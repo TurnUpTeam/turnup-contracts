@@ -1,0 +1,10 @@
+# Ignore artifacts:
+coverage
+tmp
+pnpm-lock.yaml
+package-lock.json
+web
+web-deposit
+artifacts
+cache
+export
