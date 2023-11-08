@@ -192,26 +192,38 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
       wishPasses[sharesSubject].totalSupply += amount;
       wishPasses[sharesSubject].balanceOf[msg.sender] += amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
-      (bool success, ) = protocolFeeDestination.call{value: protocolFee}("");
-      require(success, "Unable to send funds");
+      _sendBuyFunds(protocolFee, subjectFee, address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
       wishPasses[wisher].totalSupply += amount;
       wishPasses[wisher].balanceOf[msg.sender] += amount;
-      (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
-      (bool success2, ) = sharesSubject.call{value: subjectFee}("");
-      require(success1 && success2, "Unable to send funds");
+      _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
     } else {
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][msg.sender] += amount;
       sharesSupply[sharesSubject] += amount;
-      (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
-      (bool success2, ) = sharesSubject.call{value: subjectFee}("");
-      require(success1 && success2, "Unable to send funds");
+      _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
     }
 
     emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
+  }
+
+  function _sendBuyFunds(uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+    (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
+    bool success2;
+    if (sharesSubject != address(0)) {
+      (bool success, ) = sharesSubject.call{value: subjectFee}("");
+      success2 = success;
+    } else {
+      success2 = true;
+    }
+    require(success1 && success2, "Unable to send funds");
+  }
+
+  function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
+    require(balance >= amount, "Insufficient keys");
+    require(sharesSubject != msg.sender || balance > amount, "You cannot sell your last key");
   }
 
   // @dev Sell shares for a given subject
@@ -230,47 +242,48 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     if (wishPasses[sharesSubject].owner != address(0)) {
       require(wishPasses[sharesSubject].subject == address(0), "bound cant be sell");
       uint256 balance = wishPasses[sharesSubject].balanceOf[msg.sender];
-      require(balance >= amount, "Insufficient keys");
-      require(sharesSubject != msg.sender || balance > amount, "You cannot sell your last key");
+      _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply -= amount;
       wishPasses[sharesSubject].balanceOf[msg.sender] -= amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
 
-      (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
-      (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
-      require(success1 && success2, "Unable to send funds");
+      _sendSellFunds(price, protocolFee, subjectFee, address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       address wisher = authorizedWishes[sharesSubject];
       uint256 balance = wishPasses[wisher].balanceOf[msg.sender];
-      require(balance >= amount, "Insufficient keys");
-      require(sharesSubject != msg.sender || balance > amount, "You cannot sell your last key");
+      _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.BIND;
       wishPasses[sharesSubject].totalSupply -= amount;
       wishPasses[sharesSubject].balanceOf[msg.sender] -= amount;
 
-      (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
-      (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
-      (bool success3, ) = sharesSubject.call{value: subjectFee}("");
-      require(success1 && success2 && success3, "Unable to send funds");
+      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     } else {
       uint256 balance = sharesBalance[sharesSubject][msg.sender];
-      require(sharesSubject != msg.sender || balance > amount, "You cannot sell your last key");
-      require(balance >= amount, "Insufficient keys");
+      _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][msg.sender] -= amount;
       sharesSupply[sharesSubject] -= amount;
-
-      (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
-      (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
-      (bool success3, ) = sharesSubject.call{value: subjectFee}("");
-      require(success1 && success2 && success3, "Unable to send funds");
+      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     }
 
     emit Trade(msg.sender, sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount, subjectType);
+  }
+
+  function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+    (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
+    (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
+    bool success3;
+    if (sharesSubject != address(0)) {
+      (bool success, ) = sharesSubject.call{value: subjectFee}("");
+      success3 = success;
+    } else {
+      success3 = true;
+    }
+    require(success1 && success2 && success3, "Unable to send funds");
   }
 
   // @dev This function is used to buy shares for multiple subjects at once
