@@ -192,11 +192,11 @@ describe("TurnupSharesV3", function () {
     let sellPriceAfterFee = await turnupShares.getSellPriceAfterFee(subject, amountToSell);
     let sellPrice = await turnupShares.getSellPrice(subject, amountToSell);
 
-    await expect(turnupShares.sellShares(subject, 4)).revertedWith("You cannot sell your last key");
+    await expect(turnupShares.sellShares(subject, 4)).revertedWith("CannotSellLastKey()");
 
     let gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).sellShares(subject, amountToSell));
 
-    await expect(turnupShares.connect(buyer).sellShares(subject, amountToSell)).revertedWith("Insufficient keys");
+    await expect(turnupShares.connect(buyer).sellShares(subject, amountToSell)).revertedWith("InsufficientKeys()");
 
     amountToSell = 2;
     sellPrice = await turnupShares.getSellPrice(subject, amountToSell);
@@ -233,7 +233,7 @@ describe("TurnupSharesV3", function () {
   it("should revert if getting selling price of not existent supply", async function () {
     await init();
     const amount = 1;
-    await expect(turnupShares.getSellPrice(subject, amount)).revertedWith("Invalid amount");
+    await expect(turnupShares.getSellPrice(subject, amount)).revertedWith("InvalidAmount()");
   });
 
   it("should allow the owner to create a new wish pass", async function () {
