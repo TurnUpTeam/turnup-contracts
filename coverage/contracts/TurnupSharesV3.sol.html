@@ -25,9 +25,9 @@
         <span class='fraction'>82/107</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">53.77% </span>
+        <span class="strong">52.78% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>57/106</span>
+        <span class='fraction'>57/108</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">92% </span>
@@ -577,25 +577,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">42×</span>
-<span class="cline-any cline-yes">42×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">42×</span>
-<span class="cline-any cline-yes">42×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-yes">43×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
 <span class="cline-any cline-yes">8×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">35×</span>
+<span class="cline-any cline-yes">36×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -604,8 +604,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">17×</span>
-<span class="cline-any cline-yes">17×</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-yes">18×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -643,13 +643,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-yes">41×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-yes">41×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1123,7 +1123,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @dev Sell shares for a given subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
-  function sellShares(address sharesSubject, uint256 amount) public payable virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyIfSetup {
+  function sellShares(address sharesSubject, uint256 amount) public virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyIfSetup {
     uint256 supply = getSupply(sharesSubject);
     <span class="missing-if-branch" title="if path not taken" >I</span>if (supply &lt;= amount) revert CannotSellLastKey();
 &nbsp;
@@ -1188,7 +1188,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   //   risk to run out of gas
   // @param sharesSubjects The array of subjects to buy shares for
   // @param amounts The array of amounts to buy for each subject
-  function batchBuyShares(address[] memory sharesSubjects, uint256[] memory amounts) public virtual payable {
+  function batchBuyShares(address[] memory sharesSubjects, uint256[] memory amounts) public payable virtual {
     <span class="missing-if-branch" title="if path not taken" >I</span>if (sharesSubjects.length != amounts.length) revert WrongAmount();
     for (uint256 i = 0; i &lt; sharesSubjects.length; i++) {
       buyShares(sharesSubjects[i], amounts[i]);
@@ -1200,7 +1200,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
   function newWishPass(address wisher, uint256 reservedQuantity) external virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyOwner <span class="missing-if-branch" title="else path not taken" >E</span>onlyIfSetup {
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!(reservedQuantity &gt; 0 &amp;&amp; reservedQuantity &lt;= 50)) revert ReserveQuantityTooLarge();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (reservedQuantity == 0 || reservedQuantity &gt; 50) revert ReserveQuantityTooLarge();
     <span class="missing-if-branch" title="if path not taken" >I</span>if (wisher == address(0)) revert InvalidZeroAddress();
     <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].owner != address(0)) revert DuplicateWish();
 &nbsp;
@@ -1264,7 +1264,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 08 2023 12:11:16 GMT-0800 (Pacific Standard Time)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 08 2023 14:53:38 GMT-0800 (Pacific Standard Time)
 </div>
 </div>
 <script src="../prettify.js"></script>

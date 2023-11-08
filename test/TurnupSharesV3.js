@@ -115,14 +115,21 @@ describe("TurnupSharesV3", function () {
 
     // owner buys shares
 
-    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
-    await turnupShares.buyShares(subject, amount, {value: expectedPrice});
-
-    // buyer buys shares
-
     let buyPrice = await turnupShares.getBuyPrice(subject, amount);
     let protocolFee = await turnupShares.getProtocolFee(buyPrice);
     let subjectFee = await turnupShares.getSubjectFee(buyPrice);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
+    // emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
+
+    await expect(turnupShares.buyShares(subject, amount, {value: expectedPrice}))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject, subject, true, amount, expectedPrice, protocolFee, subjectFee, amount, 2);
+
+    // buyer buys shares
+
+    buyPrice = await turnupShares.getBuyPrice(subject, amount);
+    protocolFee = await turnupShares.getProtocolFee(buyPrice);
+    subjectFee = await turnupShares.getSubjectFee(buyPrice);
     expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
     expect(expectedPrice).to.equal(buyPrice.add(protocolFee).add(subjectFee));
 
@@ -306,8 +313,6 @@ describe("TurnupSharesV3", function () {
   });
 
   describe("bindWishPass", function () {
-    // ... (other tests)
-
     it("should allow the owner to bind a wish pass to a subject", async function () {
       await init();
       const reservedQuantity = 10;

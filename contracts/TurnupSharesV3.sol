@@ -268,7 +268,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @dev Sell shares for a given subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
-  function sellShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
+  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup {
     uint256 supply = getSupply(sharesSubject);
     if (supply <= amount) revert CannotSellLastKey();
 
@@ -345,7 +345,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
   function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOwner onlyIfSetup {
-    if (!(reservedQuantity > 0 && reservedQuantity <= 50)) revert ReserveQuantityTooLarge();
+    if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != address(0)) revert DuplicateWish();
 
