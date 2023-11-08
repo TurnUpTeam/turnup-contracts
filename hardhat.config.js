@@ -4,6 +4,7 @@ require("@nomiclabs/hardhat-waffle");
 require("hardhat-abi-exporter");
 require("@nomiclabs/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
+require("solidity-coverage");
 
 if (process.env.GAS_REPORT === "yes") {
   require("hardhat-gas-reporter");
