@@ -6,13 +6,13 @@ describe("TurnupSharesV3", function () {
   let turnupShares;
   let owner;
   let project;
-  let buyer, buyer2, buyer3, wished;
+  let buyer, buyer2, buyer3, wished, wished1, wished2;
   let subject;
 
   const deployUtils = new DeployUtils(ethers);
 
   before(async function () {
-    [owner, project, buyer, buyer2, buyer3, wished] = await ethers.getSigners();
+    [owner, project, buyer, buyer2, buyer3, wished, wished1, wished2] = await ethers.getSigners();
     subject = owner.address;
   });
 
@@ -252,5 +252,118 @@ describe("TurnupSharesV3", function () {
     await expect(upgrades.upgradeProxy(turnupShares.address, newImplementation.connect(project))).to.be.revertedWith(
       "Ownable: caller is not the owner"
     );
+  });
+
+  it("should allow users to buy and sell wishes", async function () {
+    await init();
+    // Owner creates wish pass
+    const reservedQty = 10;
+    await turnupShares.newWishPass(wished.address, reservedQty);
+
+    // Buyer purchases some wish pass shares
+    const buyAmount = 5;
+    const buyPrice = await turnupShares.getBuyPriceAfterFee(wished.address, buyAmount);
+    await turnupShares.connect(buyer).buyShares(wished.address, buyAmount, {value: buyPrice});
+
+    expect((await turnupShares.wishPasses(wished.address)).totalSupply.toNumber()).to.equal(15);
+
+    expect(await turnupShares.getWishBalanceOf(wished.address, buyer.address)).to.equal(buyAmount);
+    // Verify buyer wish pass balance
+
+    // Buyer sells some wish pass shares
+    const sellAmount = 2;
+    const sellPrice = await turnupShares.getSellPriceAfterFee(wished.address, sellAmount);
+
+    await turnupShares.connect(buyer).sellShares(wished.address, sellAmount);
+
+    expect(await turnupShares.getWishBalanceOf(wished.address, buyer.address)).to.equal(buyAmount - sellAmount);
+  });
+
+  it("should allow batch buying multiple wish passes", async function () {
+    await init();
+    // Create 2 wish passes
+    const reservedQty = 10;
+    await turnupShares.newWishPass(wished1.address, reservedQty);
+    await turnupShares.newWishPass(wished2.address, reservedQty);
+
+    // Get batch buy prices
+    const wish1Amount = 5;
+    const wish2Amount = 3;
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+
+    // Batch buy
+    await turnupShares
+      .connect(buyer)
+      .batchBuyShares([wished1.address, wished2.address], [wish1Amount, wish2Amount], {value: wish1Price.add(wish2Price)});
+
+    // Verify balances
+    const wish1Balance = await turnupShares.getWishBalanceOf(wished1.address, buyer.address);
+    expect(wish1Balance).to.equal(wish1Amount);
+
+    const wish2Balance = await turnupShares.getWishBalanceOf(wished2.address, buyer.address);
+    expect(wish2Balance).to.equal(wish2Amount);
+  });
+
+  describe("bindWishPass", function () {
+    // ... (other tests)
+
+    it("should allow the owner to bind a wish pass to a subject", async function () {
+      await init();
+      const reservedQuantity = 10;
+
+      // Owner creates a new wish pass
+      await turnupShares.newWishPass(wished.address, reservedQuantity);
+      await turnupShares.setFeeDestination(project.address);
+
+      // Owner binds the wish pass to a subject
+      await turnupShares.bindWishPass(subject, wished.address);
+
+      // Check if the wish pass has been bound correctly
+      expect(await turnupShares.authorizedWishes(subject)).to.equal(wished.address);
+      const wishPass = await turnupShares.wishPasses(wished.address);
+      expect(wishPass.subject).to.equal(subject);
+    });
+
+    it("should revert if a non-owner tries to bind a wish pass", async function () {
+      await init();
+      const reservedQuantity = 10;
+
+      // Owner creates a new wish pass
+      await turnupShares.newWishPass(wished.address, reservedQuantity);
+
+      // Non-owner tries to bind the wish pass
+      await expect(turnupShares.connect(buyer).bindWishPass(subject, wished.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+
+    it("should revert if trying to bind a wish pass that has already been bound", async function () {
+      await init();
+      const reservedQuantity = 10;
+
+      // Owner creates a new wish pass and binds it
+      await turnupShares.newWishPass(wished.address, reservedQuantity);
+      await turnupShares.bindWishPass(subject, wished.address);
+
+      // Try to bind the same wish pass again
+      await expect(turnupShares.bindWishPass(subject, wished.address)).to.be.revertedWith("DuplicateWish()");
+    });
+
+    it("should revert if the subject or wisher address is zero", async function () {
+      await init();
+      const reservedQuantity = 10;
+
+      // Owner creates a new wish pass
+      await turnupShares.newWishPass(wished.address, reservedQuantity);
+
+      // Attempt to bind with a zero subject address
+      await expect(turnupShares.bindWishPass(ethers.constants.AddressZero, wished.address)).to.be.revertedWith(
+        "WrongAddress()"
+      );
+
+      // Attempt to bind with a zero wisher address
+      await expect(turnupShares.bindWishPass(subject, ethers.constants.AddressZero)).to.be.revertedWith("WrongAddress()");
+    });
   });
 });

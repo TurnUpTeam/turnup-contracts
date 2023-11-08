@@ -95,6 +95,14 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     return "v3.0.0";
   }
 
+  // @dev Helper to get the balance of a user for a given wish
+  // @param sharesSubject The subject of the shares
+  // @param user The user to get the balance of
+  // @return The balance of the user for the given wish
+  function getWishBalanceOf(address sharesSubject, address user) public view returns (uint256) {
+    return wishPasses[sharesSubject].balanceOf[user];
+  }
+
   // @dev Set the destination fee
   // @param _feeDestination The address of the destination
   function setFeeDestination(address _feeDestination) public virtual onlyOwner {
@@ -325,7 +333,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   //   risk to run out of gas
   // @param sharesSubjects The array of subjects to buy shares for
   // @param amounts The array of amounts to buy for each subject
-  function batchBuyShares(address[] memory sharesSubjects, uint256[] memory amounts) public virtual {
+  function batchBuyShares(address[] memory sharesSubjects, uint256[] memory amounts) public payable virtual {
     if (sharesSubjects.length != amounts.length) revert WrongAmount();
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       buyShares(sharesSubjects[i], amounts[i]);
