@@ -92,7 +92,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   function _authorizeUpgrade(address _newImplementation) internal virtual override onlyOwner {}
 
   function getVer() public pure virtual returns (string memory) {
-    return "v5.0.0";
+    return "v3.0.0";
   }
 
   // @dev Set the destination fee
