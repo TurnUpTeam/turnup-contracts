@@ -213,7 +213,6 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
 
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
-
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply += amount;
       wishPasses[sharesSubject].balanceOf[msg.sender] += amount;
@@ -235,6 +234,11 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
   }
 
+  // @dev Internal function to send funds when buying shares or wishes
+  //   It reverts if any sends fail.
+  // @param protocolFee The protocol fee
+  // @param subjectFee The subject fee
+  // @param sharesSubject The subject of the shares
   function _sendBuyFunds(uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
     (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
     bool success2 = true;
@@ -244,6 +248,10 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     if (!success1 || !success2) revert UnableToSendFunds();
   }
 
+  // @dev Check the balance of a given subject and revert if not correct
+  // @param sharesSubject The subject of the shares
+  // @param balance The balance of the subject
+  // @param amount The amount to check
   function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
     if (balance < amount) revert InsufficientKeys();
     if (!(sharesSubject != msg.sender || balance > amount)) revert CannotSellLastKey();
@@ -296,6 +304,12 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     emit Trade(msg.sender, sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount, subjectType);
   }
 
+  // @dev Internal function to send funds when selling shares or wishes
+  //   It reverts if any sends fail.
+  // @param price The price
+  // @param protocolFee The protocol fee
+  // @param subjectFee The subject fee
+  // @param sharesSubject The subject of the shares
   function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
     (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
     (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
