@@ -18,7 +18,7 @@ devDependencies:
     specifier: ^3.1.7
     version: 3.1.7(hardhat@2.18.3)
   '@nomiclabs/hardhat-waffle':
-    specifier: ^2.0.5
+    specifier: ^2.0.6
     version: 2.0.6(@nomiclabs/hardhat-ethers@2.2.3)(@types/sinon-chai@3.2.11)(ethereum-waffle@3.4.4)(ethers@5.7.2)(hardhat@2.18.3)
   '@openzeppelin/contracts':
     specifier: ^4.8.3
@@ -42,7 +42,7 @@ devDependencies:
     specifier: ^1.6.3
     version: 1.6.3
   chai:
-    specifier: ^4.3.7
+    specifier: ^4.3.10
     version: 4.3.10
   dotenv:
     specifier: ^16.1.3

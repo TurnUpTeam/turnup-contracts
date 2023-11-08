@@ -1,8 +1,13 @@
-require("hardhat-gas-reporter");
+const {requirePath} = require("require-or-mock");
+require("dotenv").config();
+require("@nomiclabs/hardhat-waffle");
 require("hardhat-abi-exporter");
 require("@nomiclabs/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
-const {requirePath} = require("require-or-mock");
+
+if (process.env.GAS_REPORT === "yes") {
+  require("hardhat-gas-reporter");
+}
 
 // if missed, it sets up a mock
 requirePath(

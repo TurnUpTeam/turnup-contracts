@@ -6,6 +6,8 @@ pragma solidity 0.8.19;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+//import "hardhat/console.sol";
+
 contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -50,6 +52,13 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     SubjectType subjectType
   );
 
+  modifier onlyIfSetup() {
+    require(protocolFeeDestination != address(0), "Protocol fee destination not set");
+    require(protocolFeePercent > 0, "Protocol fee percent not set");
+    require(subjectFeePercent > 0, "Subject fee percent not set");
+    _;
+  }
+
   function initialize() public initializer {
     __Ownable_init();
     __UUPSUpgradeable_init();
@@ -64,6 +73,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @dev Set the destination fee
   // @param _feeDestination The address of the destination
   function setFeeDestination(address _feeDestination) public virtual onlyOwner {
+    require(_feeDestination != address(0), "Invalid zero address");
     protocolFeeDestination = _feeDestination;
   }
 
@@ -121,6 +131,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @return The sell price of the given amount of shares
   function getSellPrice(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
     uint256 supply = getSupply(sharesSubject);
+    require(supply >= amount, "Invalid amount");
     return getPrice(supply - amount, amount);
   }
 
@@ -130,8 +141,8 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @return The buy price of the given amount of shares after fees
   function getBuyPriceAfterFee(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
     uint256 price = getBuyPrice(sharesSubject, amount);
-    uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-    uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
     return price + protocolFee + subjectFee;
   }
 
@@ -141,22 +152,35 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @return The sell price of the given amount of shares after fees
   function getSellPriceAfterFee(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
     uint256 price = getSellPrice(sharesSubject, amount);
-    uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-    uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
     return price - protocolFee - subjectFee;
+  }
+
+  // @dev Get the protocol fee of a given price
+  // @param price The price
+  function getProtocolFee(uint256 price) public view virtual returns (uint256) {
+    return (price * protocolFeePercent) / 1 ether;
+  }
+
+  // @dev Get the subject fee of a given price
+  // @param price The price
+  function getSubjectFee(uint256 price) public view virtual returns (uint256) {
+    return (price * subjectFeePercent) / 1 ether;
   }
 
   // @dev Buy shares for a given subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
-  function buyShares(address sharesSubject, uint256 amount) public payable virtual {
+  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
     uint256 supply = getSupply(sharesSubject);
     // solhint-disable-next-line reason-string
     require(supply > 0 || sharesSubject == msg.sender, "Only the keys' owner can buy the first key");
 
     uint256 price = getPrice(supply, amount);
-    uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-    uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+
     // solhint-disable-next-line reason-string
     require(msg.value >= price + protocolFee + subjectFee, "Transaction failed due to price fluctuations");
 
@@ -181,7 +205,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     } else {
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][msg.sender] += amount;
-      sharesSupply[sharesSubject] += supply + amount;
+      sharesSupply[sharesSubject] += amount;
       (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
       (bool success2, ) = sharesSubject.call{value: subjectFee}("");
       require(success1 && success2, "Unable to send funds");
@@ -193,13 +217,13 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @dev Sell shares for a given subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
-  function sellShares(address sharesSubject, uint256 amount) public payable virtual {
+  function sellShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
     uint256 supply = getSupply(sharesSubject);
     require(supply > amount, "Cannot sell the last key");
 
     uint256 price = getPrice(supply - amount, amount);
-    uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-    uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
 
     SubjectType subjectType;
 
@@ -234,10 +258,11 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     } else {
       uint256 balance = sharesBalance[sharesSubject][msg.sender];
       require(sharesSubject != msg.sender || balance > amount, "You cannot sell your last key");
+      require(balance >= amount, "Insufficient keys");
 
       subjectType = SubjectType.KEY;
-      sharesBalance[sharesSubject][msg.sender] = sharesBalance[sharesSubject][msg.sender] - amount;
-      sharesSupply[sharesSubject] = supply - amount;
+      sharesBalance[sharesSubject][msg.sender] -= amount;
+      sharesSupply[sharesSubject] -= amount;
 
       (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
       (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
@@ -264,10 +289,10 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   //   Only the contract owner can execute it.
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
-  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOwner {
+  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOwner onlyIfSetup {
     require(reservedQuantity > 0 && reservedQuantity <= 50, "reserve quantity too large");
     require(wisher != address(0), "invalid zero wisher");
-    require(wishPasses[wisher].owner != address(0), "duplicate wish");
+    require(wishPasses[wisher].owner == address(0), "duplicate wish");
 
     wishPasses[wisher].owner = wisher;
     wishPasses[wisher].reservedQuantity = reservedQuantity;
