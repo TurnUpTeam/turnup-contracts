@@ -109,7 +109,7 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
   function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
   function getVer() public pure virtual returns (string memory) {
-    return "v4.1.5";
+    return "v4.1.6";
   }
 
   // @dev Helper to get the balance of a user for a given wish

@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/TurnupSharesV4.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> TurnupSharesV4.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">94.34% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>100/106</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">61.11% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>66/108</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">96% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>24/25</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">93.43% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>128/137</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">63×</span>
+<span class="cline-any cline-yes">63×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17×</span>
+<span class="cline-any cline-yes">17×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">37×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+&nbsp;
+// for security it is better to lock the version
+pragma solidity 0.8.19;
+&nbsp;
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+&nbsp;
+contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
+  /*
+    About ownership and upgradeability
+&nbsp;
+    There is a strategy for it. Following OpenZeppelin best practices, we will deploy
+    the contracts and then transfer the ownership of the proxy-contract to a
+    Gnosis safe multi-sig wallet. Any subsequent upgrades will be performed
+    according to this process. Here is the guide we will follow to transfer ownership
+    to the multi-sig wallet and later deploy new implementations:
+    https://docs.openzeppelin.com/defender/guide-upgrades
+&nbsp;
+    We are not implementing an explicit time-lock process because when
+    a bug is discovered (which is the primary reason why we are using upgradeable
+    contracts), the speed of response is crucial to avoid disaster.
+    For example, the infamous crash of Terra/UST could have been mitigated if they
+    did not have to wait for the fixed lockup time before intervening.
+*/
+&nbsp;
+  error InvalidZeroAddress();
+  error DuplicateWish();
+  error WishNotFound();
+  error DuplicateBind();
+  error ClaimRewardShouldBeFalse();
+  error TransactionFailedDueToPrice();
+  error OnlyKeysOwnerCanBuyFirstKey();
+  error BoundCannotBeBuiOrSell();
+  error InvalidAmount();
+  error InsufficientKeys();
+  error CannotSellLastKey();
+  error ProtocolFeeDestinationNotSet();
+  error ProtocolFeePercentNotSet();
+  error SubjectFeePercentNotSet();
+  error SubjectDoesNotMatch();
+  error UnableToSendFunds();
+  error UnableToClaimReward();
+  error ReserveQuantityTooLarge();
+  error WrongAmount();
+  error WrongAddress();
+  error NotVoteFound();
+  error ZeroReservedQuantity();
+  error ZeroReservedWish();
+  error OwnerCantBeWisher();
+  error InvalidWish();
+&nbsp;
+  address public protocolFeeDestination;
+  uint256 public protocolFeePercent;
+  uint256 public subjectFeePercent;
+&nbsp;
+  // SharesSubject =&gt; (Holder =&gt; Balance)
+  mapping(address =&gt; mapping(address =&gt; uint256)) public sharesBalance;
+&nbsp;
+  // SharesSubject =&gt; Supply
+  mapping(address =&gt; uint256) public sharesSupply;
+&nbsp;
+  // new variables in V3
+&nbsp;
+  mapping(address =&gt; address) public authorizedWishes;
+&nbsp;
+  struct WishPass {
+    address owner;
+    address subject;
+    uint256 totalSupply;
+    uint256 subjectReward;
+    bool isClaimReward;
+    uint256 reservedQuantity;
+    mapping(address =&gt; uint256) balanceOf;
+  }
+  mapping(address =&gt; WishPass) public wishPasses;
+&nbsp;
+  enum SubjectType {
+    WISH,
+    BIND,
+    KEY
+  }
+&nbsp;
+  event Trade(
+    address indexed trader,
+    address indexed subject,
+    bool isBuy,
+    uint256 shareAmount,
+    uint256 ethAmount,
+    uint256 protocolEthAmount,
+    uint256 subjectEthAmount,
+    uint256 supply,
+    SubjectType subjectType
+  );
+&nbsp;
+  modifier onlyIfSetup() {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (protocolFeeDestination == address(0)) revert ProtocolFeeDestinationNotSet();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (protocolFeePercent == 0) revert ProtocolFeePercentNotSet();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (subjectFeePercent == 0) revert SubjectFeePercentNotSet();
+    _;
+  }
+&nbsp;
+  function initialize() public <span class="missing-if-branch" title="else path not taken" >E</span>initializer {
+    __Ownable_init();
+    __UUPSUpgradeable_init();
+  }
+&nbsp;
+  // solhint-disable-next-line no-empty-blocks
+<span class="fstat-no" title="function not covered" >  function _authorizeUpgrade(address newImplementation) internal virtual override <span class="missing-if-branch" title="if path not taken" >I</span>onlyOwner {}</span>
+&nbsp;
+  function getVer() public pure virtual returns (string memory) {
+    return "v4.1.5";
+  }
+&nbsp;
+  // @dev Helper to get the balance of a user for a given wish
+  // @param sharesSubject The subject of the shares
+  // @param user The user to get the balance of
+  // @return The balance of the user for the given wish
+  function getWishBalanceOf(address sharesSubject, address user) public view returns (uint256) {
+    return wishPasses[sharesSubject].balanceOf[user];
+  }
+&nbsp;
+  // @dev Set the destination fee
+  // @param _feeDestination The address of the destination
+  function setFeeDestination(address _feeDestination) public virtual onlyOwner {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (_feeDestination == address(0)) revert InvalidZeroAddress();
+    protocolFeeDestination = _feeDestination;
+  }
+&nbsp;
+  // @dev Set the protocol fee percent
+  // @param _feePercent The percent of the protocol fee
+  function setProtocolFeePercent(uint256 _feePercent) public virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyOwner {
+    protocolFeePercent = _feePercent;
+  }
+&nbsp;
+  // @dev Set the subject fee percent
+  // @param _feePercent The percent of the subject fee
+  function setSubjectFeePercent(uint256 _feePercent) public virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyOwner {
+    subjectFeePercent = _feePercent;
+  }
+&nbsp;
+  // @dev Get the price of a given amount of shares
+  // @param supply The current supply of keys
+  // @param amount The amount of keys to buy
+  // @return The price of the given amount of keys
+  function getPrice(uint256 supply, uint256 amount) public pure virtual returns (uint256) {
+    uint256 sum1 = supply == 0 ? 0 : ((supply - 1) * (supply) * (2 * (supply - 1) + 1)) / 6;
+    uint256 sum2 = supply == 0 &amp;&amp; amount == 1
+      ? 0
+      : ((supply + amount - 1) * (supply + amount) * (2 * (supply + amount - 1) + 1)) / 6;
+    uint256 summation = sum2 - sum1;
+    return (summation * 1 ether) / 2000;
+  }
+&nbsp;
+  // @dev Get the current supply of shares
+  // @param sharesSubject The subject of the shares
+  // @return The current supply of shares
+  function getSupply(address sharesSubject) public view virtual returns (uint256) {
+    if (wishPasses[sharesSubject].owner != address(0)) {
+      return wishPasses[sharesSubject].totalSupply;
+    } else if (authorizedWishes[sharesSubject] != address(0)) {
+      address wisher = authorizedWishes[sharesSubject];
+      return wishPasses[wisher].totalSupply;
+    } else {
+      return sharesSupply[sharesSubject];
+    }
+  }
+&nbsp;
+  // @dev Get the buy price of a given amount of shares
+  // @param sharesSubject The subject of the shares
+  // @param amount The amount of shares to buy
+  // @return The buy price of the given amount of shares
+  function getBuyPrice(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
+    uint256 supply = getSupply(sharesSubject);
+    return getPrice(supply, amount);
+  }
+&nbsp;
+  // @dev Get the sell price of a given amount of shares
+  // @param sharesSubject The subject of the shares
+  // @param amount The amount of shares to sell
+  // @return The sell price of the given amount of shares
+  function getSellPrice(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
+    uint256 supply = getSupply(sharesSubject);
+    if (supply &lt; amount) revert InvalidAmount();
+    return getPrice(supply - amount, amount);
+  }
+&nbsp;
+  // @dev Get the buy price of a given amount of shares after fees
+  // @param sharesSubject The subject of the shares
+  // @param amount The amount of shares to buy
+  // @return The buy price of the given amount of shares after fees
+  function getBuyPriceAfterFee(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
+    uint256 price = getBuyPrice(sharesSubject, amount);
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+    return price + protocolFee + subjectFee;
+  }
+&nbsp;
+  // @dev Get the sell price of a given amount of shares after fees
+  // @param sharesSubject The subject of the shares
+  // @param amount The amount of shares to sell
+  // @return The sell price of the given amount of shares after fees
+  function getSellPriceAfterFee(address sharesSubject, uint256 amount) public view virtual returns (uint256) {
+    uint256 price = getSellPrice(sharesSubject, amount);
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+    return price - protocolFee - subjectFee;
+  }
+&nbsp;
+  // @dev Get the protocol fee of a given price
+  // @param price The price
+  function getProtocolFee(uint256 price) public view virtual returns (uint256) {
+    return (price * protocolFeePercent) / 1 ether;
+  }
+&nbsp;
+  // @dev Get the subject fee of a given price
+  // @param price The price
+  function getSubjectFee(uint256 price) public view virtual returns (uint256) {
+    return (price * subjectFeePercent) / 1 ether;
+  }
+&nbsp;
+  // @dev Buy shares for a given subject
+  // @param sharesSubject The subject of the shares
+  // @param amount The amount of shares to buy
+  function buyShares(address sharesSubject, uint256 amount) public payable virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyIfSetup {
+    uint256 supply = getSupply(sharesSubject);
+    // solhint-disable-next-line reason-string
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!(supply &gt; 0 || sharesSubject == msg.sender)) revert OnlyKeysOwnerCanBuyFirstKey();
+&nbsp;
+    uint256 price = getPrice(supply, amount);
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+&nbsp;
+    // solhint-disable-next-line reason-string
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (msg.value &lt; price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
+&nbsp;
+    SubjectType subjectType;
+&nbsp;
+    if (wishPasses[sharesSubject].owner != address(0)) {
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
+      subjectType = SubjectType.WISH;
+      wishPasses[sharesSubject].totalSupply += amount;
+      wishPasses[sharesSubject].balanceOf[msg.sender] += amount;
+      wishPasses[sharesSubject].subjectReward += subjectFee;
+      _sendBuyFunds(protocolFee, subjectFee, address(0));
+    } else if (authorizedWishes[sharesSubject] != address(0)) {
+      subjectType = SubjectType.BIND;
+      address wisher = authorizedWishes[sharesSubject];
+      wishPasses[wisher].totalSupply += amount;
+      wishPasses[wisher].balanceOf[msg.sender] += amount;
+      _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
+    } else {
+      subjectType = SubjectType.KEY;
+      sharesBalance[sharesSubject][msg.sender] += amount;
+      sharesSupply[sharesSubject] += amount;
+      _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
+    }
+&nbsp;
+    emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
+  }
+&nbsp;
+  // @dev Internal function to send funds when buying shares or wishes
+  //   It reverts if any sends fail.
+  // @param protocolFee The protocol fee
+  // @param subjectFee The subject fee
+  // @param sharesSubject The subject of the shares
+  function _sendBuyFunds(uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+    (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
+    bool success2 = true;
+    if (sharesSubject != address(0)) {
+      (success2, ) = sharesSubject.call{value: subjectFee}("");
+    }
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!success1 || !success2) revert UnableToSendFunds();
+  }
+&nbsp;
+  // @dev Check the balance of a given subject and revert if not correct
+  // @param sharesSubject The subject of the shares
+  // @param balance The balance of the subject
+  // @param amount The amount to check
+  function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
+    if (balance &lt; amount) revert InsufficientKeys();
+    if (!(sharesSubject != msg.sender || balance &gt; amount)) revert CannotSellLastKey();
+  }
+&nbsp;
+  // @dev Sell shares for a given subject
+  // @param sharesSubject The subject of the shares
+  // @param amount The amount of shares to sell
+  function sellShares(address sharesSubject, uint256 amount) public virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyIfSetup {
+    uint256 supply = getSupply(sharesSubject);
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (supply &lt;= amount) revert CannotSellLastKey();
+&nbsp;
+    uint256 price = getPrice(supply - amount, amount);
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+&nbsp;
+    SubjectType subjectType;
+&nbsp;
+    if (wishPasses[sharesSubject].owner != address(0)) {
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
+      uint256 balance = wishPasses[sharesSubject].balanceOf[msg.sender];
+      _checkBalance(sharesSubject, balance, amount);
+&nbsp;
+      subjectType = SubjectType.WISH;
+      wishPasses[sharesSubject].totalSupply -= amount;
+      wishPasses[sharesSubject].balanceOf[msg.sender] -= amount;
+      wishPasses[sharesSubject].subjectReward += subjectFee;
+&nbsp;
+      _sendSellFunds(price, protocolFee, subjectFee, address(0));
+    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (authorizedWishes[sharesSubject] != address(0)) {
+<span class="cstat-no" title="statement not covered" >      address wisher = authorizedWishes[sharesSubject];</span>
+<span class="cstat-no" title="statement not covered" >      uint256 balance = wishPasses[wisher].balanceOf[msg.sender];</span>
+<span class="cstat-no" title="statement not covered" >      _checkBalance(sharesSubject, balance, amount)</span>;
+&nbsp;
+      subjectType = SubjectType.BIND;
+      wishPasses[sharesSubject].totalSupply -= amount;
+      wishPasses[sharesSubject].balanceOf[msg.sender] -= amount;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject)</span>;
+    } else {
+      uint256 balance = sharesBalance[sharesSubject][msg.sender];
+      _checkBalance(sharesSubject, balance, amount);
+&nbsp;
+      subjectType = SubjectType.KEY;
+      sharesBalance[sharesSubject][msg.sender] -= amount;
+      sharesSupply[sharesSubject] -= amount;
+      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
+    }
+&nbsp;
+    emit Trade(msg.sender, sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount, subjectType);
+  }
+&nbsp;
+  // @dev Internal function to send funds when selling shares or wishes
+  //   It reverts if any sends fail.
+  // @param price The price
+  // @param protocolFee The protocol fee
+  // @param subjectFee The subject fee
+  // @param sharesSubject The subject of the shares
+  function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+    (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
+    (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
+    bool success3 = true;
+    if (sharesSubject != address(0)) {
+      (success3, ) = sharesSubject.call{value: subjectFee}("");
+    }
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!success1 || !success2 || !success3) revert UnableToSendFunds();
+  }
+&nbsp;
+  // @dev This function is used to buy shares for multiple subjects at once
+  //   Limit the elements in the array when calling this function to not
+  //   risk to run out of gas
+  // @param sharesSubjects The array of subjects to buy shares for
+  // @param amounts The array of amounts to buy for each subject
+  function batchBuyShares(address[] memory sharesSubjects, uint256[] memory amounts) public payable virtual {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (sharesSubjects.length != amounts.length) revert WrongAmount();
+    for (uint256 i = 0; i &lt; sharesSubjects.length; i++) {
+      buyShares(sharesSubjects[i], amounts[i]);
+    }
+  }
+&nbsp;
+  // @dev This function is used to create a new wish
+  //   Only the contract owner can execute it.
+  // @param wisher The address of the wisher
+  // @param reservedQuantity The amount of shares to reserve for the wisher
+  function newWishPass(address wisher, uint256 reservedQuantity) external virtual <span class="missing-if-branch" title="else path not taken" >E</span>onlyOwner <span class="missing-if-branch" title="else path not taken" >E</span>onlyIfSetup {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (reservedQuantity == 0 || reservedQuantity &gt; 50) revert ReserveQuantityTooLarge();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wisher == address(0)) revert InvalidZeroAddress();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].owner != address(0)) revert DuplicateWish();
+&nbsp;
+    wishPasses[wisher].owner = wisher;
+    wishPasses[wisher].reservedQuantity = reservedQuantity;
+    wishPasses[wisher].totalSupply = reservedQuantity;
+  }
+&nbsp;
+  // @dev This function is used to bind a wish to a subject
+  //   Only the contract owner can execute it.
+  // @param sharesSubject The address of the subject
+  // @param wisher The address of the wisher
+  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOwner {
+    if (sharesSubject == address(0) || wisher == address(0)) revert WrongAddress();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].owner != wisher) revert WishNotFound();
+    if (authorizedWishes[sharesSubject] != address(0)) revert DuplicateWish();
+&nbsp;
+    wishPasses[wisher].subject = sharesSubject;
+    authorizedWishes[sharesSubject] = wisher;
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].isClaimReward) revert ClaimRewardShouldBeFalse();
+    wishPasses[wisher].isClaimReward = true;
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].subjectReward &gt; 0) {
+<span class="cstat-no" title="statement not covered" >      (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");</span>
+<span class="cstat-no" title="statement not covered" >      if (!success) revert UnableToClaimReward();</span>
+    }
+  }
+&nbsp;
+  // @dev This function is used to claim the reserved wish pass
+  //   Only the sharesSubject itself can call this function to make the claim
+  function claimReservedWishPass() external payable virtual {
+    address sharesSubject = msg.sender;
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
+&nbsp;
+    address wisher = authorizedWishes[sharesSubject];
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].owner != wisher) revert InvalidWish();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
+    //    if (wishPasses[wisher].balanceOf[sharesSubject] &gt; 0) revert ZeroReservedWish();
+&nbsp;
+    uint256 amount = wishPasses[wisher].reservedQuantity;
+    uint256 price = getPrice(0, amount);
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (msg.value &lt; price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
+&nbsp;
+    wishPasses[wisher].reservedQuantity = 0;
+    wishPasses[wisher].balanceOf[sharesSubject] += amount;
+&nbsp;
+    _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
+&nbsp;
+    uint256 supply = wishPasses[wisher].totalSupply;
+    emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply, SubjectType.BIND);
+  }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Thu Nov 09 2023 11:45:19 GMT-0800 (Pacific Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

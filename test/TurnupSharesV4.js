@@ -24,7 +24,7 @@ describe("TurnupSharesV4", function () {
 
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
-    expect(await turnupShares.getVer()).to.equal("v4.1.5");
+    expect(await turnupShares.getVer()).to.equal("v4.1.6");
   });
 
   async function init() {
