@@ -4,11 +4,11 @@
 pragma solidity 0.8.19;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 //import "hardhat/console.sol";
 
-contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
+contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error InvalidZeroAddress();
   error DuplicateWish();
   error WishNotFound();
@@ -33,6 +33,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   error ZeroReservedQuantity();
   error ZeroReservedWish();
   error OwnerCantBeWisher();
+  error InvalidWish();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -86,13 +87,10 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
 
   function initialize() public initializer {
     __Ownable_init();
-    __UUPSUpgradeable_init();
   }
 
-  function _authorizeUpgrade(address _newImplementation) internal virtual override onlyOwner {}
-
   function getVer() public pure virtual returns (string memory) {
-    return "v3.0.0";
+    return "v5.0.0";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -215,7 +213,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
     uint256 subjectFee = getSubjectFee(price);
 
     // solhint-disable-next-line reason-string
-    if (!(msg.value >= price + protocolFee + subjectFee)) revert TransactionFailedDueToPrice();
+    if (msg.value < price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
 
     SubjectType subjectType;
 
@@ -359,7 +357,7 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
   function bindWishPass(address sharesSubject, address wisher) external virtual onlyOwner {
-    if (!(sharesSubject != address(0) && wisher != address(0))) revert WrongAddress();
+    if (sharesSubject == address(0) || wisher == address(0)) revert WrongAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
     if (authorizedWishes[sharesSubject] != address(0)) revert DuplicateWish();
 
@@ -379,23 +377,24 @@ contract TurnupSharesV3 is OwnableUpgradeable, UUPSUpgradeable {
   //   Only the sharesSubject itself can call this function to make the claim
   function claimReservedWishPass() external payable virtual {
     address sharesSubject = msg.sender;
+
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
 
     address wisher = authorizedWishes[sharesSubject];
-    if (wishPasses[wisher].owner == wisher) revert OwnerCantBeWisher();
+    if (wishPasses[wisher].owner != wisher) revert InvalidWish();
     if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch();
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
-    if (wishPasses[wisher].balanceOf[sharesSubject] > 0) revert ZeroReservedWish();
+    //    if (wishPasses[wisher].balanceOf[sharesSubject] > 0) revert ZeroReservedWish();
 
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
 
-    if (!(msg.value >= price + protocolFee + subjectFee)) revert TransactionFailedDueToPrice();
+    if (msg.value < price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
 
     wishPasses[wisher].reservedQuantity = 0;
-    wishPasses[wisher].balanceOf[sharesSubject] = wishPasses[wisher].reservedQuantity;
+    wishPasses[wisher].balanceOf[sharesSubject] += amount;
 
     _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
 
