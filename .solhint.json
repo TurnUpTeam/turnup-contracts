@@ -14,7 +14,6 @@
     "imports-on-top": "error",
     "compiler-version": ["error", "^0.8.0"],
     "no-empty-blocks": "off",
-    "func-visibility": ["warn", {"ignoreConstructors": true}],
-    "custom-errors": "off"
+    "func-visibility": ["warn", {"ignoreConstructors": true}]
   }
 }
