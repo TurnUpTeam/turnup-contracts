@@ -68,3 +68,6 @@ db
 .openzeppelin/unknown-1337.json
 /export/deployed.json
 /flattened
+/tmp
+!/tmp/.gitkeep
+```
