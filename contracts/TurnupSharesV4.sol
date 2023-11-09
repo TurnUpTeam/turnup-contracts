@@ -3,10 +3,10 @@
 // for security it is better to lock the version
 pragma solidity 0.8.19;
 
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract TurnupSharesV4 is Initializable, Ownable2StepUpgradeable {
+contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
   /*
     About ownership and upgradeability
 
@@ -102,7 +102,11 @@ contract TurnupSharesV4 is Initializable, Ownable2StepUpgradeable {
 
   function initialize() public initializer {
     __Ownable_init();
+    __UUPSUpgradeable_init();
   }
+
+  // solhint-disable-next-line no-empty-blocks
+  function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
   function getVer() public pure virtual returns (string memory) {
     return "v4.1.5";

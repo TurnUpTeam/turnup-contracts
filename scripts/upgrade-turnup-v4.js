@@ -6,7 +6,7 @@ async function main() {
 
   console.log("Upgrading Turnup with the account:", deployer.address);
 
-  const implementation = await ethers.getContractFactory("TurnupSharesV4.sol");
+  const implementation = await ethers.getContractFactory("TurnupSharesV4");
 
   const turnup = await upgrades.upgradeProxy("0x4a7ed799b75bC8BA109Fa6a4F2B8Ce622eEd8C6B", implementation);
   console.log("Box upgraded");
