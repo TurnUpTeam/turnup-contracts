@@ -13,8 +13,7 @@ allFiredEvents
 scTopics
 
 # Coverage directory used by tools like istanbul
-coverage
-coverage.json
+#coverage
 coverageEnv
 
 # node-waf configuration

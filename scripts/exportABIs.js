@@ -13,7 +13,7 @@ async function main() {
     ABIs.contracts[rename || name] = json.abi;
   }
   abi("TurnupSharesV2", "contracts");
-  abi("TurnupSharesV3", "contracts");
+  abi("TurnupSharesV4.sol", "contracts");
 
   await fs.writeFile(path.resolve(__dirname, "../export/ABIs.json"), JSON.stringify(ABIs, null, 2));
 }
