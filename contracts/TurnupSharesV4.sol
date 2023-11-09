@@ -3,12 +3,27 @@
 // for security it is better to lock the version
 pragma solidity 0.8.19;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-//import "hardhat/console.sol";
+contract TurnupSharesV4 is Initializable, Ownable2StepUpgradeable {
+  /*
+    About ownership and upgradeability
 
-contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
+    There is a strategy for it. Following OpenZeppelin best practices, we will deploy
+    the contracts and then transfer the ownership of the proxy-contract to a
+    Gnosis safe multi-sig wallet. Any subsequent upgrades will be performed
+    according to this process. Here is the guide we will follow to transfer ownership
+    to the multi-sig wallet and later deploy new implementations:
+    https://docs.openzeppelin.com/defender/guide-upgrades
+
+    We are not implementing an explicit time-lock process because when
+    a bug is discovered (which is the primary reason why we are using upgradeable
+    contracts), the speed of response is crucial to avoid disaster.
+    For example, the infamous crash of Terra/UST could have been mitigated if they
+    did not have to wait for the fixed lockup time before intervening.
+*/
+
   error InvalidZeroAddress();
   error DuplicateWish();
   error WishNotFound();
