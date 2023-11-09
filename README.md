@@ -51,3 +51,9 @@ npm run lint
 ```
 npm run size
 ```
+
+## Test coverage
+
+```
+
+```
