@@ -46,22 +46,21 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error ClaimRewardShouldBeFalse();
   error TransactionFailedDueToPrice();
   error OnlyKeysOwnerCanBuyFirstKey();
-  error BoundCannotBeBuiOrSell();
+  error BoundCannotBeBuyOrSell();
   error InvalidAmount();
   error InsufficientKeys(address sender, address sharesSubject, uint256 balance, uint256 amount);
   error CannotSellLastKey();
   error ProtocolFeeDestinationNotSet();
   error ProtocolFeePercentNotSet();
   error SubjectFeePercentNotSet();
-  error SubjectDoesNotMatch();
+  error SubjectDoesNotMatch(address subject);
   error UnableToSendFunds();
   error UnableToClaimReward();
   error ReserveQuantityTooLarge();
   error WrongAmount();
-  error WrongAddress();
   error ZeroReservedQuantity();
   error ZeroReservedWish();
-  error InvalidWish();
+  error InvalidWish(address wisher);
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -243,7 +242,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     SubjectType subjectType;
 
     if (wishPasses[sharesSubject].owner != address(0)) {
-      if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
+      if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply += amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
@@ -302,7 +301,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     SubjectType subjectType;
 
     if (wishPasses[sharesSubject].owner != address(0)) {
-      if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
+      if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
       uint256 balance = wishPasses[sharesSubject].balanceOf[_msgSender()];
       _checkBalance(sharesSubject, balance, amount);
 
@@ -382,7 +381,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
   function bindWishPass(address sharesSubject, address wisher) external virtual onlyOwner {
-    if (sharesSubject == address(0) || wisher == address(0)) revert WrongAddress();
+    if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
 
@@ -407,8 +406,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
 
     address wisher = authorizedWishes[sharesSubject];
-    if (wishPasses[wisher].owner != wisher) revert InvalidWish();
-    if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch();
+    if (wishPasses[wisher].owner != wisher) revert InvalidWish(wishPasses[wisher].owner);
+    if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch(wishPasses[wisher].subject);
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
     //    if (wishPasses[wisher].balanceOf[sharesSubject] > 0) revert ZeroReservedWish();
 

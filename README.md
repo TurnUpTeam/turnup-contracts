@@ -55,7 +55,7 @@ npm run size
 ## Test coverage
 
 ```
-  25 passing (2s)
+  25 passing (3s)
 
 ---------------------|----------|----------|----------|----------|----------------|
 File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |

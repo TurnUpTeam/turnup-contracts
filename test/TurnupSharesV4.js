@@ -375,10 +375,12 @@ describe("TurnupSharesV4", function () {
     await turnupShares.newWishPass(wished.address, reservedQuantity);
 
     // Attempt to bind with a zero subject address
-    await expect(turnupShares.bindWishPass(ethers.constants.AddressZero, wished.address)).to.be.revertedWith("WrongAddress()");
+    await expect(turnupShares.bindWishPass(ethers.constants.AddressZero, wished.address)).to.be.revertedWith(
+      "InvalidZeroAddress()"
+    );
 
     // Attempt to bind with a zero wisher address
-    await expect(turnupShares.bindWishPass(subject, ethers.constants.AddressZero)).to.be.revertedWith("WrongAddress()");
+    await expect(turnupShares.bindWishPass(subject, ethers.constants.AddressZero)).to.be.revertedWith("InvalidZeroAddress()");
   });
 
   it("should allow users to buy wish shares", async function () {
