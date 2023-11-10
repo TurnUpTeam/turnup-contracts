@@ -8,7 +8,7 @@ async function main() {
 
   const implementation = await ethers.getContractFactory("TurnupSharesV4");
 
-  const turnup = await upgrades.upgradeProxy("0x4a7ed799b75bC8BA109Fa6a4F2B8Ce622eEd8C6B", implementation);
+  const turnup = await upgrades.upgradeProxy("0x5a1B8f5780b41bE5ACB7BD423E2676526685Ef64", implementation);
   console.log("Box upgraded");
 
   console.log("Turnup(Proxy) address:", await turnup.address);
