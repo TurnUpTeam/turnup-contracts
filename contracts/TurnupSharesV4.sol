@@ -27,7 +27,6 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
   error InvalidZeroAddress();
   error DuplicateWish();
   error WishNotFound();
-  error DuplicateBind();
   error ClaimRewardShouldBeFalse();
   error TransactionFailedDueToPrice();
   error OnlyKeysOwnerCanBuyFirstKey();
@@ -44,10 +43,8 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
   error ReserveQuantityTooLarge();
   error WrongAmount();
   error WrongAddress();
-  error NotVoteFound();
   error ZeroReservedQuantity();
   error ZeroReservedWish();
-  error OwnerCantBeWisher();
   error InvalidWish();
 
   address public protocolFeeDestination;
@@ -60,10 +57,12 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
   // SharesSubject => Supply
   mapping(address => uint256) public sharesSupply;
 
-  // new variables in V3
+  // new variables in V4
 
+  // @dev Mapping of authorized wishes
   mapping(address => address) public authorizedWishes;
 
+  // @dev Struct to track a wish pass
   struct WishPass {
     address owner;
     address subject;
@@ -73,14 +72,18 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
     uint256 reservedQuantity;
     mapping(address => uint256) balanceOf;
   }
+
+  // @dev Mapping of wish passes
   mapping(address => WishPass) public wishPasses;
 
+  // @dev Enum to track the type of subject
   enum SubjectType {
     WISH,
     BIND,
     KEY
   }
 
+  // @dev Event emitted when a trade is executed
   event Trade(
     address indexed trader,
     address indexed subject,
@@ -93,6 +96,7 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
     SubjectType subjectType
   );
 
+  // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
     if (protocolFeeDestination == address(0)) revert ProtocolFeeDestinationNotSet();
     if (protocolFeePercent == 0) revert ProtocolFeePercentNotSet();
@@ -100,14 +104,18 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
     _;
   }
 
+  // @dev Initialize the contract
   function initialize() public initializer {
     __Ownable_init();
     __UUPSUpgradeable_init();
   }
 
+  // @dev Internal function to authorize an upgrade
   // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
+  // @dev Helper to get the version of the contract
+  // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
     return "v4.1.6";
   }
