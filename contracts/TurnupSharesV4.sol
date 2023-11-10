@@ -231,7 +231,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
     uint256 supply = getSupply(sharesSubject);
     // solhint-disable-next-line reason-string
-    if (!(supply > 0 || sharesSubject == msg.sender)) revert OnlyKeysOwnerCanBuyFirstKey();
+    if (!(supply > 0 || sharesSubject == _msgSender())) revert OnlyKeysOwnerCanBuyFirstKey();
 
     uint256 price = getPrice(supply, amount);
     uint256 protocolFee = getProtocolFee(price);
@@ -246,23 +246,23 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply += amount;
-      wishPasses[sharesSubject].balanceOf[msg.sender] += amount;
+      wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
       _sendBuyFunds(protocolFee, subjectFee, address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
       wishPasses[wisher].totalSupply += amount;
-      wishPasses[wisher].balanceOf[msg.sender] += amount;
+      wishPasses[wisher].balanceOf[_msgSender()] += amount;
       _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
     } else {
       subjectType = SubjectType.KEY;
-      sharesBalance[sharesSubject][msg.sender] += amount;
+      sharesBalance[sharesSubject][_msgSender()] += amount;
       sharesSupply[sharesSubject] += amount;
       _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
     }
 
-    emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
   }
 
   // @dev Internal function to send funds when buying shares or wishes
@@ -303,36 +303,36 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuiOrSell();
-      uint256 balance = wishPasses[sharesSubject].balanceOf[msg.sender];
+      uint256 balance = wishPasses[sharesSubject].balanceOf[_msgSender()];
       _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply -= amount;
-      wishPasses[sharesSubject].balanceOf[msg.sender] -= amount;
+      wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
 
       _sendSellFunds(price, protocolFee, subjectFee, address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       address wisher = authorizedWishes[sharesSubject];
-      uint256 balance = wishPasses[wisher].balanceOf[msg.sender];
+      uint256 balance = wishPasses[wisher].balanceOf[_msgSender()];
       _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.BIND;
       wishPasses[sharesSubject].totalSupply -= amount;
-      wishPasses[sharesSubject].balanceOf[msg.sender] -= amount;
+      wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
 
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     } else {
-      uint256 balance = sharesBalance[sharesSubject][msg.sender];
+      uint256 balance = sharesBalance[sharesSubject][_msgSender()];
       _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.KEY;
-      sharesBalance[sharesSubject][msg.sender] -= amount;
+      sharesBalance[sharesSubject][_msgSender()] -= amount;
       sharesSupply[sharesSubject] -= amount;
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     }
 
-    emit Trade(msg.sender, sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount, subjectType);
+    emit Trade(_msgSender(), sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount, subjectType);
   }
 
   // @dev Internal function to send funds when selling shares or wishes
@@ -342,7 +342,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param subjectFee The subject fee
   // @param sharesSubject The subject of the shares
   function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
-    (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
+    (bool success1, ) = _msgSender().call{value: price - protocolFee - subjectFee}("");
     (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
     bool success3 = true;
     if (sharesSubject != address(0)) {
@@ -402,7 +402,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev This function is used to claim the reserved wish pass
   //   Only the sharesSubject itself can call this function to make the claim
   function claimReservedWishPass() external payable virtual {
-    address sharesSubject = msg.sender;
+    address sharesSubject = _msgSender();
 
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
 
@@ -425,6 +425,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
 
     uint256 supply = wishPasses[wisher].totalSupply;
-    emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply, SubjectType.BIND);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, protocolFee, subjectFee, supply, SubjectType.BIND);
   }
 }
