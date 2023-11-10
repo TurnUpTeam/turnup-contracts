@@ -4,9 +4,9 @@
 pragma solidity 0.8.19;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
+contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   /*
     About ownership and upgradeability
 
@@ -23,6 +23,21 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
     For example, the infamous crash of Terra/UST could have been mitigated if they
     did not have to wait for the fixed lockup time before intervening.
 */
+
+  // @dev Event emitted when a trade is executed
+  event Trade(
+    address indexed trader,
+    address indexed subject,
+    bool isBuy,
+    uint256 shareAmount,
+    uint256 ethAmount,
+    uint256 protocolEthAmount,
+    uint256 subjectEthAmount,
+    uint256 supply,
+    SubjectType subjectType
+  );
+
+  event Bind(address indexed sharesSubject, address indexed wisher);
 
   error InvalidZeroAddress();
   error DuplicateWish();
@@ -83,19 +98,6 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
     KEY
   }
 
-  // @dev Event emitted when a trade is executed
-  event Trade(
-    address indexed trader,
-    address indexed subject,
-    bool isBuy,
-    uint256 shareAmount,
-    uint256 ethAmount,
-    uint256 protocolEthAmount,
-    uint256 subjectEthAmount,
-    uint256 supply,
-    SubjectType subjectType
-  );
-
   // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
     if (protocolFeeDestination == address(0)) revert ProtocolFeeDestinationNotSet();
@@ -107,17 +109,12 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
   // @dev Initialize the contract
   function initialize() public initializer {
     __Ownable_init();
-    __UUPSUpgradeable_init();
   }
-
-  // @dev Internal function to authorize an upgrade
-  // solhint-disable-next-line no-empty-blocks
-  function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.1.6";
+    return "v4.1.7";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -398,6 +395,7 @@ contract TurnupSharesV4 is UUPSUpgradeable, OwnableUpgradeable {
       (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");
       if (!success) revert UnableToClaimReward();
     }
+    emit Bind(sharesSubject, wisher);
   }
 
   // @dev This function is used to claim the reserved wish pass

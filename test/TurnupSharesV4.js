@@ -24,7 +24,7 @@ describe("TurnupSharesV4", function () {
 
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
-    expect(await turnupShares.getVer()).to.equal("v4.1.6");
+    expect(await turnupShares.getVer()).to.equal("v4.1.7");
   });
 
   async function init() {
@@ -326,7 +326,9 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setFeeDestination(project.address);
 
     // Owner binds the wish pass to a subject
-    await turnupShares.bindWishPass(subject, wished.address);
+    await expect(turnupShares.bindWishPass(subject, wished.address))
+      .to.emit(turnupShares, "Bind")
+      .withArgs(subject, wished.address);
 
     // Check if the wish pass has been bound correctly
     expect(await turnupShares.authorizedWishes(subject)).to.equal(wished.address);
