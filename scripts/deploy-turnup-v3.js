@@ -4,20 +4,26 @@ const web3 = require("web3");
 async function main() {
   const [deployer] = await ethers.getSigners();
 
-  console.log("Upgrading Turnup with the account:", deployer.address);
+  console.log("Deploying contracts with the account:", deployer.address);
 
-  const implementation = await ethers.getContractFactory("TurnupSharesV4");
-
-  const chainId = (await this.ethers.provider.getNetwork()).chainId;
-
-  const address = chainId === 56 ? "0x5a1B8f5780b41bE5ACB7BD423E2676526685Ef64" : process.env.ADDRESS;
-
-  const turnup = await upgrades.upgradeProxy(address, implementation);
-  console.log("Box upgraded");
+  const TurnupSharesV1 = await ethers.getContractFactory("TurnupSharesV3");
+  const turnup = await upgrades.deployProxy(TurnupSharesV1);
+  await turnup.deployed();
 
   console.log("Turnup(Proxy) address:", await turnup.address);
   console.log("Turnup(Implementation) address:", await upgrades.erc1967.getImplementationAddress(turnup.address));
   console.log("Turnup(Admin) address:", await upgrades.erc1967.getAdminAddress(turnup.address));
+
+  console.log("process.env.FEE_DESTINATION:", process.env.FEE_DESTINATION);
+  await turnup.setFeeDestination(process.env.FEE_DESTINATION);
+
+  percent = web3.utils.toWei("0.05", "ether");
+
+  await new Promise((r) => setTimeout(r, 3000));
+  await turnup.setProtocolFeePercent(percent);
+
+  await new Promise((r) => setTimeout(r, 3000));
+  await turnup.setSubjectFeePercent(percent);
 
   await new Promise((r) => setTimeout(r, 5000));
 
