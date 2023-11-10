@@ -48,7 +48,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error OnlyKeysOwnerCanBuyFirstKey();
   error BoundCannotBeBuiOrSell();
   error InvalidAmount();
-  error InsufficientKeys();
+  error InsufficientKeys(address sender, address sharesSubject, uint256 balance, uint256 amount);
   error CannotSellLastKey();
   error ProtocolFeeDestinationNotSet();
   error ProtocolFeePercentNotSet();
@@ -115,7 +115,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.1.7";
+    return "v4.1.8";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -284,8 +284,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param balance The balance of the subject
   // @param amount The amount to check
   function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
-    if (balance < amount) revert InsufficientKeys();
-    if (!(sharesSubject != msg.sender || balance > amount)) revert CannotSellLastKey();
+    if (balance < amount) revert InsufficientKeys(_msgSender(), sharesSubject, balance, amount);
+    if (!(sharesSubject != _msgSender() || balance > amount)) revert CannotSellLastKey();
   }
 
   // @dev Sell shares for a given subject

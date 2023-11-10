@@ -24,7 +24,7 @@ describe("TurnupSharesV4", function () {
 
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
-    expect(await turnupShares.getVer()).to.equal("v4.1.7");
+    expect(await turnupShares.getVer()).to.equal("v4.1.8");
   });
 
   async function init() {
@@ -209,7 +209,11 @@ describe("TurnupSharesV4", function () {
 
     let gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).sellShares(subject, amountToSell));
 
-    await expect(turnupShares.connect(buyer).sellShares(subject, amountToSell)).revertedWith("InsufficientKeys()");
+    const buyerShares = await turnupShares.sharesBalance(subject, buyer.address);
+
+    await expect(turnupShares.connect(buyer).sellShares(subject, amountToSell)).revertedWith(
+      `InsufficientKeys("${buyer.address}", "${subject}", ${buyerShares}, ${amountToSell})`
+    );
 
     amountToSell = 2;
     sellPrice = await turnupShares.getSellPrice(subject, amountToSell);
