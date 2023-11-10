@@ -7,5 +7,3 @@ if [[ "$SKIP_COMPILE" == "" ]]; then
 fi
 
 node scripts/exportABIs.js
-cp export/ABIs.json ../cruna-dashboard/src/config/.
-cp export/deployed.json ../cruna-dashboard/src/config/.

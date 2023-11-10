@@ -52,18 +52,24 @@ npm run lint
 npm run size
 ```
 
+### Flatten the smart contracts
+
+After deploying to the blockchain, you can flatten the smart contracts to verify the source code on Etherscan with the following command:
+
+```
+bin/flatten.sh TurnupSharesV4
+```
+
+### To export the ABI
+
+```
+bin/export.sh
+```
+
+Notice that the ABI is exported anyway during the pre-commit hook.
+
 ## Test coverage
 
 ```
-  25 passing (3s)
 
----------------------|----------|----------|----------|----------|----------------|
-File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
----------------------|----------|----------|----------|----------|----------------|
- contracts/          |    94.59 |    63.39 |      100 |    93.75 |                |
-  Lock.sol           |      100 |      100 |      100 |      100 |                |
-  TurnupSharesV4.sol |    94.34 |    61.32 |      100 |    93.43 |... 324,396,397 |
----------------------|----------|----------|----------|----------|----------------|
-All files            |    94.59 |    63.39 |      100 |    93.75 |                |
----------------------|----------|----------|----------|----------|----------------|
 ```
