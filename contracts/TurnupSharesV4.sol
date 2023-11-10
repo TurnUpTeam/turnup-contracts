@@ -40,7 +40,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event Bind(address indexed sharesSubject, address indexed wisher);
 
   error InvalidZeroAddress();
-  error DuplicateWish();
+  error ExistingWish(address wisher);
+  error WishAlreadyBound(address wisher);
   error WishNotFound();
   error ClaimRewardShouldBeFalse();
   error TransactionFailedDueToPrice();
@@ -369,7 +370,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOwner onlyIfSetup {
     if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
-    if (wishPasses[wisher].owner != address(0)) revert DuplicateWish();
+    if (wishPasses[wisher].owner != address(0)) revert ExistingWish(wishPasses[wisher].owner);
 
     wishPasses[wisher].owner = wisher;
     wishPasses[wisher].reservedQuantity = reservedQuantity;
@@ -383,7 +384,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function bindWishPass(address sharesSubject, address wisher) external virtual onlyOwner {
     if (sharesSubject == address(0) || wisher == address(0)) revert WrongAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
-    if (authorizedWishes[sharesSubject] != address(0)) revert DuplicateWish();
+    if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
 
     wishPasses[wisher].subject = sharesSubject;
     authorizedWishes[sharesSubject] = wisher;

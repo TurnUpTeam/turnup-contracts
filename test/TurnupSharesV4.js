@@ -358,7 +358,9 @@ describe("TurnupSharesV4", function () {
     await turnupShares.bindWishPass(subject, wished.address);
 
     // Try to bind the same wish pass again
-    await expect(turnupShares.bindWishPass(subject, wished.address)).to.be.revertedWith("DuplicateWish()");
+    await expect(turnupShares.bindWishPass(subject, wished.address)).to.be.revertedWith(
+      `WishAlreadyBound("${wished.address}")`
+    );
   });
 
   it("should revert if the subject or wisher address is zero", async function () {
