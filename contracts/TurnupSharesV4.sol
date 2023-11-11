@@ -37,7 +37,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     SubjectType subjectType
   );
 
-  event Bind(address indexed sharesSubject, address indexed wisher);
+  event WishCreated(address wisher, uint256 reservedQuantity);
+  event WishBound(address indexed sharesSubject, address indexed wisher);
+  event ProtocolFeeDestinationUpdated(address protocolFeeDestination);
+  event ProtocolFeePercentUpdated(uint256 protocolFeePercent);
+  event SubjectFeePercentUpdated(uint256 subjectFeePercent);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -106,6 +110,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _;
   }
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   // @dev Initialize the contract
   function initialize() public initializer {
     __Ownable_init();
@@ -114,7 +123,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.1.8";
+    return "v4.1.9";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -130,18 +139,21 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function setFeeDestination(address _feeDestination) public virtual onlyOwner {
     if (_feeDestination == address(0)) revert InvalidZeroAddress();
     protocolFeeDestination = _feeDestination;
+    emit ProtocolFeeDestinationUpdated(_feeDestination);
   }
 
   // @dev Set the protocol fee percent
   // @param _feePercent The percent of the protocol fee
   function setProtocolFeePercent(uint256 _feePercent) public virtual onlyOwner {
     protocolFeePercent = _feePercent;
+    emit ProtocolFeePercentUpdated(_feePercent);
   }
 
   // @dev Set the subject fee percent
   // @param _feePercent The percent of the subject fee
   function setSubjectFeePercent(uint256 _feePercent) public virtual onlyOwner {
     subjectFeePercent = _feePercent;
+    emit SubjectFeePercentUpdated(_feePercent);
   }
 
   // @dev Get the price of a given amount of shares
@@ -225,6 +237,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev Buy shares for a given subject
+  // @notice The function allows to buy 3 types of shares:
+  //   - Keys: The shares of the subject
+  //   - Wishes: The shares of the wisher who has not joined yet the system
+  //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
   function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
@@ -288,6 +304,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev Sell shares for a given subject
+  // @notice The function allows to sell 3 types of shares:
+  //   - Keys: The shares of the subject
+  //   - Wishes: The shares of the wisher who has not joined yet the system
+  //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
   function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup {
@@ -374,6 +394,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].owner = wisher;
     wishPasses[wisher].reservedQuantity = reservedQuantity;
     wishPasses[wisher].totalSupply = reservedQuantity;
+    emit WishCreated(wisher, reservedQuantity);
   }
 
   // @dev This function is used to bind a wish to a subject
@@ -395,7 +416,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");
       if (!success) revert UnableToClaimReward();
     }
-    emit Bind(sharesSubject, wisher);
+    emit WishBound(sharesSubject, wisher);
   }
 
   // @dev This function is used to claim the reserved wish pass

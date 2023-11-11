@@ -24,7 +24,7 @@ describe("TurnupSharesV4", function () {
 
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
-    expect(await turnupShares.getVer()).to.equal("v4.1.8");
+    expect(await turnupShares.getVer()).to.equal("v4.1.9");
   });
 
   async function init() {
@@ -48,19 +48,25 @@ describe("TurnupSharesV4", function () {
   });
 
   it("should allow the owner to set fee destination", async function () {
-    await turnupShares.setFeeDestination(project.address);
+    await expect(turnupShares.setFeeDestination(project.address))
+      .to.emit(turnupShares, "ProtocolFeeDestinationUpdated")
+      .withArgs(project.address);
     expect(await turnupShares.protocolFeeDestination()).to.equal(project.address);
   });
 
   it("should allow the owner to set protocol fee percent", async function () {
     const protocolFee = ethers.utils.parseUnits("5", "wei"); // example fee
-    await turnupShares.setProtocolFeePercent(protocolFee);
+    await expect(turnupShares.setProtocolFeePercent(protocolFee))
+      .to.emit(turnupShares, "ProtocolFeePercentUpdated")
+      .withArgs(protocolFee);
     expect(await turnupShares.protocolFeePercent()).to.equal(protocolFee);
   });
 
   it("should allow the owner to set subject fee percent", async function () {
     const subjectFee = ethers.utils.parseUnits("5", "wei"); // example fee
-    await turnupShares.setSubjectFeePercent(subjectFee);
+    await expect(turnupShares.setSubjectFeePercent(subjectFee))
+      .to.emit(turnupShares, "SubjectFeePercentUpdated")
+      .withArgs(subjectFee);
     expect(await turnupShares.subjectFeePercent()).to.equal(subjectFee);
   });
 
@@ -326,12 +332,14 @@ describe("TurnupSharesV4", function () {
     const reservedQuantity = 10;
 
     // Owner creates a new wish pass
-    await turnupShares.newWishPass(wished.address, reservedQuantity);
+    await expect(turnupShares.newWishPass(wished.address, reservedQuantity))
+      .to.emit(turnupShares, "WishCreated")
+      .withArgs(wished.address, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
 
     // Owner binds the wish pass to a subject
     await expect(turnupShares.bindWishPass(subject, wished.address))
-      .to.emit(turnupShares, "Bind")
+      .to.emit(turnupShares, "WishBound")
       .withArgs(subject, wished.address);
 
     // Check if the wish pass has been bound correctly
@@ -491,5 +499,20 @@ describe("TurnupSharesV4", function () {
     // Check if the reserved quantity for the 'wished' address is set to 0 after claiming
     const wishPass = await turnupShares.wishPasses(wished.address);
     expect((await turnupShares.wishPasses(wished.address)).reservedQuantity).to.equal(0);
+  });
+
+  it("should be upgradeable by the owner", async function () {
+    const Upgraded = await ethers.getContractFactory("TurnupSharesV4b");
+    const upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
+
+    expect(await upgraded.getVer()).to.equal("v7.0.0");
+  });
+
+  it("should prevent non-owners from upgrading the contract", async function () {
+    const Upgraded = await ethers.getContractFactory("TurnupSharesV4b");
+
+    await expect(upgrades.upgradeProxy(turnupShares.address, Upgraded.connect(buyer))).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
   });
 });
