@@ -12,7 +12,6 @@ async function main() {
     let json = require(source);
     ABIs.contracts[rename || name] = json.abi;
   }
-  abi("Lock", "contracts");
   abi("TurnupSharesV4", "contracts");
 
   await fs.writeFile(path.resolve(__dirname, "../export/ABIs.json"), JSON.stringify(ABIs, null, 2));
