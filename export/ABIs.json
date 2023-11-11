@@ -1,7 +1,12 @@
 {
-  "when": "2023-11-11T03:42:19.504Z",
+  "when": "2023-11-11T18:41:30.711Z",
   "contracts": {
     "TurnupSharesV4": [
+      {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
       {
         "inputs": [],
         "name": "BoundCannotBeBuyOrSell",
@@ -161,25 +166,6 @@
         "anonymous": false,
         "inputs": [
           {
-            "indexed": true,
-            "internalType": "address",
-            "name": "sharesSubject",
-            "type": "address"
-          },
-          {
-            "indexed": true,
-            "internalType": "address",
-            "name": "wisher",
-            "type": "address"
-          }
-        ],
-        "name": "Bind",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
             "indexed": false,
             "internalType": "uint8",
             "name": "version",
@@ -206,6 +192,45 @@
           }
         ],
         "name": "OwnershipTransferred",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "protocolFeeDestination",
+            "type": "address"
+          }
+        ],
+        "name": "ProtocolFeeDestinationUpdated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "protocolFeePercent",
+            "type": "uint256"
+          }
+        ],
+        "name": "ProtocolFeePercentUpdated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "subjectFeePercent",
+            "type": "uint256"
+          }
+        ],
+        "name": "SubjectFeePercentUpdated",
         "type": "event"
       },
       {
@@ -267,6 +292,44 @@
           }
         ],
         "name": "Trade",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "sharesSubject",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "wisher",
+            "type": "address"
+          }
+        ],
+        "name": "WishBound",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "wisher",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "reservedQuantity",
+            "type": "uint256"
+          }
+        ],
+        "name": "WishCreated",
         "type": "event"
       },
       {
