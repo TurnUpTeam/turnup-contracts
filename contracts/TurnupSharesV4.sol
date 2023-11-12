@@ -331,7 +331,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param amount The amount to check
   function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
     if (balance < amount) revert InsufficientKeys(balance);
-    if (sharesSubject == _msgSender() && balance <= amount) revert CannotSellLastKey();
+    if (sharesSubject == _msgSender() && balance == amount) revert CannotSellLastKey();
   }
 
   // @dev Sell shares for a given subject

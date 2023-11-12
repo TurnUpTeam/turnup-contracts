@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-12T05:00:21.544Z",
+  "when": "2023-11-12T06:12:55.054Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -36,23 +36,8 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "sender",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "sharesSubject",
-            "type": "address"
-          },
-          {
             "internalType": "uint256",
             "name": "balance",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
             "type": "uint256"
           }
         ],
@@ -420,6 +405,30 @@
         "name": "claimReservedWishPass",
         "outputs": [],
         "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "sharesSubject",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "user",
+            "type": "address"
+          }
+        ],
+        "name": "getBalanceOf",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
