@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-12T06:27:30.343Z",
+  "when": "2023-11-12T06:44:04.796Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -27,11 +27,6 @@
           {
             "internalType": "uint256",
             "name": "supply",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "balance",
             "type": "uint256"
           },
           {
