@@ -336,7 +336,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev Validate the amounts to avoid overflow
-  function _validateAmounts(uint256 supply, uint256 balance, uint256 amount) internal view {
+  function _validateAmounts(uint256 supply, uint256 balance, uint256 amount) internal pure {
     if (supply < amount || balance < amount) revert ExcessiveAmount(supply, balance, amount);
   }
 
