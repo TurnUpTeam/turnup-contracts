@@ -213,7 +213,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       return sharesBalance[sharesSubject][user];
     }
   }
-  
+
   // @dev Get the buy price of a given amount of shares
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
@@ -232,7 +232,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (supply < amount) revert InvalidAmount();
     return getPrice(supply - amount, amount);
   }
-  
+
   // @dev Get the buy price of a given amount of shares after fees
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
@@ -331,7 +331,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param amount The amount to check
   function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
     if (balance < amount) revert InsufficientKeys(balance);
-    if (!(sharesSubject != _msgSender() || balance > amount)) revert CannotSellLastKey();
+    if (sharesSubject == _msgSender() && balance <= amount) revert CannotSellLastKey();
   }
 
   // @dev Sell shares for a given subject
@@ -352,7 +352,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     SubjectType subjectType;
     uint256 balance = getBalanceOf(sharesSubject, _msgSender());
     _checkBalance(sharesSubject, balance, amount);
-    
+
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
 
