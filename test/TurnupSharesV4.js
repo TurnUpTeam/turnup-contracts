@@ -220,7 +220,7 @@ describe("TurnupSharesV4", function () {
     const buyerShares = await turnupShares.sharesBalance(subject, buyer.address);
 
     await expect(turnupShares.connect(buyer).sellShares(subject, amountToSell)).revertedWith(
-      `InsufficientKeys("${buyer.address}", "${subject}", ${buyerShares}, ${amountToSell})`
+      `InsufficientKeys(${buyerShares})`
     );
 
     amountToSell = 2;
