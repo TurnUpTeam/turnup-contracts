@@ -77,7 +77,7 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 File                  |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 ----------------------|----------|----------|----------|----------|----------------|
  contracts/           |    94.74 |    63.16 |      100 |    93.88 |                |
-  TurnupSharesV4.sol  |    94.74 |    63.16 |      100 |    93.88 |... 355,428,429 |
+  TurnupSharesV4.sol  |    94.74 |    63.16 |      100 |    93.88 |... 356,429,430 |
  contracts/mocks/     |      2.5 |        0 |     7.69 |     2.13 |                |
   TurnupSharesV3.sol  |        0 |        0 |        0 |        0 |... 122,123,125 |
   TurnupSharesV4b.sol |      100 |      100 |      100 |      100 |                |
