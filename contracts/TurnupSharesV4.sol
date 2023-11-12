@@ -199,6 +199,21 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     }
   }
 
+  // @dev Get hold balance of shares
+  // @param sharesSubject The subject of the shares
+  // @param user The holder of the shares
+  // @return The balance of holder
+  function getBalanceOf(address sharesSubject, address user) public view virtual returns (uint256) {
+    if (wishPasses[sharesSubject].owner != address(0)) {
+      return wishPasses[sharesSubject].balanceOf[user];
+    } else if (authorizedWishes[sharesSubject] != address(0)) {
+      address wisher = authorizedWishes[sharesSubject];
+      return wishPasses[wisher].balanceOf[user];
+    } else {
+      return sharesBalance[sharesSubject][user];
+    }
+  }
+  
   // @dev Get the buy price of a given amount of shares
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
@@ -217,7 +232,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (supply < amount) revert InvalidAmount();
     return getPrice(supply - amount, amount);
   }
-
+  
   // @dev Get the buy price of a given amount of shares after fees
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
@@ -335,11 +350,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 subjectFee = getSubjectFee(price);
 
     SubjectType subjectType;
-
+    uint256 balance = getBalanceOf(sharesSubject, _msgSender());
+    _checkBalance(sharesSubject, balance, amount);
+    
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
-      uint256 balance = wishPasses[sharesSubject].balanceOf[_msgSender()];
-      _checkBalance(sharesSubject, balance, amount);
 
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply -= amount;
@@ -348,19 +363,13 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
       _sendSellFunds(price, protocolFee, subjectFee, address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
-      address wisher = authorizedWishes[sharesSubject];
-      uint256 balance = wishPasses[wisher].balanceOf[_msgSender()];
-      _checkBalance(sharesSubject, balance, amount);
-
       subjectType = SubjectType.BIND;
-      wishPasses[sharesSubject].totalSupply -= amount;
-      wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
+      address wisher = authorizedWishes[sharesSubject];
+      wishPasses[wisher].totalSupply -= amount;
+      wishPasses[wisher].balanceOf[_msgSender()] -= amount;
 
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     } else {
-      uint256 balance = sharesBalance[sharesSubject][_msgSender()];
-      _checkBalance(sharesSubject, balance, amount);
-
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][_msgSender()] -= amount;
       sharesSupply[sharesSubject] -= amount;
