@@ -112,6 +112,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _;
   }
 
+  // @dev Modifier to check if the caller is the operator
   modifier onlyOperator() {
     if (operator == address(0)) revert OperatorNotSet();
     if (operator != _msgSender()) revert NotTheOperator();
@@ -128,6 +129,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     __Ownable_init();
   }
 
+  // @dev Set the operator
+  // @param _operator The address of the operator
   function setOperator(address _operator) public onlyOwner {
     if (_operator == address(0)) revert InvalidZeroAddress();
     operator = _operator;
