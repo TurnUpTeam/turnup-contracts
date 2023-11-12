@@ -10,18 +10,16 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   /*
     About ownership and upgradeability
 
-    There is a strategy for it. Following OpenZeppelin best practices, we will deploy
-    the contracts and then transfer the ownership of the proxy-contract to a
-    Gnosis safe multi-sig wallet. Any subsequent upgrades will be performed
-    according to this process. Here is the guide we will follow to transfer ownership
-    to the multi-sig wallet and later deploy new implementations:
-    https://docs.openzeppelin.com/defender/guide-upgrades
+    The smart contract is upgraded by a multi-sig wallet. We are in the process of defining a DAO to manage it.
+    The owner is right now a standard wallet, but will be changed to a multi-sig wallet too once the DAO is ready.
 
     We are not implementing an explicit time-lock process because when
     a bug is discovered (which is the primary reason why we are using upgradeable
     contracts), the speed of response is crucial to avoid disaster.
     For example, the infamous crash of Terra/UST could have been mitigated if they
     did not have to wait for the fixed lockup time before intervening.
+
+    However, if the future DAO decides to implement a time-lock, it will be implemented in a future upgrade.
 */
 
   // @dev Event emitted when a trade is executed
@@ -65,6 +63,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error ZeroReservedQuantity();
   error ZeroReservedWish();
   error InvalidWish(address wisher);
+  error NotTheOperator();
+  error OperatorNotSet();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -102,11 +102,20 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     KEY
   }
 
+  address public operator;
+
   // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
     if (protocolFeeDestination == address(0)) revert ProtocolFeeDestinationNotSet();
     if (protocolFeePercent == 0) revert ProtocolFeePercentNotSet();
     if (subjectFeePercent == 0) revert SubjectFeePercentNotSet();
+    _;
+  }
+
+  // @dev Modifier to check if the caller is the operator
+  modifier onlyOperator() {
+    if (operator == address(0)) revert OperatorNotSet();
+    if (operator != _msgSender()) revert NotTheOperator();
     _;
   }
 
@@ -120,10 +129,17 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     __Ownable_init();
   }
 
+  // @dev Set the operator
+  // @param _operator The address of the operator
+  function setOperator(address _operator) public onlyOwner {
+    if (_operator == address(0)) revert InvalidZeroAddress();
+    operator = _operator;
+  }
+
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.1.9";
+    return "v4.2.0";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -386,7 +402,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the contract owner can execute it.
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
-  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOwner onlyIfSetup {
+  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOperator onlyIfSetup {
     if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != address(0)) revert ExistingWish(wishPasses[wisher].owner);
@@ -401,7 +417,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the contract owner can execute it.
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
-  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOwner {
+  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator {
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
