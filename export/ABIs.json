@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-12T07:01:04.334Z",
+  "when": "2023-11-13T17:16:05.550Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -20,22 +20,6 @@
       {
         "inputs": [],
         "name": "ClaimRewardShouldBeFalse",
-        "type": "error"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "supply",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "name": "ExcessiveAmount",
         "type": "error"
       },
       {

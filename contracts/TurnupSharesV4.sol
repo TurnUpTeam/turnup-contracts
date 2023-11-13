@@ -65,7 +65,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error InvalidWish(address wisher);
   error NotTheOperator();
   error OperatorNotSet();
-  error ExcessiveAmount(uint256 supply, uint256 amount);
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -140,7 +139,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.2.0";
+    return "v4.2.1";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -335,11 +334,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (sharesSubject == _msgSender() && balance == amount) revert CannotSellLastKey();
   }
 
-  // @dev Validate the amounts to avoid overflow
-  function _validateAmounts(uint256 supply, uint256 amount) internal pure {
-    if (supply < amount) revert ExcessiveAmount(supply, amount);
-  }
-
   // @dev Sell shares for a given subject
   // @notice The function allows to sell 3 types of shares:
   //   - Keys: The shares of the subject
@@ -363,7 +357,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
 
       subjectType = SubjectType.WISH;
-      _validateAmounts(wishPasses[sharesSubject].totalSupply, amount);
       wishPasses[sharesSubject].totalSupply -= amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
@@ -372,14 +365,12 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
-      _validateAmounts(wishPasses[wisher].totalSupply, amount);
       wishPasses[wisher].totalSupply -= amount;
       wishPasses[wisher].balanceOf[_msgSender()] -= amount;
 
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     } else {
       subjectType = SubjectType.KEY;
-      _validateAmounts(sharesSupply[sharesSubject], amount);
       sharesBalance[sharesSubject][_msgSender()] -= amount;
       sharesSupply[sharesSubject] -= amount;
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
