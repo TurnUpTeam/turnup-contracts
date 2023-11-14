@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-13T17:16:05.550Z",
+  "when": "2023-11-14T03:25:26.785Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -150,11 +150,6 @@
       {
         "inputs": [],
         "name": "ZeroReservedQuantity",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "ZeroReservedWish",
         "type": "error"
       },
       {

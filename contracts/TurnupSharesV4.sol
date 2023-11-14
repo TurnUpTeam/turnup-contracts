@@ -61,7 +61,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error ReserveQuantityTooLarge();
   error WrongAmount();
   error ZeroReservedQuantity();
-  error ZeroReservedWish();
   error InvalidWish(address wisher);
   error NotTheOperator();
   error OperatorNotSet();
@@ -455,7 +454,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[wisher].owner != wisher) revert InvalidWish(wishPasses[wisher].owner);
     if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch(wishPasses[wisher].subject);
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
-    //    if (wishPasses[wisher].balanceOf[sharesSubject] > 0) revert ZeroReservedWish();
 
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
