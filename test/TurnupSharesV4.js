@@ -582,16 +582,14 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setFeeDestination(project.address);
 
     // Owner binds the wish pass to a subject
-    await expect(turnupShares.connect(operator).bindWishPass(subject, wished1.address)).to.be.revertedWith("WishNotFound()");
+    await expect(turnupShares.connect(operator).bindWishPass(buyer3.address, wished1.address)).to.be.revertedWith(
+      "WishNotFound()"
+    );
   });
 
   it("should revert when binding same wish", async function () {
     await init();
     const reservedQuantity = 10;
-    const buyPrice = await turnupShares.getBuyPrice(ethers.constants.AddressZero, reservedQuantity);
-    const protocolFee = await turnupShares.getProtocolFee(buyPrice);
-    const subjectFee = await turnupShares.getSubjectFee(buyPrice);
-    const totalPrice = buyPrice.add(protocolFee).add(subjectFee);
     // Owner creates a new wish pass
     await expect(turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity))
       .to.emit(turnupShares, "WishCreated")
