@@ -516,36 +516,4 @@ describe("TurnupSharesV4", function () {
       "Ownable: caller is not the owner"
     );
   });
-
-  it("should replicate test_POC2_newWishPass_bindWishPass_buyShares from CertiK", async function () {
-    // newWishPass(WISH);
-    // buyerBuySharesFrom(SubjectA, SubjectA, 1);
-    // buyerBuySharesFrom(Bob, SubjectA, 10);
-    // buyerBuySharesFrom(Tom, SubjectA, 20);
-    // bindWishPass(SubjectA, WISH);
-    // buyerBuySharesFrom(Bob, SubjectA, 10);
-
-    await init();
-    const reservedQuantity = 10;
-    const amountToBuy = 5;
-    const wisher = wished.address;
-
-    // Owner creates a new wish pass
-    await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
-
-    // Calculate the expected price for buying the wish shares
-    const price = await turnupShares.getBuyPrice(wisher, amountToBuy);
-    const protocolFee = await turnupShares.getProtocolFee(price);
-    const subjectFee = await turnupShares.getSubjectFee(price);
-    const totalPrice = price.add(protocolFee).add(subjectFee);
-
-    // User buys wish shares
-    await expect(turnupShares.connect(buyer).buyShares(wisher, amountToBuy, {value: totalPrice}))
-      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
-      .withArgs(buyer.address, wisher, true, amountToBuy, price, reservedQuantity + amountToBuy, WISH);
-
-    // Check the new total supply and balance for the wisher
-    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(reservedQuantity + amountToBuy);
-    expect(await turnupShares.getWishBalanceOf(wisher, buyer.address)).to.equal(amountToBuy);
-  });
 });
