@@ -500,4 +500,25 @@ describe("TurnupSharesV4", function () {
       "Ownable: caller is not the owner"
     );
   });
+
+  it.only("should revert batch buying multiple wish passes", async function () {
+    await init();
+    // Create 2 wish passes
+    const reservedQty = 10;
+    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
+
+    // Get batch buy prices
+    const wish1Amount = 5;
+    const wish2Amount = 3;
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+
+    // Batch buy
+    await expect(
+      turnupShares.connect(buyer).batchBuyShares([wished1.address], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
+        value: wish1Price.add(wish2Price),
+      })
+    ).to.be.revertedWith("WrongAmount()");
+  });
 });
