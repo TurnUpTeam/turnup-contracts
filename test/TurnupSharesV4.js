@@ -130,13 +130,11 @@ describe("TurnupSharesV4", function () {
     // owner buys shares
 
     let buyPrice = await turnupShares.getBuyPrice(subject, amount);
-    let protocolFee = await turnupShares.getProtocolFee(buyPrice);
-    let subjectFee = await turnupShares.getSubjectFee(buyPrice);
     let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
 
     await expect(turnupShares.buyShares(subject, amount, {value: expectedPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
-      .withArgs(subject, subject, true, amount, expectedPrice, protocolFee, subjectFee, amount, KEY);
+      .withArgs(subject, subject, true, amount, expectedPrice, amount, KEY);
 
     // buyer buys shares
 
@@ -319,7 +317,9 @@ describe("TurnupSharesV4", function () {
     // Batch buy
     await turnupShares
       .connect(buyer)
-      .batchBuyShares([wished1.address, wished2.address], [wish1Amount, wish2Amount], {value: wish1Price.add(wish2Price)});
+      .batchBuyShares([wished1.address, wished2.address], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
+        value: wish1Price.add(wish2Price),
+      });
 
     // Verify balances
     const wish1Balance = await turnupShares.getWishBalanceOf(wished1.address, buyer.address);
@@ -414,7 +414,7 @@ describe("TurnupSharesV4", function () {
     // User buys wish shares
     await expect(turnupShares.connect(buyer).buyShares(wisher, amountToBuy, {value: totalPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
-      .withArgs(buyer.address, wisher, true, amountToBuy, price, protocolFee, subjectFee, reservedQuantity + amountToBuy, WISH);
+      .withArgs(buyer.address, wisher, true, amountToBuy, price, reservedQuantity + amountToBuy, WISH);
 
     // Check the new total supply and balance for the wisher
     expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(reservedQuantity + amountToBuy);
@@ -442,17 +442,7 @@ describe("TurnupSharesV4", function () {
     // User buys authorized wish shares
     await expect(turnupShares.connect(buyer).buyShares(authorizedSubject, amountToBuy, {value: totalPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
-      .withArgs(
-        buyer.address,
-        authorizedSubject,
-        true,
-        amountToBuy,
-        price,
-        protocolFee,
-        subjectFee,
-        reservedQuantity + amountToBuy,
-        BIND
-      );
+      .withArgs(buyer.address, authorizedSubject, true, amountToBuy, price, reservedQuantity + amountToBuy, BIND);
 
     // Check the new total supply and balance for the authorized subject
     expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(reservedQuantity + amountToBuy);
@@ -485,17 +475,7 @@ describe("TurnupSharesV4", function () {
     // Expect the Trade event to be emitted with correct parameters
     await expect(tx)
       .to.emit(turnupShares, "Trade")
-      .withArgs(
-        sharesSubject,
-        sharesSubject,
-        true,
-        reservedQuantity,
-        buyPrice,
-        protocolFee,
-        subjectFee,
-        reservedQuantity,
-        BIND
-      );
+      .withArgs(sharesSubject, sharesSubject, true, reservedQuantity, buyPrice, reservedQuantity, BIND);
 
     // Check if the wish pass balance of the 'wished' address is updated correctly
     let balance = await turnupShares.getWishBalanceOf(sharesSubject, wished.address);

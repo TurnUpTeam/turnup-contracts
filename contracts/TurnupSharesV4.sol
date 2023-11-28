@@ -6,6 +6,8 @@ pragma solidity 0.8.19;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+//import "hardhat/console.sol";
+
 contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   /*
     About ownership and upgradeability
@@ -27,10 +29,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     address indexed trader,
     address indexed subject,
     bool isBuy,
-    uint256 shareAmount,
-    uint256 ethAmount,
-    uint256 protocolEthAmount,
-    uint256 subjectEthAmount,
+    uint256 amount,
+    uint256 price,
     uint256 supply,
     SubjectType subjectType
   );
@@ -64,6 +64,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error InvalidWish(address wisher);
   error NotTheOperator();
   error OperatorNotSet();
+  error TooManyKeys();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -274,16 +275,29 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
   function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
+    (, uint256 excess) = _buyShares(sharesSubject, amount, msg.value, true);
+    if (excess > 0) _sendFundsBackIfUnused(excess);
+  }
+
+  function _buyShares(
+    address sharesSubject,
+    uint256 amount,
+    uint256 expectedPrice,
+    bool revertOnPriceError
+  ) internal returns (bool, uint256) {
     uint256 supply = getSupply(sharesSubject);
     // solhint-disable-next-line reason-string
-    if (!(supply > 0 || sharesSubject == _msgSender())) revert OnlyKeysOwnerCanBuyFirstKey();
+    if (supply == 0 && sharesSubject != _msgSender()) revert OnlyKeysOwnerCanBuyFirstKey();
 
     uint256 price = getPrice(supply, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
 
     // solhint-disable-next-line reason-string
-    if (msg.value < price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
+    if (amount == 0 || expectedPrice < price + protocolFee + subjectFee) {
+      if (revertOnPriceError) revert TransactionFailedDueToPrice();
+      else return (false, expectedPrice);
+    }
 
     SubjectType subjectType;
 
@@ -307,7 +321,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
     }
 
-    emit Trade(_msgSender(), sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount, subjectType);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, subjectType);
+    // It returns the excess sent by the user if any
+    return (true, expectedPrice - price - protocolFee - subjectFee);
+  }
+
+  function _sendFundsBackIfUnused(uint256 amount) internal {
+    (bool success, ) = _msgSender().call{value: amount}("");
+    if (!success) revert UnableToSendFunds();
   }
 
   // @dev Internal function to send funds when buying shares or wishes
@@ -375,7 +396,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     }
 
-    emit Trade(_msgSender(), sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount, subjectType);
+    emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, subjectType);
   }
 
   // @dev Internal function to send funds when selling shares or wishes
@@ -399,10 +420,34 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   risk to run out of gas
   // @param sharesSubjects The array of subjects to buy shares for
   // @param amounts The array of amounts to buy for each subject
-  function batchBuyShares(address[] memory sharesSubjects, uint256[] memory amounts) public payable virtual {
-    if (sharesSubjects.length != amounts.length) revert WrongAmount();
+  function batchBuyShares(
+    address[] calldata sharesSubjects,
+    uint256[] calldata amounts,
+    uint256[] calldata expectedPrices
+  ) public payable virtual {
+    if (sharesSubjects.length != amounts.length || sharesSubjects.length != expectedPrices.length) revert WrongAmount();
+    if (sharesSubjects.length > 10) {
+      // avoid the risk of going out-of-gas
+      revert TooManyKeys();
+    }
+    uint256 consumed = 0;
+    uint256 excesses = 0;
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
-      buyShares(sharesSubjects[i], amounts[i]);
+      (bool success, uint256 excess) = _buyShares(
+        sharesSubjects[i],
+        amounts[i],
+        expectedPrices[i],
+        // Since prices can change, we don't revert on price error to avoid cancelling all the purchases
+        false
+      );
+      if (success) {
+        consumed += expectedPrices[i];
+      }
+      excesses += excess;
+    }
+    uint256 remain = msg.value - consumed;
+    if (remain > excesses) {
+      _sendFundsBackIfUnused(msg.value - excesses);
     }
   }
 
@@ -468,6 +513,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
 
     uint256 supply = wishPasses[wisher].totalSupply;
-    emit Trade(_msgSender(), sharesSubject, true, amount, price, protocolFee, subjectFee, supply, SubjectType.BIND);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, supply, SubjectType.BIND);
   }
 }

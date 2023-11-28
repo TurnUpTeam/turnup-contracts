@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-14T03:25:26.785Z",
+  "when": "2023-11-28T19:11:48.919Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -109,6 +109,11 @@
       {
         "inputs": [],
         "name": "SubjectFeePercentNotSet",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "TooManyKeys",
         "type": "error"
       },
       {
@@ -247,25 +252,13 @@
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "shareAmount",
+            "name": "amount",
             "type": "uint256"
           },
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "ethAmount",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "protocolEthAmount",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "subjectEthAmount",
+            "name": "price",
             "type": "uint256"
           },
           {
@@ -351,6 +344,11 @@
           {
             "internalType": "uint256[]",
             "name": "amounts",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "expectedPrices",
             "type": "uint256[]"
           }
         ],
