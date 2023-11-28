@@ -67,6 +67,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error OperatorNotSet();
   error TooManyKeys();
   error CannotMakeASubjectAWish();
+  error CannotMakeASubjectABind();
+  error SubjectCannotBeAWish();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -479,7 +481,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
   function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator {
-    if (sharesSubject == wisher) revert InvalidAmount();
+    if (sharesSupply[sharesSubject] > 0) revert CannotMakeASubjectABind();
+    if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);

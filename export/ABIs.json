@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-28T23:20:04.277Z",
+  "when": "2023-11-28T23:39:51.246Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -10,6 +10,11 @@
       {
         "inputs": [],
         "name": "BoundCannotBeBuyOrSell",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "CannotMakeASubjectABind",
         "type": "error"
       },
       {
@@ -98,6 +103,11 @@
       {
         "inputs": [],
         "name": "ReserveQuantityTooLarge",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "SubjectCannotBeAWish",
         "type": "error"
       },
       {
