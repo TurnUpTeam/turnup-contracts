@@ -132,6 +132,8 @@ describe("TurnupSharesV4", function () {
     let buyPrice = await turnupShares.getBuyPrice(subject, amount);
     let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
 
+    await expect(turnupShares.buyShares(subject, 0, {value: expectedPrice})).to.be.revertedWith("InvalidAmount()");
+
     await expect(turnupShares.buyShares(subject, amount, {value: expectedPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
       .withArgs(subject, subject, true, amount, expectedPrice, amount, KEY);
@@ -338,6 +340,8 @@ describe("TurnupSharesV4", function () {
       .to.emit(turnupShares, "WishCreated")
       .withArgs(wished.address, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
+
+    await expect(turnupShares.connect(operator).bindWishPass(subject, subject)).to.be.revertedWith("InvalidInput()");
 
     // Owner binds the wish pass to a subject
     await expect(turnupShares.connect(operator).bindWishPass(subject, wished.address))

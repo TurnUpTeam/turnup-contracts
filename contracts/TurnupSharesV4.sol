@@ -40,6 +40,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event ProtocolFeeDestinationUpdated(address protocolFeeDestination);
   event ProtocolFeePercentUpdated(uint256 protocolFeePercent);
   event SubjectFeePercentUpdated(uint256 subjectFeePercent);
+  event OperatorUpdated(address operator);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -65,6 +66,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error NotTheOperator();
   error OperatorNotSet();
   error TooManyKeys();
+  error CannotMakeASubjectAWish();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -134,6 +136,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function setOperator(address _operator) public onlyOwner {
     if (_operator == address(0)) revert InvalidZeroAddress();
     operator = _operator;
+    emit OperatorUpdated(_operator);
   }
 
   // @dev Helper to get the version of the contract
@@ -285,6 +288,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 expectedPrice,
     bool revertOnPriceError
   ) internal returns (bool, uint256) {
+    if (amount == 0) {
+      if (revertOnPriceError) revert InvalidAmount();
+      else return (false, expectedPrice);
+    }
     uint256 supply = getSupply(sharesSubject);
     // solhint-disable-next-line reason-string
     if (supply == 0 && sharesSubject != _msgSender()) revert OnlyKeysOwnerCanBuyFirstKey();
@@ -294,7 +301,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 subjectFee = getSubjectFee(price);
 
     // solhint-disable-next-line reason-string
-    if (amount == 0 || expectedPrice < price + protocolFee + subjectFee) {
+    if (expectedPrice < price + protocolFee + subjectFee) {
       if (revertOnPriceError) revert TransactionFailedDueToPrice();
       else return (false, expectedPrice);
     }
@@ -362,6 +369,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
   function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup {
+    if (amount == 0) revert InvalidAmount();
     uint256 supply = getSupply(sharesSubject);
     if (supply <= amount) revert CannotSellLastKey();
 
@@ -452,14 +460,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to create a new wish
-  //   Only the contract owner can execute it.
+  //   Only the operator can execute it.
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
-  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOperator onlyIfSetup {
+  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOperator {
+    if (sharesSupply[wisher] > 0) revert CannotMakeASubjectAWish();
     if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != address(0)) revert ExistingWish(wishPasses[wisher].owner);
-
     wishPasses[wisher].owner = wisher;
     wishPasses[wisher].reservedQuantity = reservedQuantity;
     wishPasses[wisher].totalSupply = reservedQuantity;
@@ -467,10 +475,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to bind a wish to a subject
-  //   Only the contract owner can execute it.
+  //   Only the operator can execute it.
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
   function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator {
+    if (sharesSubject == wisher) revert InvalidAmount();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
