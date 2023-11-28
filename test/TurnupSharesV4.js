@@ -603,4 +603,21 @@ describe("TurnupSharesV4", function () {
       `WishAlreadyBound("${wished.address}")`
     );
   });
+
+  it("should revert when claiming no wish", async function () {
+    await init();
+    const reservedQuantity = 10;
+    const buyPrice = await turnupShares.getBuyPrice(ethers.constants.AddressZero, reservedQuantity);
+    const protocolFee = await turnupShares.getProtocolFee(buyPrice);
+    const subjectFee = await turnupShares.getSubjectFee(buyPrice);
+    const totalPrice = buyPrice.add(protocolFee).add(subjectFee);
+
+    // Owner creates a new wish pass
+    await expect(turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity))
+      .to.emit(turnupShares, "WishCreated")
+      .withArgs(wished.address, reservedQuantity);
+    await turnupShares.setFeeDestination(project.address);
+
+    await expect(turnupShares.connect(buyer3).claimReservedWishPass({value: totalPrice})).to.be.revertedWith("WishNotFound()");
+  });
 });
