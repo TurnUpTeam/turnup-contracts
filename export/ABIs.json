@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-29T19:57:33.146Z",
+  "when": "2023-11-29T21:15:31.058Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -144,6 +144,11 @@
       {
         "inputs": [],
         "name": "UnableToSendFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "UpgradedAlreadyInitialized",
         "type": "error"
       },
       {
@@ -669,6 +674,13 @@
       {
         "inputs": [],
         "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "initializeUpgrade",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"

@@ -5,10 +5,11 @@ pragma solidity 0.8.19;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 //import "hardhat/console.sol";
 
-contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
+contract TurnupSharesV4 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   /*
     About ownership and upgradeability
 
@@ -69,6 +70,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error CannotMakeASubjectAWish();
   error CannotMakeASubjectABind();
   error SubjectCannotBeAWish();
+  error UpgradedAlreadyInitialized();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -107,6 +109,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   address public operator;
+  bool private _initializedUpgrade;
 
   // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
@@ -131,6 +134,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Initialize the contract
   function initialize() public initializer {
     __Ownable_init();
+  }
+
+  // @dev Initialize the ReentracyGuard after the upgrade of the contract
+  //      It must be called a single time after the upgrade to initialize the ReentrancyGuard
+  function initializeUpgrade() public {
+    if (_initializedUpgrade) revert UpgradedAlreadyInitialized();
+    __ReentrancyGuard_init(); // Initialize ReentrancyGuard
+    _initializedUpgrade = true;
   }
 
   // @dev Set the operator
@@ -279,7 +290,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
-  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
+  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup nonReentrant {
     (, uint256 excess) = _buyShares(sharesSubject, amount, msg.value, true);
     if (excess > 0) _sendFundsBackIfUnused(excess);
   }
@@ -370,7 +381,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
-  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup {
+  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup nonReentrant {
     if (amount == 0) revert InvalidAmount();
     uint256 supply = getSupply(sharesSubject);
     if (supply <= amount) revert CannotSellLastKey();
@@ -480,7 +491,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the operator can execute it.
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
-  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator {
+  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator nonReentrant {
     if (sharesSupply[sharesSubject] > 0) revert CannotMakeASubjectABind();
     if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
@@ -502,7 +513,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev This function is used to claim the reserved wish pass
   //   Only the sharesSubject itself can call this function to make the claim
-  function claimReservedWishPass() external payable virtual {
+  function claimReservedWishPass() external payable virtual nonReentrant {
     address sharesSubject = _msgSender();
 
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
