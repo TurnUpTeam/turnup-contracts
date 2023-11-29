@@ -17,7 +17,7 @@ describe("TurnupSharesV4", function () {
   const deployUtils = new DeployUtils(ethers);
 
   before(async function () {
-    [owner, project, buyer, buyer2, buyer3, wished, wished1, wished2, operator] = await ethers.getSigners();
+    [owner, project, buyer, buyer2, buyer3, wished, wished1, wished2, operator, subject2] = await ethers.getSigners();
     subject = owner.address;
     wishSubject = wished2.address;
   });
@@ -132,9 +132,13 @@ describe("TurnupSharesV4", function () {
     let buyPrice = await turnupShares.getBuyPrice(subject, amount);
     let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
 
+    await expect(turnupShares.buyShares(subject, 0, {value: expectedPrice})).to.be.revertedWith("InvalidAmount()");
+
     await expect(turnupShares.buyShares(subject, amount, {value: expectedPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
       .withArgs(subject, subject, true, amount, expectedPrice, amount, KEY);
+
+    await expect(turnupShares.connect(operator).newWishPass(subject, 10)).to.be.revertedWith("CannotMakeASubjectAWish()");
 
     // buyer buys shares
 
@@ -331,6 +335,10 @@ describe("TurnupSharesV4", function () {
 
   it("should allow the owner to bind a wish pass to a subject", async function () {
     await init();
+
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject2.address, 5);
+    await turnupShares.connect(subject2).buyShares(subject2.address, 5, {value: expectedPrice});
+
     const reservedQuantity = 10;
 
     // Owner creates a new wish pass
@@ -338,6 +346,14 @@ describe("TurnupSharesV4", function () {
       .to.emit(turnupShares, "WishCreated")
       .withArgs(wished.address, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
+
+    await expect(turnupShares.connect(operator).bindWishPass(wished.address, wished.address)).to.be.revertedWith(
+      "SubjectCannotBeAWish()"
+    );
+
+    await expect(turnupShares.connect(operator).bindWishPass(subject2.address, wished.address)).to.be.revertedWith(
+      "CannotMakeASubjectABind()"
+    );
 
     // Owner binds the wish pass to a subject
     await expect(turnupShares.connect(operator).bindWishPass(subject, wished.address))

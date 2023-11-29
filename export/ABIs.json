@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-29T14:21:18.341Z",
+  "when": "2023-11-29T19:53:24.733Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -10,6 +10,16 @@
       {
         "inputs": [],
         "name": "BoundCannotBeBuyOrSell",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "CannotMakeASubjectABind",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "CannotMakeASubjectAWish",
         "type": "error"
       },
       {
@@ -96,6 +106,11 @@
         "type": "error"
       },
       {
+        "inputs": [],
+        "name": "SubjectCannotBeAWish",
+        "type": "error"
+      },
+      {
         "inputs": [
           {
             "internalType": "address",
@@ -168,6 +183,19 @@
           }
         ],
         "name": "Initialized",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "operator",
+            "type": "address"
+          }
+        ],
+        "name": "OperatorUpdated",
         "type": "event"
       },
       {
