@@ -445,7 +445,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
     address[] calldata sharesSubjects,
     uint256[] calldata amounts,
     uint256[] calldata expectedPrices
-  ) public payable virtual {
+  ) public payable virtual nonReentrant {
     if (sharesSubjects.length != amounts.length || sharesSubjects.length != expectedPrices.length) revert WrongAmount();
     if (sharesSubjects.length > 10) {
       // avoid the risk of going out-of-gas
