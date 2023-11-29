@@ -40,7 +40,7 @@ npm run coverage
 
 After running the coverage, you can check it opening the file `coverage/index.html` in your browser.
 
-### Check the format and lint
+### Check the lint
 
 ```
 npm run lint
@@ -71,17 +71,17 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 ## Test coverage
 
 ```
-  23 passing (2s)
+  32 passing (3s)
 
 ----------------------|----------|----------|----------|----------|----------------|
 File                  |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 ----------------------|----------|----------|----------|----------|----------------|
- contracts/           |    92.81 |    63.38 |      100 |    92.98 |                |
-  TurnupSharesV4.sol  |    92.81 |    63.38 |      100 |    92.98 |... 460,497,498 |
+ contracts/           |    92.81 |    70.42 |      100 |    93.57 |                |
+  TurnupSharesV4.sol  |    92.81 |    70.42 |      100 |    93.57 |... 460,497,498 |
  contracts/mocks/     |      2.5 |        0 |     7.69 |     2.13 |                |
   TurnupSharesV3.sol  |        0 |        0 |        0 |        0 |... 122,123,125 |
   TurnupSharesV4b.sol |      100 |      100 |      100 |      100 |                |
 ----------------------|----------|----------|----------|----------|----------------|
-All files             |    72.63 |    52.33 |    72.09 |    73.39 |                |
+All files             |    72.63 |    58.14 |    72.09 |    73.85 |                |
 ----------------------|----------|----------|----------|----------|----------------|
 ```
