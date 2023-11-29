@@ -629,4 +629,26 @@ describe("TurnupSharesV4", function () {
       "OnlyKeysOwnerCanBuyFirstKey()"
     );
   });
+
+  it("should revert when buying bound wish", async function () {
+    await init();
+    const reservedQuantity = 10;
+    const amountToBuy = 5;
+    const wisher = wished.address;
+
+    // Owner creates a new wish pass
+    await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
+
+    // Calculate the expected price for buying the wish shares
+    const price = await turnupShares.getBuyPrice(wisher, amountToBuy);
+    const protocolFee = await turnupShares.getProtocolFee(price);
+    const subjectFee = await turnupShares.getSubjectFee(price);
+    const totalPrice = price.add(protocolFee).add(subjectFee);
+
+    await turnupShares.connect(operator).bindWishPass(buyer.address, wished.address);
+
+    await expect(turnupShares.connect(buyer).buyShares(wisher, amountToBuy, {value: totalPrice})).to.revertedWith(
+      "BoundCannotBeBuyOrSell()"
+    );
+  });
 });
