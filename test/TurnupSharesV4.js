@@ -651,4 +651,15 @@ describe("TurnupSharesV4", function () {
       "BoundCannotBeBuyOrSell()"
     );
   });
+
+  it("should revert when selling last key", async function () {
+    await init();
+    const amountToBuy = 1;
+
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amountToBuy);
+
+    await expect(turnupShares.connect(buyer).sellShares(buyer.address, amountToBuy, {value: expectedPrice})).to.revertedWith(
+      "CannotSellLastKey()"
+    );
+  });
 });
