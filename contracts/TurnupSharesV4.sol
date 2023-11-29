@@ -285,6 +285,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 expectedPrice,
     bool revertOnPriceError
   ) internal returns (bool, uint256) {
+    if (amount == 0) {
+      if (revertOnPriceError) revert InvalidAmount();
+      else return (false, expectedPrice);
+    }
     uint256 supply = getSupply(sharesSubject);
     // solhint-disable-next-line reason-string
     if (supply == 0 && sharesSubject != _msgSender()) revert OnlyKeysOwnerCanBuyFirstKey();
@@ -294,7 +298,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 subjectFee = getSubjectFee(price);
 
     // solhint-disable-next-line reason-string
-    if (amount == 0 || expectedPrice < price + protocolFee + subjectFee) {
+    if (expectedPrice < price + protocolFee + subjectFee) {
       if (revertOnPriceError) revert TransactionFailedDueToPrice();
       else return (false, expectedPrice);
     }
