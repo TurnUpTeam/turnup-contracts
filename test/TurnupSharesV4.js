@@ -620,4 +620,46 @@ describe("TurnupSharesV4", function () {
 
     await expect(turnupShares.connect(buyer3).claimReservedWishPass({value: totalPrice})).to.be.revertedWith("WishNotFound()");
   });
+
+  it("should revert when not first key owner", async function () {
+    await init();
+
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, 1);
+    await expect(turnupShares.buyShares(buyer2.address, 1, {value: expectedPrice})).to.revertedWith(
+      "OnlyKeysOwnerCanBuyFirstKey()"
+    );
+  });
+
+  it("should revert when buying bound wish", async function () {
+    await init();
+    const reservedQuantity = 10;
+    const amountToBuy = 5;
+    const wisher = wished.address;
+
+    // Owner creates a new wish pass
+    await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
+
+    // Calculate the expected price for buying the wish shares
+    const price = await turnupShares.getBuyPrice(wisher, amountToBuy);
+    const protocolFee = await turnupShares.getProtocolFee(price);
+    const subjectFee = await turnupShares.getSubjectFee(price);
+    const totalPrice = price.add(protocolFee).add(subjectFee);
+
+    await turnupShares.connect(operator).bindWishPass(buyer.address, wished.address);
+
+    await expect(turnupShares.connect(buyer).buyShares(wisher, amountToBuy, {value: totalPrice})).to.revertedWith(
+      "BoundCannotBeBuyOrSell()"
+    );
+  });
+
+  it("should revert when selling last key", async function () {
+    await init();
+    const amountToBuy = 1;
+
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amountToBuy);
+
+    await expect(turnupShares.connect(buyer).sellShares(buyer.address, amountToBuy, {value: expectedPrice})).to.revertedWith(
+      "CannotSellLastKey()"
+    );
+  });
 });
