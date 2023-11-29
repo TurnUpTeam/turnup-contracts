@@ -620,4 +620,13 @@ describe("TurnupSharesV4", function () {
 
     await expect(turnupShares.connect(buyer3).claimReservedWishPass({value: totalPrice})).to.be.revertedWith("WishNotFound()");
   });
+
+  it("should revert when not first key owner", async function () {
+    await init();
+
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, 1);
+    await expect(turnupShares.buyShares(buyer2.address, 1, {value: expectedPrice})).to.revertedWith(
+      "OnlyKeysOwnerCanBuyFirstKey()"
+    );
+  });
 });
