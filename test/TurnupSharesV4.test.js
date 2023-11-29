@@ -252,9 +252,7 @@ describe("TurnupSharesV4", function () {
   });
 
   it("should prevent non-owners from setting fee destination", async function () {
-    await expect(turnupShares.connect(project).setFeeDestination(project.address)).to.be.revertedWith(
-      "Ownable: caller is not the owner"
-    );
+    await expect(turnupShares.connect(project).setFeeDestination(project.address)).to.be.revertedWith("Forbidden");
   });
 
   it("should revert if getting selling price of not existent supply", async function () {

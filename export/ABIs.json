@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-29T19:57:33.146Z",
+  "when": "2023-11-29T21:04:19.118Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -41,6 +41,16 @@
           }
         ],
         "name": "ExistingWish",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ExpiredWishCanOnlyBeSold",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Forbidden",
         "type": "error"
       },
       {
@@ -138,12 +148,22 @@
       },
       {
         "inputs": [],
+        "name": "UnableToClaimParkedFees",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "UnableToClaimReward",
         "type": "error"
       },
       {
         "inputs": [],
         "name": "UnableToSendFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "UpgradedAlreadyInitialized",
         "type": "error"
       },
       {
@@ -155,6 +175,11 @@
           }
         ],
         "name": "WishAlreadyBound",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "WishExpired",
         "type": "error"
       },
       {
@@ -342,6 +367,45 @@
         ],
         "name": "WishCreated",
         "type": "event"
+      },
+      {
+        "inputs": [],
+        "name": "DAO",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "WISH_DEADLINE_TIME",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "WISH_EXPIRATION_TIME",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
       },
       {
         "inputs": [
@@ -674,6 +738,13 @@
         "type": "function"
       },
       {
+        "inputs": [],
+        "name": "initializeUpgrade",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
         "inputs": [
           {
             "internalType": "address",
@@ -764,6 +835,19 @@
           }
         ],
         "name": "sellShares",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "dao",
+            "type": "address"
+          }
+        ],
+        "name": "setDAO",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -905,19 +989,19 @@
             "type": "address"
           },
           {
-            "internalType": "address",
-            "name": "subject",
-            "type": "address"
-          },
-          {
             "internalType": "uint256",
             "name": "totalSupply",
             "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "subjectReward",
+            "name": "createdAt",
             "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "subject",
+            "type": "address"
           },
           {
             "internalType": "bool",
@@ -927,6 +1011,16 @@
           {
             "internalType": "uint256",
             "name": "reservedQuantity",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "subjectReward",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "parkedFees",
             "type": "uint256"
           }
         ],

@@ -5,10 +5,13 @@ pragma solidity 0.8.19;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 //import "hardhat/console.sol";
 
-contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
+contract TurnupSharesV4 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+  using Address for address;
   /*
     About ownership and upgradeability
 
@@ -59,6 +62,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error SubjectDoesNotMatch(address subject);
   error UnableToSendFunds();
   error UnableToClaimReward();
+  error UnableToClaimParkedFees();
   error ReserveQuantityTooLarge();
   error WrongAmount();
   error ZeroReservedQuantity();
@@ -69,6 +73,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error CannotMakeASubjectAWish();
   error CannotMakeASubjectABind();
   error SubjectCannotBeAWish();
+  error WishExpired();
+  error ExpiredWishCanOnlyBeSold();
+  error UpgradedAlreadyInitialized();
+  error Forbidden();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -88,11 +96,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Struct to track a wish pass
   struct WishPass {
     address owner;
-    address subject;
     uint256 totalSupply;
-    uint256 subjectReward;
+    uint256 createdAt;
+    address subject;
     bool isClaimReward;
     uint256 reservedQuantity;
+    uint256 subjectReward;
+    // the fees are not paid immediately, but parked until the wish is bound or expires
+    uint256 parkedFees;
     mapping(address => uint256) balanceOf;
   }
 
@@ -107,6 +118,16 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   address public operator;
+  bool private _initializedUpgrade;
+
+  // the duration of the wish. If the wish subject does not join the system before the deadline, the wish expires
+  // and the refund process can be started
+  uint256 public constant WISH_EXPIRATION_TIME = 90 days;
+  // if the owners do not sell their wishes in the 30 days grace period, the value of the shares is transferred to a DAO wallet and used for community initiatives
+  uint256 public constant WISH_DEADLINE_TIME = 30 days;
+
+  // solhint-disable-next-line var-name-mixedcase
+  address public DAO;
 
   // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
@@ -123,6 +144,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _;
   }
 
+  modifier onlyDAO() {
+    if ((DAO == address(0) && _msgSender() != owner()) || (DAO != address(0) && _msgSender() != DAO)) revert Forbidden();
+    _;
+  }
+
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -133,12 +159,31 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     __Ownable_init();
   }
 
+  // @dev Initialize the ReentracyGuard after the upgrade of the contract
+  //      It must be called a single time after the upgrade to initialize the ReentrancyGuard
+  function initializeUpgrade() public {
+    if (_initializedUpgrade) revert UpgradedAlreadyInitialized();
+    __ReentrancyGuard_init(); // Initialize ReentrancyGuard
+    _initializedUpgrade = true;
+  }
+
   // @dev Set the operator
   // @param _operator The address of the operator
-  function setOperator(address _operator) public onlyOwner {
+  function setOperator(address _operator) public onlyDAO {
     if (_operator == address(0)) revert InvalidZeroAddress();
     operator = _operator;
     emit OperatorUpdated(_operator);
+  }
+
+  // @dev Set the DAO
+  // @param _DAO The address of the DAO
+  // @notice Initially, only the owner can set the DAO
+  //         Later, only the DAO can update itself
+  // solhint-disable-next-line var-name-mixedcase
+  function setDAO(address dao) public {
+    if (dao == address(0)) revert InvalidZeroAddress();
+    if ((DAO == address(0) && _msgSender() != owner()) || (DAO != address(0) && _msgSender() != DAO)) revert Forbidden();
+    DAO = dao;
   }
 
   // @dev Helper to get the version of the contract
@@ -157,7 +202,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev Set the destination fee
   // @param _feeDestination The address of the destination
-  function setFeeDestination(address _feeDestination) public virtual onlyOwner {
+  function setFeeDestination(address _feeDestination) public virtual onlyDAO {
     if (_feeDestination == address(0)) revert InvalidZeroAddress();
     protocolFeeDestination = _feeDestination;
     emit ProtocolFeeDestinationUpdated(_feeDestination);
@@ -165,14 +210,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev Set the protocol fee percent
   // @param _feePercent The percent of the protocol fee
-  function setProtocolFeePercent(uint256 _feePercent) public virtual onlyOwner {
+  function setProtocolFeePercent(uint256 _feePercent) public virtual onlyDAO {
     protocolFeePercent = _feePercent;
     emit ProtocolFeePercentUpdated(_feePercent);
   }
 
   // @dev Set the subject fee percent
   // @param _feePercent The percent of the subject fee
-  function setSubjectFeePercent(uint256 _feePercent) public virtual onlyOwner {
+  function setSubjectFeePercent(uint256 _feePercent) public virtual onlyDAO {
     subjectFeePercent = _feePercent;
     emit SubjectFeePercentUpdated(_feePercent);
   }
@@ -279,7 +324,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
-  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
+  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup nonReentrant {
     (, uint256 excess) = _buyShares(sharesSubject, amount, msg.value, true);
     if (excess > 0) _sendFundsBackIfUnused(excess);
   }
@@ -312,11 +357,13 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
+      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply += amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
-      _sendBuyFunds(protocolFee, subjectFee, address(0));
+      wishPasses[sharesSubject].parkedFees += protocolFee;
+      //      _sendBuyFunds(protocolFee, subjectFee, address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
@@ -347,10 +394,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The subject of the shares
   function _sendBuyFunds(uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
     (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
-    bool success2 = true;
-    if (sharesSubject != address(0)) {
-      (success2, ) = sharesSubject.call{value: subjectFee}("");
-    }
+    (bool success2, ) = sharesSubject.call{value: subjectFee}("");
     if (!success1 || !success2) revert UnableToSendFunds();
   }
 
@@ -370,7 +414,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
-  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup {
+  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup nonReentrant {
     if (amount == 0) revert InvalidAmount();
     uint256 supply = getSupply(sharesSubject);
     if (supply <= amount) revert CannotSellLastKey();
@@ -390,20 +434,20 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       wishPasses[sharesSubject].totalSupply -= amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
-
-      _sendSellFunds(price, protocolFee, subjectFee, address(0));
+      wishPasses[sharesSubject].parkedFees += protocolFee;
+      _sendSellFunds(price, protocolFee, subjectFee, address(0), address(0));
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
       wishPasses[wisher].totalSupply -= amount;
       wishPasses[wisher].balanceOf[_msgSender()] -= amount;
 
-      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
+      _sendSellFunds(price, protocolFee, subjectFee, protocolFeeDestination, sharesSubject);
     } else {
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][_msgSender()] -= amount;
       sharesSupply[sharesSubject] -= amount;
-      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
+      _sendSellFunds(price, protocolFee, subjectFee, protocolFeeDestination, sharesSubject);
     }
 
     emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, subjectType);
@@ -415,9 +459,18 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param protocolFee The protocol fee
   // @param subjectFee The subject fee
   // @param sharesSubject The subject of the shares
-  function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+  function _sendSellFunds(
+    uint256 price,
+    uint256 protocolFee,
+    uint256 subjectFee,
+    address feeDestination,
+    address sharesSubject
+  ) internal {
     (bool success1, ) = _msgSender().call{value: price - protocolFee - subjectFee}("");
-    (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
+    bool success2 = true;
+    if (feeDestination != address(0)) {
+      (success2, ) = feeDestination.call{value: protocolFee}("");
+    }
     bool success3 = true;
     if (sharesSubject != address(0)) {
       (success3, ) = sharesSubject.call{value: subjectFee}("");
@@ -473,6 +526,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].owner = wisher;
     wishPasses[wisher].reservedQuantity = reservedQuantity;
     wishPasses[wisher].totalSupply = reservedQuantity;
+    wishPasses[wisher].createdAt = block.timestamp;
     emit WishCreated(wisher, reservedQuantity);
   }
 
@@ -480,11 +534,12 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the operator can execute it.
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
-  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator {
+  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator nonReentrant {
     if (sharesSupply[sharesSubject] > 0) revert CannotMakeASubjectABind();
     if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
+    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
 
     wishPasses[wisher].subject = sharesSubject;
@@ -497,20 +552,23 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");
       if (!success) revert UnableToClaimReward();
     }
+    if (wishPasses[wisher].parkedFees > 0) {
+      (bool success, ) = protocolFeeDestination.call{value: wishPasses[wisher].parkedFees}("");
+      if (!success) revert UnableToClaimParkedFees();
+    }
     emit WishBound(sharesSubject, wisher);
   }
 
   // @dev This function is used to claim the reserved wish pass
   //   Only the sharesSubject itself can call this function to make the claim
-  function claimReservedWishPass() external payable virtual {
+  function claimReservedWishPass() external payable virtual nonReentrant {
     address sharesSubject = _msgSender();
-
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
-
     address wisher = authorizedWishes[sharesSubject];
     if (wishPasses[wisher].owner != wisher) revert InvalidWish(wishPasses[wisher].owner);
     if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch(wishPasses[wisher].subject);
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
+    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
 
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
