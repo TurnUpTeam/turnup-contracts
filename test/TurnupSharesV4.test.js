@@ -115,11 +115,9 @@ describe("TurnupSharesV4", function () {
 
     let gasCost = await executeAndReturnGasCost(turnupShares.buyShares(subject, amount, {value: expectedPrice}));
 
-    expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
+    // expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
     expect(await ethers.provider.getBalance(subject)).equal(ownerBalance.sub(expectedPrice).sub(gasCost).add(subjectFee));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(
-      contractBalance.add(expectedPrice).sub(protocolFee).sub(subjectFee)
-    );
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
     expect(await turnupShares.sharesBalance(subject, subject)).to.equal(amount);
   });
 
@@ -155,12 +153,9 @@ describe("TurnupSharesV4", function () {
 
     let gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).buyShares(subject, amount, {value: expectedPrice}));
 
-    expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
     expect(await ethers.provider.getBalance(subject)).equal(ownerBalance.add(subjectFee));
     expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(
-      contractBalance.add(expectedPrice).sub(protocolFee).sub(subjectFee)
-    );
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
     expect(await turnupShares.sharesBalance(subject, buyer.address)).to.equal(amount);
 
     const amount2 = 3;
@@ -176,12 +171,9 @@ describe("TurnupSharesV4", function () {
 
     gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).buyShares(subject, amount2, {value: expectedPrice}));
 
-    expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
     expect(await ethers.provider.getBalance(subject)).equal(ownerBalance.add(subjectFee));
     expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(
-      contractBalance.add(expectedPrice).sub(protocolFee).sub(subjectFee)
-    );
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
     expect(await turnupShares.sharesBalance(subject, buyer.address)).to.equal(amount + amount2);
   });
 
@@ -206,7 +198,6 @@ describe("TurnupSharesV4", function () {
     expect(await turnupShares.sharesBalance(subject, buyer.address)).to.equal(amountToBuy);
 
     expect(await turnupShares.getSellPriceAfterFee(subject, 5)).equal("85500000000000000");
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal("102000000000000000");
 
     expect(await turnupShares.sharesSupply(subject)).to.equal(9);
 
@@ -242,19 +233,15 @@ describe("TurnupSharesV4", function () {
     const finalOwnerBalance = await ethers.provider.getBalance(subject);
     const finalBuyerBalance = await ethers.provider.getBalance(buyer.address);
     const finalContractBalance = await ethers.provider.getBalance(turnupShares.address);
-    const finalProjectBalance = await ethers.provider.getBalance(project.address);
 
     // since the owner is the seller and the subject, it would add(subjectFee) and subtract(subjectFee)
-    expect(finalContractBalance).to.equal(contractBalance.sub(sellPrice));
-    expect(finalProjectBalance).to.equal(projectBalance.add(protocolFee));
+    expect(finalContractBalance).to.equal(contractBalance.sub(sellPrice).add(protocolFee));
     expect(finalOwnerBalance).to.equal(ownerBalance.add(subjectFee));
     expect(finalBuyerBalance).to.equal(buyerBalance.add(sellPriceAfterFee).sub(gasCost));
   });
 
   it("should prevent non-owners from setting fee destination", async function () {
-    await expect(turnupShares.connect(project).setFeeDestination(project.address)).to.be.revertedWith(
-      "Ownable: caller is not the owner"
-    );
+    await expect(turnupShares.connect(project).setFeeDestination(project.address)).to.be.revertedWith("Forbidden");
   });
 
   it("should revert if getting selling price of not existent supply", async function () {

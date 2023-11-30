@@ -1,5 +1,4 @@
 {
-  "when": "2023-11-30T02:20:36.408Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -9,7 +8,17 @@
       },
       {
         "inputs": [],
+        "name": "AlreadyClosed",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "BoundCannotBeBuyOrSell",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "BoundWish",
         "type": "error"
       },
       {
@@ -33,6 +42,11 @@
         "type": "error"
       },
       {
+        "inputs": [],
+        "name": "DAONotSetup",
+        "type": "error"
+      },
+      {
         "inputs": [
           {
             "internalType": "address",
@@ -41,6 +55,26 @@
           }
         ],
         "name": "ExistingWish",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ExpiredWishCanOnlyBeSold",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Forbidden",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "GracePeriodExpired",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InsufficientFunds",
         "type": "error"
       },
       {
@@ -138,12 +172,22 @@
       },
       {
         "inputs": [],
+        "name": "UnableToClaimParkedFees",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "UnableToClaimReward",
         "type": "error"
       },
       {
         "inputs": [],
         "name": "UnableToSendFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "UpgradedAlreadyInitialized",
         "type": "error"
       },
       {
@@ -155,6 +199,21 @@
           }
         ],
         "name": "WishAlreadyBound",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "WishAlreadyClosed",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "WishExpired",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "WishNotExpiredYet",
         "type": "error"
       },
       {
@@ -171,6 +230,19 @@
         "inputs": [],
         "name": "ZeroReservedQuantity",
         "type": "error"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "dao",
+            "type": "address"
+          }
+        ],
+        "name": "DAOUpdated",
+        "type": "event"
       },
       {
         "anonymous": false,
@@ -328,6 +400,19 @@
         "anonymous": false,
         "inputs": [
           {
+            "indexed": true,
+            "internalType": "address",
+            "name": "sharesSubject",
+            "type": "address"
+          }
+        ],
+        "name": "WishClosed",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
             "indexed": false,
             "internalType": "address",
             "name": "wisher",
@@ -342,6 +427,58 @@
         ],
         "name": "WishCreated",
         "type": "event"
+      },
+      {
+        "inputs": [],
+        "name": "DAO",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "DAOBalance",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "WISH_DEADLINE_TIME",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "WISH_EXPIRATION_TIME",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
       },
       {
         "inputs": [
@@ -426,6 +563,19 @@
         "name": "claimReservedWishPass",
         "outputs": [],
         "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "sharesSubject",
+            "type": "address"
+          }
+        ],
+        "name": "closeExpiredWish",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
@@ -745,6 +895,19 @@
       },
       {
         "inputs": [],
+        "name": "protocolFees",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
         "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
@@ -764,6 +927,19 @@
           }
         ],
         "name": "sellShares",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "dao",
+            "type": "address"
+          }
+        ],
+        "name": "setDAO",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -905,19 +1081,19 @@
             "type": "address"
           },
           {
-            "internalType": "address",
-            "name": "subject",
-            "type": "address"
-          },
-          {
             "internalType": "uint256",
             "name": "totalSupply",
             "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "subjectReward",
+            "name": "createdAt",
             "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "subject",
+            "type": "address"
           },
           {
             "internalType": "bool",
@@ -928,9 +1104,50 @@
             "internalType": "uint256",
             "name": "reservedQuantity",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "subjectReward",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "parkedFees",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "beneficiary",
+            "type": "address"
+          }
+        ],
+        "name": "withdrawDAOFunds",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdrawProtocolFees",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       }
     ]
