@@ -83,6 +83,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error WishAlreadyClosed();
   error DAONotSetup();
   error AlreadyClosed();
+  error InsufficientFunds();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -502,6 +503,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       }
       excesses += excess;
     }
+    if (msg.value < consumed) revert InsufficientFunds();
     uint256 remain = msg.value - consumed;
     if (remain > excesses) {
       _sendFundsBackIfUnused(msg.value - excesses);
