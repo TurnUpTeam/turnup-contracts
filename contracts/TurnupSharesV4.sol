@@ -83,7 +83,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error WishNotExpiredYet();
   error WishAlreadyClosed();
   error DAONotSetup();
-  error AlreadyClosed();
+  error NotCloseableOrAlreadyClosed();
   error InsufficientFunds();
 
   address public protocolFeeDestination;
@@ -600,11 +600,12 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
       revert WishNotExpiredYet();
-    if (wishPasses[sharesSubject].parkedFees == 0) revert AlreadyClosed();
-    DAOBalance +=
-      wishPasses[sharesSubject].parkedFees +
-      wishPasses[sharesSubject].subjectReward +
-      getPrice(0, wishPasses[sharesSubject].totalSupply);
+    if (wishPasses[sharesSubject].parkedFees == 0) revert NotCloseableOrAlreadyClosed();
+    uint256 remain;
+    if (wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity > 0) {
+      remain = getPrice(0, wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity);
+    }
+    DAOBalance += wishPasses[sharesSubject].parkedFees + wishPasses[sharesSubject].subjectReward + remain;
     wishPasses[sharesSubject].parkedFees = 0;
     emit WishClosed(sharesSubject);
   }
@@ -612,11 +613,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev This function is used to transfer unused wish fees to the DAO
   function withdrawDAOFunds(uint256 amount, address beneficiary) external onlyDAO {
     if (DAO == address(0)) revert DAONotSetup();
+    if (DAOBalance == 0) revert InsufficientFunds();
     if (beneficiary == address(0)) beneficiary = DAO;
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
-
     (bool success, ) = beneficiary.call{value: DAOBalance}("");
     if (success) {
       DAOBalance -= amount;
