@@ -176,9 +176,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @notice Initially, only the owner can set the DAO
   //         Later, only the DAO can update itself
   // solhint-disable-next-line var-name-mixedcase
-  function setDAO(address dao) public {
+  function setDAO(address dao) public onlyDAO {
     if (dao == address(0)) revert InvalidZeroAddress();
-    if ((DAO == address(0) && _msgSender() != owner()) || (DAO != address(0) && _msgSender() != DAO)) revert Forbidden();
     DAO = dao;
   }
 
