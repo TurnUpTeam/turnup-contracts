@@ -12,8 +12,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   /*
     About ownership and upgradeability
 
-    The smart contract is upgraded by a multi-sig wallet. We are in the process of defining a DAO to manage it.
-    The owner is right now a standard wallet, but will be changed to a multi-sig wallet too once the DAO is ready.
+    The smart contract is owned by a multi-sig wallet, which is the only one that can upgrade it.
+    https://bscscan.com/tx/0xe2622ee5860d2887ff25d2c46d10143803a69660de71cae9bf94d2a62b193a14
+
+    We are in the process of defining a DAO to manage it.
 
     We are not implementing an explicit time-lock process because when
     a bug is discovered (which is the primary reason why we are using upgradeable
