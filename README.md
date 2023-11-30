@@ -71,7 +71,8 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 ## Test coverage
 
 ```
-  33 passing (5s)
+  33 passing (3s)
+  1 pending
 
 ---------------------|----------|----------|----------|----------|----------------|
 File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
@@ -81,4 +82,7 @@ File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Line
 ---------------------|----------|----------|----------|----------|----------------|
 All files            |    93.62 |    71.23 |      100 |    94.22 |                |
 ---------------------|----------|----------|----------|----------|----------------|
+
+> Istanbul reports written to ./coverage/ and ./coverage.json
+
 ```

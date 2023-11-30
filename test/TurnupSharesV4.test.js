@@ -305,6 +305,17 @@ describe("TurnupSharesV4", function () {
     expect(await turnupShares.getWishBalanceOf(wished.address, buyer.address)).to.equal(buyAmount - sellAmount);
   });
 
+  //this should be fix
+  it.skip("should allow users to buy and sell wishes and send sell funds", async function () {
+    await init();
+    const reservedQty = 10;
+    const wishedAddress = turnupShares.address;
+    await turnupShares.connect(operator).newWishPass(wishedAddress, reservedQty);
+    await expect(turnupShares.connect(operator).bindWishPass(subject, wishedAddress)).to.be.revertedWith(
+      "UnableToClaimReward()"
+    );
+  });
+
   it("should allow batch buying multiple wish passes", async function () {
     await init();
     // Create 2 wish passes
