@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-29T21:04:19.118Z",
+  "when": "2023-11-30T00:06:40.668Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -10,6 +10,11 @@
       {
         "inputs": [],
         "name": "BoundCannotBeBuyOrSell",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "BoundWish",
         "type": "error"
       },
       {
@@ -33,6 +38,11 @@
         "type": "error"
       },
       {
+        "inputs": [],
+        "name": "DAONotSetup",
+        "type": "error"
+      },
+      {
         "inputs": [
           {
             "internalType": "address",
@@ -51,6 +61,11 @@
       {
         "inputs": [],
         "name": "Forbidden",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "GracePeriodExpired",
         "type": "error"
       },
       {
@@ -179,7 +194,17 @@
       },
       {
         "inputs": [],
+        "name": "WishAlreadyClosed",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "WishExpired",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "WishNotExpiredYet",
         "type": "error"
       },
       {
@@ -383,6 +408,19 @@
       },
       {
         "inputs": [],
+        "name": "DAOBalance",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
         "name": "WISH_DEADLINE_TIME",
         "outputs": [
           {
@@ -490,6 +528,19 @@
         "name": "claimReservedWishPass",
         "outputs": [],
         "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "sharesSubject",
+            "type": "address"
+          }
+        ],
+        "name": "closeExpiredWish",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
@@ -738,13 +789,6 @@
         "type": "function"
       },
       {
-        "inputs": [],
-        "name": "initializeUpgrade",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
         "inputs": [
           {
             "internalType": "address",
@@ -804,6 +848,19 @@
       {
         "inputs": [],
         "name": "protocolFeePercent",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "protocolFees",
         "outputs": [
           {
             "internalType": "uint256",
@@ -1025,6 +1082,32 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdrawDAOFunds",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdrawProtocolFees",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       }
     ]
