@@ -8,11 +8,6 @@
       },
       {
         "inputs": [],
-        "name": "AlreadyClosed",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "BoundCannotBeBuyOrSell",
         "type": "error"
       },
@@ -107,6 +102,11 @@
       {
         "inputs": [],
         "name": "InvalidZeroAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "NotCloseableOrAlreadyClosed",
         "type": "error"
       },
       {
