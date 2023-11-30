@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-30T18:07:33.371Z",
+  "when": "2023-11-30T18:27:57.818Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -395,6 +395,19 @@
           }
         ],
         "name": "WishBound",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "sharesSubject",
+            "type": "address"
+          }
+        ],
+        "name": "WishClosed",
         "type": "event"
       },
       {
@@ -1113,6 +1126,11 @@
             "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "beneficiary",
+            "type": "address"
           }
         ],
         "name": "withdrawDAOFunds",
