@@ -44,6 +44,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event SubjectFeePercentUpdated(uint256 subjectFeePercent);
   event OperatorUpdated(address operator);
   event DAOUpdated(address dao);
+  event WishClosed(address indexed sharesSubject);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -594,8 +595,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to close an expired wish
-  function closeExpiredWish(address sharesSubject) external {
-    if (DAO == address(0)) revert DAONotSetup();
+  function closeExpiredWish(address sharesSubject) external onlyDAO {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
       revert WishNotExpiredYet();
@@ -605,10 +605,12 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       wishPasses[sharesSubject].subjectReward +
       getPrice(0, wishPasses[sharesSubject].totalSupply);
     wishPasses[sharesSubject].parkedFees = 0;
+    emit WishClosed(sharesSubject);
   }
 
   // @dev This function is used to transfer unused wish fees to the DAO
   function withdrawDAOFunds(uint256 amount) external {
+    if (DAO == address(0)) revert DAONotSetup();
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
