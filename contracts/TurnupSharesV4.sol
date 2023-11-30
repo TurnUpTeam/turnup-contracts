@@ -166,6 +166,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Set the protocol fee percent
   // @param _feePercent The percent of the protocol fee
   function setProtocolFeePercent(uint256 _feePercent) public virtual onlyOwner {
+    if (_feePercent > 50000000 gwei) revert InvalidAmount();
     protocolFeePercent = _feePercent;
     emit ProtocolFeePercentUpdated(_feePercent);
   }
@@ -173,6 +174,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Set the subject fee percent
   // @param _feePercent The percent of the subject fee
   function setSubjectFeePercent(uint256 _feePercent) public virtual onlyOwner {
+    if (_feePercent > 50000000 gwei) revert InvalidAmount();
     subjectFeePercent = _feePercent;
     emit SubjectFeePercentUpdated(_feePercent);
   }
