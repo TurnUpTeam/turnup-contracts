@@ -582,7 +582,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function withdrawProtocolFees(uint256 amount) external {
     if (amount == 0) amount = protocolFees;
     if (amount > protocolFees) revert InvalidAmount();
-    if (protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
+    if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
     (bool success, ) = protocolFeeDestination.call{value: protocolFees}("");
     if (success) {
       protocolFees -= amount;
@@ -609,8 +609,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function withdrawDAOFunds(uint256 amount) external {
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
-    if (protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
-    (bool success, ) = protocolFeeDestination.call{value: protocolFees}("");
+    if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
+    (bool success, ) = DAO.call{value: DAOBalance}("");
     if (success) {
       DAOBalance -= amount;
     } else {
