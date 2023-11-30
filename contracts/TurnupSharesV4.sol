@@ -576,6 +576,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply, SubjectType.BIND);
   }
 
+  // @dev This function is used withdraw the protocol fees
   function withdrawProtocolFees(uint256 amount) external {
     if (amount == 0) amount = protocolFees;
     if (amount > protocolFees) revert InvalidAmount();
@@ -588,6 +589,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     }
   }
 
+  // @dev This function is used to close an expired wish
   function closeExpiredWish(address sharesSubject) external {
     if (DAO == address(0)) revert DAONotSetup();
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
@@ -601,6 +603,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[sharesSubject].parkedFees = 0;
   }
 
+  // @dev This function is used to transfer unused wish fees to the DAO
   function withdrawDAOFunds(uint256 amount) external {
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
