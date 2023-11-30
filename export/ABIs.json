@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-30T02:00:20.745Z",
+  "when": "2023-11-30T02:03:59.561Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -221,6 +221,19 @@
         "inputs": [],
         "name": "ZeroReservedQuantity",
         "type": "error"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "dao",
+            "type": "address"
+          }
+        ],
+        "name": "DAOUpdated",
+        "type": "event"
       },
       {
         "anonymous": false,

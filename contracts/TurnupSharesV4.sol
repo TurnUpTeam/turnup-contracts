@@ -41,6 +41,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event ProtocolFeePercentUpdated(uint256 protocolFeePercent);
   event SubjectFeePercentUpdated(uint256 subjectFeePercent);
   event OperatorUpdated(address operator);
+  event DAOUpdated(address dao);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -179,6 +180,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function setDAO(address dao) public onlyDAO {
     if (dao == address(0)) revert InvalidZeroAddress();
     DAO = dao;
+    emit DAOUpdated(dao);
   }
 
   // @dev Helper to get the version of the contract
