@@ -1,5 +1,5 @@
 {
-  "when": "2023-11-30T06:21:58.226Z",
+  "when": "2023-11-30T18:07:33.371Z",
   "contracts": {
     "TurnupSharesV4": [
       {
@@ -71,6 +71,11 @@
       {
         "inputs": [],
         "name": "GracePeriodExpired",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InsufficientFunds",
         "type": "error"
       },
       {
