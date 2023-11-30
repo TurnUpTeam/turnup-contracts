@@ -609,12 +609,13 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to transfer unused wish fees to the DAO
-  function withdrawDAOFunds(uint256 amount) external {
+  function withdrawDAOFunds(uint256 amount, address beneficiary) external onlyDAO {
     if (DAO == address(0)) revert DAONotSetup();
+    if (beneficiary == address(0)) beneficiary = DAO;
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
-    (bool success, ) = DAO.call{value: DAOBalance}("");
+    (bool success, ) = beneficiary.call{value: DAOBalance}("");
     if (success) {
       DAOBalance -= amount;
     } else {
