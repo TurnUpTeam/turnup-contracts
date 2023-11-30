@@ -731,6 +731,10 @@ describe("TurnupSharesV4", function () {
     await turnupShares.connect(buyer3).sellShares(wisher, 7);
     expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(10);
 
+    // there is a remaining because of people buying and selling and buying again,
+    // accumulating more rewards than what are returned back during the final sale
+    expect((await turnupShares.wishPasses(wisher)).subjectReward).to.equal("184050000000000000");
+
     expect(await turnupShares.getBalanceOf(wisher, buyer.address)).to.equal(0);
     expect(await turnupShares.getBalanceOf(wisher, buyer2.address)).to.equal(0);
     expect(await turnupShares.getBalanceOf(wisher, buyer3.address)).to.equal(0);
@@ -818,11 +822,11 @@ describe("TurnupSharesV4", function () {
 
     await expect(turnupShares.connect(dao).closeExpiredWish(wisher)).to.emit(turnupShares, "WishClosed").withArgs(wisher);
 
-    expect(await turnupShares.DAOBalance()).to.equal("725575000000000000");
+    expect(await turnupShares.DAOBalance()).to.equal("1175575000000000000");
 
     let balanceBefore = await ethers.provider.getBalance(beneficiary.address);
     await turnupShares.connect(dao).withdrawDAOFunds(0, beneficiary.address);
     let balanceAfter = await ethers.provider.getBalance(beneficiary.address);
-    expect(balanceAfter.sub(balanceBefore).toString()).to.equal("725575000000000000");
+    expect(balanceAfter.sub(balanceBefore).toString()).to.equal("1175575000000000000");
   });
 });
