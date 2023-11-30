@@ -593,7 +593,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
       revert WishNotExpiredYet();
     if (DAO == address(0)) revert DAONotSetup();
-    uint256 amount = 0;
+    uint256 amount;
     if (wishPasses[sharesSubject].parkedFees == 0) revert AlreadyClosed();
     amount += wishPasses[sharesSubject].parkedFees + wishPasses[sharesSubject].subjectReward;
     amount += getPrice(0, wishPasses[sharesSubject].totalSupply);
