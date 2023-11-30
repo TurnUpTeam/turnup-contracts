@@ -603,7 +603,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[sharesSubject].parkedFees == 0) revert NotCloseableOrAlreadyClosed();
     uint256 remain;
     if (wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity > 0) {
-      remain = getPrice(0, wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity);
+      remain = getPrice(
+        wishPasses[sharesSubject].reservedQuantity,
+        wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity
+      );
     }
     DAOBalance += wishPasses[sharesSubject].parkedFees + wishPasses[sharesSubject].subjectReward + remain;
     wishPasses[sharesSubject].parkedFees = 0;
