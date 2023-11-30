@@ -333,6 +333,30 @@ describe("TurnupSharesV4", function () {
     expect(wish2Balance).to.equal(wish2Amount);
   });
 
+  it("should revert contract does not have funds to send back", async function () {
+    await init();
+    // Create 2 wish passes
+    const reservedQty = 10;
+    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
+
+    // Get batch buy prices
+    const wish1Amount = 5;
+    const wish2Amount = 3;
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+    const overPrice = wish1Price.add(wish2Price);
+
+    // Batch buy
+    await expect(
+      turnupShares
+        .connect(buyer)
+        .batchBuyShares([wished1.address, wished2.address], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
+          value: overPrice.add(wish2Price),
+        })
+    ).to.revertedWith("UnableToSendFunds()");
+  });
+
   it("should allow the owner to bind a wish pass to a subject", async function () {
     await init();
 
