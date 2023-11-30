@@ -80,6 +80,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error WishNotExpiredYet();
   error WishAlreadyClosed();
   error DAONotSetup();
+  error AlreadyClosed();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -593,17 +594,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       revert WishNotExpiredYet();
     if (DAO == address(0)) revert DAONotSetup();
     uint256 amount = 0;
-    if (wishPasses[sharesSubject].parkedFees > 0) {
-      amount += wishPasses[sharesSubject].parkedFees + wishPasses[sharesSubject].subjectReward;
-      delete wishPasses[sharesSubject].parkedFees;
-      delete wishPasses[sharesSubject].subjectReward;
-    }
-    uint256 price = getPrice(0, wishPasses[sharesSubject].totalSupply);
-    uint256 protocolFee = getProtocolFee(price);
-    uint256 subjectFee = getSubjectFee(price);
-    amount += price - protocolFee - subjectFee;
+    if (wishPasses[sharesSubject].parkedFees == 0) revert AlreadyClosed();
+    amount += wishPasses[sharesSubject].parkedFees + wishPasses[sharesSubject].subjectReward;
+    amount += getPrice(0, wishPasses[sharesSubject].totalSupply);
     DAOBalance += amount;
-    delete wishPasses[sharesSubject].totalSupply;
+    wishPasses[sharesSubject].parkedFees = 0;
   }
 
   function withdrawDAOFunds(uint256 amount) external {
