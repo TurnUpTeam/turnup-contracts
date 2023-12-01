@@ -12,8 +12,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   /*
     About ownership and upgradeability
 
-    The smart contract is upgraded by a multi-sig wallet. We are in the process of defining a DAO to manage it.
-    The owner is right now a standard wallet, but will be changed to a multi-sig wallet too once the DAO is ready.
+    The smart contract is owned by a multi-sig wallet, which is the only one that can upgrade it.
+    https://bscscan.com/tx/0xe2622ee5860d2887ff25d2c46d10143803a69660de71cae9bf94d2a62b193a14
+
+    We are in the process of defining a DAO to manage it.
 
     We are not implementing an explicit time-lock process because when
     a bug is discovered (which is the primary reason why we are using upgradeable
@@ -41,6 +43,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event ProtocolFeePercentUpdated(uint256 protocolFeePercent);
   event SubjectFeePercentUpdated(uint256 subjectFeePercent);
   event OperatorUpdated(address operator);
+  event DAOUpdated(address dao);
+  event WishClosed(address indexed sharesSubject);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -59,6 +63,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error SubjectDoesNotMatch(address subject);
   error UnableToSendFunds();
   error UnableToClaimReward();
+  error UnableToClaimParkedFees();
   error ReserveQuantityTooLarge();
   error WrongAmount();
   error ZeroReservedQuantity();
@@ -69,6 +74,17 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error CannotMakeASubjectAWish();
   error CannotMakeASubjectABind();
   error SubjectCannotBeAWish();
+  error UpgradedAlreadyInitialized();
+  error WishExpired();
+  error ExpiredWishCanOnlyBeSold();
+  error Forbidden();
+  error GracePeriodExpired();
+  error BoundWish();
+  error WishNotExpiredYet();
+  error WishAlreadyClosed();
+  error DAONotSetup();
+  error NotCloseableOrAlreadyClosed();
+  error InsufficientFunds();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -88,11 +104,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Struct to track a wish pass
   struct WishPass {
     address owner;
-    address subject;
     uint256 totalSupply;
-    uint256 subjectReward;
+    uint256 createdAt;
+    address subject;
     bool isClaimReward;
     uint256 reservedQuantity;
+    uint256 subjectReward;
+    // the fees are not paid immediately, but parked until the wish is bound or expires
+    uint256 parkedFees;
     mapping(address => uint256) balanceOf;
   }
 
@@ -107,6 +126,18 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   address public operator;
+
+  // the duration of the wish. If the wish subject does not join the system before the deadline, the wish expires
+  // and the refund process can be started
+  uint256 public constant WISH_EXPIRATION_TIME = 90 days;
+  // if the owners do not sell their wishes in the 30 days grace period, the value of the shares is transferred to a DAO wallet and used for community initiatives
+  uint256 public constant WISH_DEADLINE_TIME = 30 days;
+
+  // solhint-disable-next-line var-name-mixedcase
+  address public DAO;
+  // solhint-disable-next-line var-name-mixedcase
+  uint256 public DAOBalance;
+  uint256 public protocolFees;
 
   // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
@@ -123,6 +154,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _;
   }
 
+  modifier onlyDAO() {
+    if ((DAO == address(0) && _msgSender() != owner()) || (DAO != address(0) && _msgSender() != DAO)) revert Forbidden();
+    _;
+  }
+
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -135,16 +171,27 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev Set the operator
   // @param _operator The address of the operator
-  function setOperator(address _operator) public onlyOwner {
+  function setOperator(address _operator) public onlyDAO {
     if (_operator == address(0)) revert InvalidZeroAddress();
     operator = _operator;
     emit OperatorUpdated(_operator);
   }
 
+  // @dev Set the DAO
+  // @param _DAO The address of the DAO
+  // @notice Initially, only the owner can set the DAO
+  //         Later, only the DAO can update itself
+  // solhint-disable-next-line var-name-mixedcase
+  function setDAO(address dao) public onlyDAO {
+    if (dao == address(0)) revert InvalidZeroAddress();
+    DAO = dao;
+    emit DAOUpdated(dao);
+  }
+
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.2.1";
+    return "v5.0.0";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -157,7 +204,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev Set the destination fee
   // @param _feeDestination The address of the destination
-  function setFeeDestination(address _feeDestination) public virtual onlyOwner {
+  function setFeeDestination(address _feeDestination) public virtual onlyDAO {
     if (_feeDestination == address(0)) revert InvalidZeroAddress();
     protocolFeeDestination = _feeDestination;
     emit ProtocolFeeDestinationUpdated(_feeDestination);
@@ -165,16 +212,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev Set the protocol fee percent
   // @param _feePercent The percent of the protocol fee
-  function setProtocolFeePercent(uint256 _feePercent) public virtual onlyOwner {
-    if (_feePercent > 50000000 gwei) revert InvalidAmount();
+  function setProtocolFeePercent(uint256 _feePercent) public virtual onlyDAO {
     protocolFeePercent = _feePercent;
     emit ProtocolFeePercentUpdated(_feePercent);
   }
 
   // @dev Set the subject fee percent
   // @param _feePercent The percent of the subject fee
-  function setSubjectFeePercent(uint256 _feePercent) public virtual onlyOwner {
-    if (_feePercent > 50000000 gwei) revert InvalidAmount();
+  function setSubjectFeePercent(uint256 _feePercent) public virtual onlyDAO {
     subjectFeePercent = _feePercent;
     emit SubjectFeePercentUpdated(_feePercent);
   }
@@ -314,22 +359,27 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
+      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply += amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
       wishPasses[sharesSubject].subjectReward += subjectFee;
-      _sendBuyFunds(protocolFee, subjectFee, address(0));
+      wishPasses[sharesSubject].parkedFees += protocolFee;
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
       wishPasses[wisher].totalSupply += amount;
       wishPasses[wisher].balanceOf[_msgSender()] += amount;
-      _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
+      protocolFees += protocolFee;
+      (bool success, ) = sharesSubject.call{value: subjectFee}("");
+      if (!success) revert UnableToSendFunds();
     } else {
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][_msgSender()] += amount;
       sharesSupply[sharesSubject] += amount;
-      _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
+      protocolFees += protocolFee;
+      (bool success, ) = sharesSubject.call{value: subjectFee}("");
+      if (!success) revert UnableToSendFunds();
     }
 
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, subjectType);
@@ -339,21 +389,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   function _sendFundsBackIfUnused(uint256 amount) internal {
     (bool success, ) = _msgSender().call{value: amount}("");
-    if (!success) revert UnableToSendFunds();
-  }
-
-  // @dev Internal function to send funds when buying shares or wishes
-  //   It reverts if any sends fail.
-  // @param protocolFee The protocol fee
-  // @param subjectFee The subject fee
-  // @param sharesSubject The subject of the shares
-  function _sendBuyFunds(uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
-    (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
-    bool success2 = true;
-    if (sharesSubject != address(0)) {
-      (success2, ) = sharesSubject.call{value: subjectFee}("");
-    }
-    if (!success1 || !success2) revert UnableToSendFunds();
+    // if the transaction fails, to avoid either blocking the process or losing the amount
+    if (!success) protocolFees += amount;
   }
 
   // @dev Check the balance of a given subject and revert if not correct
@@ -387,24 +424,35 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
-
+      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME < block.timestamp)
+        revert GracePeriodExpired();
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply -= amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
-      wishPasses[sharesSubject].subjectReward += subjectFee;
-
-      _sendSellFunds(price, protocolFee, subjectFee, address(0));
+      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) {
+        // since the subject did not bind the wish, the user is not charged for the sale,
+        // on the opposite, the seller will have also the unused subjectFee
+        // Instead the protocolFee will be collected by the DAO at the end of the grace period
+        wishPasses[sharesSubject].subjectReward -= subjectFee;
+        (bool success, ) = _msgSender().call{value: price + subjectFee}("");
+        if (!success) revert UnableToSendFunds();
+      } else {
+        wishPasses[sharesSubject].subjectReward += subjectFee;
+        wishPasses[sharesSubject].parkedFees += protocolFee;
+        _sendSellFunds(price, protocolFee, subjectFee, address(0));
+      }
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
       wishPasses[wisher].totalSupply -= amount;
       wishPasses[wisher].balanceOf[_msgSender()] -= amount;
-
+      protocolFees += protocolFee;
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     } else {
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][_msgSender()] -= amount;
       sharesSupply[sharesSubject] -= amount;
+      protocolFees += protocolFee;
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     }
 
@@ -419,12 +467,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The subject of the shares
   function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
     (bool success1, ) = _msgSender().call{value: price - protocolFee - subjectFee}("");
-    (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
-    bool success3 = true;
+    bool success2 = true;
     if (sharesSubject != address(0)) {
-      (success3, ) = sharesSubject.call{value: subjectFee}("");
+      (success2, ) = sharesSubject.call{value: subjectFee}("");
     }
-    if (!success1 || !success2 || !success3) revert UnableToSendFunds();
+    if (!success1 || !success2) revert UnableToSendFunds();
   }
 
   // @dev This function is used to buy shares for multiple subjects at once
@@ -457,6 +504,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       }
       excesses += excess;
     }
+    if (msg.value < consumed) revert InsufficientFunds();
     uint256 remain = msg.value - consumed;
     if (remain > excesses) {
       _sendFundsBackIfUnused(msg.value - excesses);
@@ -475,6 +523,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].owner = wisher;
     wishPasses[wisher].reservedQuantity = reservedQuantity;
     wishPasses[wisher].totalSupply = reservedQuantity;
+    wishPasses[wisher].createdAt = block.timestamp;
     emit WishCreated(wisher, reservedQuantity);
   }
 
@@ -487,6 +536,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
+    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
 
     wishPasses[wisher].subject = sharesSubject;
@@ -498,6 +548,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[wisher].subjectReward > 0) {
       (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");
       if (!success) revert UnableToClaimReward();
+      protocolFees += wishPasses[wisher].parkedFees;
     }
     emit WishBound(sharesSubject, wisher);
   }
@@ -506,13 +557,12 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the sharesSubject itself can call this function to make the claim
   function claimReservedWishPass() external payable virtual {
     address sharesSubject = _msgSender();
-
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
-
     address wisher = authorizedWishes[sharesSubject];
     if (wishPasses[wisher].owner != wisher) revert InvalidWish(wishPasses[wisher].owner);
     if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch(wishPasses[wisher].subject);
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
+    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
 
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
@@ -523,10 +573,59 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
     wishPasses[wisher].reservedQuantity = 0;
     wishPasses[wisher].balanceOf[sharesSubject] += amount;
-
-    _sendBuyFunds(protocolFee, subjectFee, sharesSubject);
+    protocolFees += protocolFee;
+    (bool success, ) = sharesSubject.call{value: subjectFee}("");
+    if (!success) revert UnableToSendFunds();
 
     uint256 supply = wishPasses[wisher].totalSupply;
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply, SubjectType.BIND);
+  }
+
+  // @dev This function is used withdraw the protocol fees
+  function withdrawProtocolFees(uint256 amount) external {
+    if (amount == 0) amount = protocolFees;
+    if (amount > protocolFees) revert InvalidAmount();
+    if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
+
+    (bool success, ) = protocolFeeDestination.call{value: protocolFees}("");
+    if (success) {
+      protocolFees -= amount;
+    } else {
+      revert UnableToSendFunds();
+    }
+  }
+
+  // @dev This function is used to close an expired wish
+  function closeExpiredWish(address sharesSubject) external onlyDAO {
+    if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
+      revert WishNotExpiredYet();
+    if (wishPasses[sharesSubject].parkedFees == 0) revert NotCloseableOrAlreadyClosed();
+    uint256 remain;
+    if (wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity > 0) {
+      remain = getPrice(
+        wishPasses[sharesSubject].reservedQuantity,
+        wishPasses[sharesSubject].totalSupply - wishPasses[sharesSubject].reservedQuantity
+      );
+    }
+    DAOBalance += wishPasses[sharesSubject].parkedFees + wishPasses[sharesSubject].subjectReward + remain;
+    wishPasses[sharesSubject].parkedFees = 0;
+    emit WishClosed(sharesSubject);
+  }
+
+  // @dev This function is used to transfer unused wish fees to the DAO
+  function withdrawDAOFunds(uint256 amount, address beneficiary) external onlyDAO {
+    if (DAO == address(0)) revert DAONotSetup();
+    if (DAOBalance == 0) revert InsufficientFunds();
+    if (beneficiary == address(0)) beneficiary = DAO;
+    if (amount == 0) amount = DAOBalance;
+    if (amount > DAOBalance) revert InvalidAmount();
+    if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
+    (bool success, ) = beneficiary.call{value: DAOBalance}("");
+    if (success) {
+      DAOBalance -= amount;
+    } else {
+      revert UnableToSendFunds();
+    }
   }
 }

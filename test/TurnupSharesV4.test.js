@@ -6,25 +6,32 @@ describe("TurnupSharesV4", function () {
   let turnupShares;
   let owner;
   let project;
-  let buyer, buyer2, buyer3, wished, wished1, wished2, operator;
+  let buyer, buyer2, buyer3, wished, wished1, wished2, operator, dao, beneficiary;
   let subject;
   let wishSubject;
 
   const WISH = 0;
   const BIND = 1;
   const KEY = 2;
+  const addr0 = "0x" + "0".repeat(40);
 
   const deployUtils = new DeployUtils(ethers);
 
+  async function increaseBlockTimestampBy(offset) {
+    await this.ethers.provider.send("evm_increaseTime", [offset]);
+    await this.ethers.provider.send("evm_mine");
+  }
+
   before(async function () {
-    [owner, project, buyer, buyer2, buyer3, wished, wished1, wished2, operator, subject2] = await ethers.getSigners();
+    [owner, project, buyer, buyer2, buyer3, wished, wished1, wished2, operator, subject2, dao, beneficiary] =
+      await ethers.getSigners();
     subject = owner.address;
     wishSubject = wished2.address;
   });
 
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
-    expect(await turnupShares.getVer()).to.equal("v4.2.1");
+    expect(await turnupShares.getVer()).to.equal("v5.0.0");
   });
 
   async function init() {
@@ -115,11 +122,9 @@ describe("TurnupSharesV4", function () {
 
     let gasCost = await executeAndReturnGasCost(turnupShares.buyShares(subject, amount, {value: expectedPrice}));
 
-    expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
+    // expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
     expect(await ethers.provider.getBalance(subject)).equal(ownerBalance.sub(expectedPrice).sub(gasCost).add(subjectFee));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(
-      contractBalance.add(expectedPrice).sub(protocolFee).sub(subjectFee)
-    );
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
     expect(await turnupShares.sharesBalance(subject, subject)).to.equal(amount);
   });
 
@@ -143,24 +148,24 @@ describe("TurnupSharesV4", function () {
     // buyer buys shares
 
     buyPrice = await turnupShares.getBuyPrice(subject, amount);
-    protocolFee = await turnupShares.getProtocolFee(buyPrice);
-    subjectFee = await turnupShares.getSubjectFee(buyPrice);
+    let protocolFee = await turnupShares.getProtocolFee(buyPrice);
+    let subjectFee = await turnupShares.getSubjectFee(buyPrice);
     expectedPrice = await turnupShares.getBuyPriceAfterFee(subject, amount);
     expect(expectedPrice).to.equal(buyPrice.add(protocolFee).add(subjectFee));
 
-    let projectBalance = await ethers.provider.getBalance(project.address);
+    let subjectBalanceBefore = await ethers.provider.getBalance(subject);
     let ownerBalance = await ethers.provider.getBalance(subject);
     let contractBalance = await ethers.provider.getBalance(turnupShares.address);
     let buyerBalance = await ethers.provider.getBalance(buyer.address);
 
     let gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).buyShares(subject, amount, {value: expectedPrice}));
 
-    expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
+    let subjectBalanceAfter = await ethers.provider.getBalance(subject);
+    expect(subjectBalanceAfter).to.equal(subjectBalanceBefore.add(subjectFee));
+
     expect(await ethers.provider.getBalance(subject)).equal(ownerBalance.add(subjectFee));
     expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(
-      contractBalance.add(expectedPrice).sub(protocolFee).sub(subjectFee)
-    );
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
     expect(await turnupShares.sharesBalance(subject, buyer.address)).to.equal(amount);
 
     const amount2 = 3;
@@ -176,12 +181,9 @@ describe("TurnupSharesV4", function () {
 
     gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).buyShares(subject, amount2, {value: expectedPrice}));
 
-    expect(await ethers.provider.getBalance(project.address)).equal(projectBalance.add(protocolFee));
     expect(await ethers.provider.getBalance(subject)).equal(ownerBalance.add(subjectFee));
     expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(
-      contractBalance.add(expectedPrice).sub(protocolFee).sub(subjectFee)
-    );
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
     expect(await turnupShares.sharesBalance(subject, buyer.address)).to.equal(amount + amount2);
   });
 
@@ -206,7 +208,6 @@ describe("TurnupSharesV4", function () {
     expect(await turnupShares.sharesBalance(subject, buyer.address)).to.equal(amountToBuy);
 
     expect(await turnupShares.getSellPriceAfterFee(subject, 5)).equal("85500000000000000");
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal("102000000000000000");
 
     expect(await turnupShares.sharesSupply(subject)).to.equal(9);
 
@@ -242,19 +243,15 @@ describe("TurnupSharesV4", function () {
     const finalOwnerBalance = await ethers.provider.getBalance(subject);
     const finalBuyerBalance = await ethers.provider.getBalance(buyer.address);
     const finalContractBalance = await ethers.provider.getBalance(turnupShares.address);
-    const finalProjectBalance = await ethers.provider.getBalance(project.address);
 
     // since the owner is the seller and the subject, it would add(subjectFee) and subtract(subjectFee)
-    expect(finalContractBalance).to.equal(contractBalance.sub(sellPrice));
-    expect(finalProjectBalance).to.equal(projectBalance.add(protocolFee));
+    expect(finalContractBalance).to.equal(contractBalance.sub(sellPrice).add(protocolFee));
     expect(finalOwnerBalance).to.equal(ownerBalance.add(subjectFee));
     expect(finalBuyerBalance).to.equal(buyerBalance.add(sellPriceAfterFee).sub(gasCost));
   });
 
   it("should prevent non-owners from setting fee destination", async function () {
-    await expect(turnupShares.connect(project).setFeeDestination(project.address)).to.be.revertedWith(
-      "Ownable: caller is not the owner"
-    );
+    await expect(turnupShares.connect(project).setFeeDestination(project.address)).to.be.revertedWith("Forbidden");
   });
 
   it("should revert if getting selling price of not existent supply", async function () {
@@ -331,30 +328,6 @@ describe("TurnupSharesV4", function () {
 
     const wish2Balance = await turnupShares.getWishBalanceOf(wished2.address, buyer.address);
     expect(wish2Balance).to.equal(wish2Amount);
-  });
-
-  it("should revert contract does not have funds to send back", async function () {
-    await init();
-    // Create 2 wish passes
-    const reservedQty = 10;
-    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
-    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
-
-    // Get batch buy prices
-    const wish1Amount = 5;
-    const wish2Amount = 3;
-    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
-    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
-    const overPrice = wish1Price.add(wish2Price);
-
-    // Batch buy
-    await expect(
-      turnupShares
-        .connect(buyer)
-        .batchBuyShares([wished1.address, wished2.address], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
-          value: overPrice.add(wish2Price),
-        })
-    ).to.revertedWith("UnableToSendFunds()");
   });
 
   it("should allow the owner to bind a wish pass to a subject", async function () {
@@ -782,5 +755,159 @@ describe("TurnupSharesV4", function () {
     await expect(turnupShares.connect(operator).bindWishPass(turnupShares.address, wishedAddress)).to.revertedWith(
       "UnableToClaimReward()"
     );
+  });
+
+  it("should manage an expired wish that sold out", async function () {
+    await init();
+    const wisher = wished.address;
+
+    // Owner creates a new wish pass
+    await turnupShares.connect(operator).newWishPass(wisher, 10);
+
+    // buyer buys 5
+    let buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 5);
+    await turnupShares.connect(buyer).buyShares(wisher, 5, {value: buyPrice});
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(15);
+
+    // buyer buys 4
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 4);
+    await turnupShares.connect(buyer).buyShares(wisher, 4, {value: buyPrice});
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(19);
+
+    // buyer2 buys 12
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 12);
+    await turnupShares.connect(buyer2).buyShares(wisher, 12, {value: buyPrice});
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(31);
+
+    // buyer sells 3
+    await turnupShares.connect(buyer).sellShares(wisher, 3);
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(28);
+
+    // buyer3 buys 7
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 7);
+    await turnupShares.connect(buyer3).buyShares(wisher, 7, {value: buyPrice});
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(35);
+
+    // buyer2 sells 1
+    await turnupShares.connect(buyer2).sellShares(wisher, 1);
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(34);
+
+    expect(await turnupShares.getBalanceOf(wisher, buyer.address)).to.equal(6);
+    expect(await turnupShares.getBalanceOf(wisher, buyer2.address)).to.equal(11);
+    expect(await turnupShares.getBalanceOf(wisher, buyer3.address)).to.equal(7);
+
+    // the wish expires
+    await increaseBlockTimestampBy(90 * 24 * 60 * 60 + 1);
+
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 2);
+    await expect(turnupShares.connect(buyer2).buyShares(wisher, 2, {value: buyPrice})).to.be.revertedWith(
+      "ExpiredWishCanOnlyBeSold()"
+    );
+
+    // buyers sell everything
+    await turnupShares.connect(buyer).sellShares(wisher, 6);
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(28);
+    await turnupShares.connect(buyer2).sellShares(wisher, 11);
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(17);
+    await turnupShares.connect(buyer3).sellShares(wisher, 7);
+    expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(10);
+
+    // there is a remaining because of people buying and selling and buying again,
+    // accumulating more rewards than what are returned back during the final sale
+    expect((await turnupShares.wishPasses(wisher)).subjectReward).to.equal("184050000000000000");
+
+    expect(await turnupShares.getBalanceOf(wisher, buyer.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(wisher, buyer2.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(wisher, buyer3.address)).to.equal(0);
+
+    const whishStatus = await turnupShares.wishPasses(wisher);
+    expect(whishStatus.subjectReward).to.equal("184050000000000000");
+    expect(whishStatus.parkedFees).to.equal("490150000000000000");
+
+    // the wish ends
+    await increaseBlockTimestampBy(30 * 24 * 60 * 60 + 1);
+
+    await expect(turnupShares.closeExpiredWish(wisher)).to.emit(turnupShares, "WishClosed").withArgs(wisher);
+
+    expect(await turnupShares.DAOBalance()).to.equal("674200000000000000");
+  });
+
+  it("should manage an expired wish sale", async function () {
+    await init();
+    const wisher = wished.address;
+
+    // Owner creates a new wish pass
+    await turnupShares.connect(operator).newWishPass(wisher, 10);
+
+    // buyer buys 5
+    let buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 5);
+    await turnupShares.connect(buyer).buyShares(wisher, 5, {value: buyPrice});
+
+    // buyer buys 4
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 4);
+    await turnupShares.connect(buyer).buyShares(wisher, 4, {value: buyPrice});
+
+    // buyer2 buys 12
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 12);
+    await turnupShares.connect(buyer2).buyShares(wisher, 12, {value: buyPrice});
+
+    // buyer sells 3
+    await turnupShares.connect(buyer).sellShares(wisher, 3);
+
+    // buyer3 buys 7
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 7);
+    await turnupShares.connect(buyer3).buyShares(wisher, 7, {value: buyPrice});
+
+    // buyer2 sells 1
+    await turnupShares.connect(buyer2).sellShares(wisher, 1);
+
+    expect(await turnupShares.getBalanceOf(wisher, buyer.address)).to.equal(6);
+    expect(await turnupShares.getBalanceOf(wisher, buyer2.address)).to.equal(11);
+    expect(await turnupShares.getBalanceOf(wisher, buyer3.address)).to.equal(7);
+
+    // the wish expires
+    await increaseBlockTimestampBy(90 * 24 * 60 * 60 + 1);
+
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 2);
+    await expect(turnupShares.connect(buyer2).buyShares(wisher, 2, {value: buyPrice})).to.be.revertedWith(
+      "ExpiredWishCanOnlyBeSold()"
+    );
+
+    // buyer sells 4
+    await turnupShares.connect(buyer).sellShares(wisher, 6);
+
+    // buyer2 sells 8
+    await turnupShares.connect(buyer2).sellShares(wisher, 8);
+
+    // buyer3 sells 4
+    await turnupShares.connect(buyer3).sellShares(wisher, 4);
+
+    expect(await turnupShares.getBalanceOf(wisher, buyer.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(wisher, buyer2.address)).to.equal(3);
+    expect(await turnupShares.getBalanceOf(wisher, buyer3.address)).to.equal(3);
+
+    await expect(turnupShares.closeExpiredWish(wisher)).to.be.revertedWith("WishNotExpiredYet()");
+
+    // the wish ends
+    await increaseBlockTimestampBy(30 * 24 * 60 * 60 + 1);
+
+    await expect(turnupShares.connect(buyer2).sellShares(wisher, 1)).to.be.revertedWith("GracePeriodExpired()");
+
+    await expect(turnupShares.withdrawDAOFunds(0, addr0)).to.be.revertedWith("DAONotSetup()");
+
+    await expect(turnupShares.setDAO(dao.address)).to.emit(turnupShares, "DAOUpdated").withArgs(dao.address);
+
+    await expect(turnupShares.connect(dao).withdrawDAOFunds(0, addr0)).to.be.revertedWith("InsufficientFunds()");
+
+    expect(await turnupShares.DAOBalance()).to.equal(0);
+
+    await expect(turnupShares.connect(dao).closeExpiredWish(wisher)).to.emit(turnupShares, "WishClosed").withArgs(wisher);
+
+    expect(await turnupShares.DAOBalance()).to.equal("1175575000000000000");
+
+    let balanceBefore = await ethers.provider.getBalance(beneficiary.address);
+    await turnupShares.connect(dao).withdrawDAOFunds(0, beneficiary.address);
+    let balanceAfter = await ethers.provider.getBalance(beneficiary.address);
+    expect(balanceAfter.sub(balanceBefore).toString()).to.equal("1175575000000000000");
   });
 });
