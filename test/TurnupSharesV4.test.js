@@ -910,4 +910,45 @@ describe("TurnupSharesV4", function () {
     let balanceAfter = await ethers.provider.getBalance(beneficiary.address);
     expect(balanceAfter.sub(balanceBefore).toString()).to.equal("1175575000000000000");
   });
+
+  it.only("subjectReward should be 0 at end of sell", async function () {
+    await init();
+
+    // buyer buys 5
+    await turnupShares.connect(operator).newWishPass(buyer.address, 10);
+    let buyPrice = await turnupShares.getBuyPriceAfterFee(buyer.address, 5);
+    await turnupShares.buyShares(buyer.address, 5, {value: buyPrice});
+
+    // buyer2 buys 12
+    await turnupShares.connect(operator).newWishPass(buyer2.address, 10);
+    buyPrice = await turnupShares.getBuyPriceAfterFee(buyer2.address, 12);
+    await turnupShares.buyShares(buyer2.address, 12, {value: buyPrice});
+
+    // buyer3 buys 7
+    await turnupShares.connect(operator).newWishPass(buyer3.address, 10);
+    buyPrice = await turnupShares.getBuyPriceAfterFee(buyer3.address, 7);
+    await turnupShares.buyShares(buyer3.address, 7, {value: buyPrice});
+
+    // the wish expires
+    await increaseBlockTimestampBy(90 * 24 * 60 * 60 + 1);
+
+    // buyers sell everything
+    await turnupShares.sellShares(buyer.address, 5);
+    await turnupShares.sellShares(buyer2.address, 12);
+    await turnupShares.sellShares(buyer3.address, 7);
+
+    expect(await turnupShares.getBalanceOf(buyer.address, buyer.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(buyer2.address, buyer2.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(buyer3.address, buyer3.address)).to.equal(0);
+
+    const buyerStatus = await turnupShares.wishPasses(buyer.address);
+    expect(buyerStatus.subjectReward).to.equal("0");
+    expect(buyerStatus.parkedFees).to.equal("0");
+    const buyer2Status = await turnupShares.wishPasses(buyer2.address);
+    expect(buyer2Status.subjectReward).to.equal("0");
+    expect(buyer2Status.parkedFees).to.equal("0");
+    const buyer3Status = await turnupShares.wishPasses(buyer3.address);
+    expect(buyer3Status.subjectReward).to.equal("0");
+    expect(buyer3Status.parkedFees).to.equal("0");
+  });
 });
