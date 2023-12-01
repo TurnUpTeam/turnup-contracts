@@ -958,18 +958,17 @@ describe("TurnupSharesV4", function () {
     expect(buyer3Status.parkedFees).to.equal(protocolFee3);
   });
 
-  //needs to be fix
-  it.skip("subjectReward should be 0 at end of sell", async function () {
+  it("testing withdrawProtocolFees", async function () {
     await init();
 
     // buyer buys 5
-    await turnupShares.connect(operator).newWishPass(buyer.address, 5);
-
+    let buyPrice = await turnupShares.getBuyPriceAfterFee(subject, 5);
+    await turnupShares.buyShares(subject, 5, {value: buyPrice});
     await turnupShares.setFeeDestination(buyer.address);
     expect(await turnupShares.protocolFeeDestination()).to.equal(buyer.address);
 
-    let buyPrice = await turnupShares.getBuyPriceAfterFee(buyer.address, 5);
-    await turnupShares.buyShares(buyer.address, 5, {value: buyPrice});
+    buyPrice = await turnupShares.getBuyPriceAfterFee(buyer.address, 5);
+    await turnupShares.connect(buyer).buyShares(buyer.address, 5, {value: buyPrice});
 
     await turnupShares.connect(buyer).withdrawProtocolFees(0);
   });
