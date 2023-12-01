@@ -71,16 +71,16 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 ## Test coverage
 
 ```
-  34 passing (3s)
+  36 passing (3s)
   1 pending
 
 ---------------------|----------|----------|----------|----------|----------------|
 File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 ---------------------|----------|----------|----------|----------|----------------|
- contracts/          |    94.33 |     72.6 |      100 |     94.8 |                |
-  TurnupSharesV4.sol |    94.33 |     72.6 |      100 |     94.8 |... 403,499,500 |
+ contracts/          |    97.16 |    73.97 |      100 |    98.84 |                |
+  TurnupSharesV4.sol |    97.16 |    73.97 |      100 |    98.84 |        499,500 |
 ---------------------|----------|----------|----------|----------|----------------|
-All files            |    94.33 |     72.6 |      100 |     94.8 |                |
+All files            |    97.16 |    73.97 |      100 |    98.84 |                |
 ---------------------|----------|----------|----------|----------|----------------|
 
 > Istanbul reports written to ./coverage/ and ./coverage.json

@@ -734,4 +734,38 @@ describe("TurnupSharesV4", function () {
       })
     ).to.be.revertedWith("TransactionFailedDueToPrice()");
   });
+
+  it("should allow users to buy authorized wish shares", async function () {
+    await init();
+    const reservedQuantity = 10;
+    const amountToBuy = 5;
+    const wisher = wished.address;
+    const authorizedSubject = buyer2.address;
+
+    // Owner creates a new wish pass
+    await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
+    // Owner binds the wish pass to an authorized subject
+    await turnupShares.connect(operator).bindWishPass(authorizedSubject, wisher);
+    await turnupShares.getWishBalanceOf(authorizedSubject, subject);
+  });
+
+  it("should authorizedSubject sell key", async function () {
+    await init();
+    const amountToBuy = 5;
+    const reservedQuantity = 10;
+    const wisher = wished.address;
+    const authorizedSubject = buyer2.address;
+
+    // // Owner creates a new wish pass
+    await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
+    //  // Owner binds the wish pass to an authorized subject
+    await turnupShares.connect(operator).bindWishPass(authorizedSubject, wisher);
+    // await turnupShares.getWishBalanceOf(authorizedSubject, subject)
+
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(authorizedSubject, amountToBuy);
+
+    await turnupShares.buyShares(authorizedSubject, amountToBuy, {value: expectedPrice});
+
+    await turnupShares.sellShares(authorizedSubject, 1);
+  });
 });
