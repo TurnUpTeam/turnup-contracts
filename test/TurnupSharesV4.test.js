@@ -305,17 +305,6 @@ describe("TurnupSharesV4", function () {
     expect(await turnupShares.getWishBalanceOf(wished.address, buyer.address)).to.equal(buyAmount - sellAmount);
   });
 
-  //this should be fix
-  it.skip("should allow users to buy and sell wishes and send sell funds", async function () {
-    await init();
-    const reservedQty = 10;
-    const wishedAddress = turnupShares.address;
-    await turnupShares.connect(operator).newWishPass(wishedAddress, reservedQty);
-    await expect(turnupShares.connect(operator).bindWishPass(subject, wishedAddress)).to.be.revertedWith(
-      "UnableToClaimReward()"
-    );
-  });
-
   it("should allow batch buying multiple wish passes", async function () {
     await init();
     // Create 2 wish passes
@@ -767,5 +756,31 @@ describe("TurnupSharesV4", function () {
     await turnupShares.buyShares(authorizedSubject, amountToBuy, {value: expectedPrice});
 
     await turnupShares.sellShares(authorizedSubject, 1);
+  });
+
+  it("should allow users to buy and bind", async function () {
+    await init();
+    const amountToBuy = 5;
+    const reservedQty = 10;
+    const wishedAddress = buyer.address;
+    await turnupShares.connect(operator).newWishPass(wishedAddress, reservedQty);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(wishedAddress, amountToBuy);
+
+    await turnupShares.buyShares(wishedAddress, amountToBuy, {value: expectedPrice});
+    await turnupShares.connect(operator).bindWishPass(buyer2.address, wishedAddress);
+  });
+
+  it("should revert when user buy and bind bad address", async function () {
+    await init();
+    const amountToBuy = 5;
+    const reservedQty = 10;
+    const wishedAddress = buyer.address;
+    await turnupShares.connect(operator).newWishPass(wishedAddress, reservedQty);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(wishedAddress, amountToBuy);
+
+    await turnupShares.buyShares(wishedAddress, amountToBuy, {value: expectedPrice});
+    await expect(turnupShares.connect(operator).bindWishPass(turnupShares.address, wishedAddress)).to.revertedWith(
+      "UnableToClaimReward()"
+    );
   });
 });
