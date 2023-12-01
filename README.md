@@ -72,6 +72,7 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 
 ```
   40 passing (7s)
+  1 pending
 
 ---------------------|----------|----------|----------|----------|----------------|
 File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
@@ -81,4 +82,7 @@ File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Line
 ---------------------|----------|----------|----------|----------|----------------|
 All files            |    95.18 |    68.14 |    97.06 |    95.87 |                |
 ---------------------|----------|----------|----------|----------|----------------|
+
+> Istanbul reports written to ./coverage/ and ./coverage.json
+
 ```
