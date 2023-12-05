@@ -45,6 +45,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event OperatorUpdated(address operator);
   event DAOUpdated(address dao);
   event WishClosed(address indexed sharesSubject);
+  event UnableToRefundUser(address indexed user, uint256 amount);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -390,6 +391,9 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function _sendFundsBackIfUnused(uint256 amount) internal {
     (bool success, ) = _msgSender().call{value: amount}("");
     // if the transaction fails, to avoid either blocking the process or losing the amount
+    // we just add the amount to the protocolFees. The user can contact turnup at
+    // support@turnup.so to have a manual refund.
+    emit UnableToRefundUser(_msgSender(), amount);
     if (!success) protocolFees += amount;
   }
 
