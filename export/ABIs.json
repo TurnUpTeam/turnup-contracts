@@ -223,6 +223,11 @@
       },
       {
         "inputs": [],
+        "name": "WisherCannotBuySellItsWish",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "WrongAmount",
         "type": "error"
       },

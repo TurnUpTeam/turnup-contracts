@@ -86,6 +86,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error DAONotSetup();
   error NotCloseableOrAlreadyClosed();
   error InsufficientFunds();
+  error WisherCannotBuySellItsWish();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -361,6 +362,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[sharesSubject].owner != address(0)) {
       if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
       if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
+      if (_msgSender() == sharesSubject) revert WisherCannotBuySellItsWish();
       subjectType = SubjectType.WISH;
       wishPasses[sharesSubject].totalSupply += amount;
       wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;

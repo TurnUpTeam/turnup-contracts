@@ -298,7 +298,18 @@ describe("TurnupSharesV4", function () {
     // Buyer purchases some wish pass shares
     const buyAmount = 5;
     const buyPrice = await turnupShares.getBuyPriceAfterFee(wished.address, buyAmount);
+
+    await expect(turnupShares.connect(wished).buyShares(wished.address, buyAmount, {value: buyPrice})).to.be.revertedWith(
+      "WisherCannotBuySellItsWish()"
+    );
+
     await turnupShares.connect(buyer).buyShares(wished.address, buyAmount, {value: buyPrice});
+
+    const buyerWishBalance = await turnupShares.getBalanceOf(wished.address, buyer.address);
+    expect(buyerWishBalance).to.equal(buyAmount);
+
+    const wishedWishBalance = await turnupShares.getBalanceOf(wished.address, wished.address);
+    expect(wishedWishBalance).to.equal(0);
 
     expect((await turnupShares.wishPasses(wished.address)).totalSupply.toNumber()).to.equal(15);
 
