@@ -587,7 +587,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
 
-    (bool success, ) = protocolFeeDestination.call{value: protocolFees}("");
+    (bool success, ) = protocolFeeDestination.call{value: amount}("");
     if (success) {
       protocolFees -= amount;
     } else {
@@ -621,7 +621,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
-    (bool success, ) = beneficiary.call{value: DAOBalance}("");
+    (bool success, ) = beneficiary.call{value: amount}("");
     if (success) {
       DAOBalance -= amount;
     } else {
