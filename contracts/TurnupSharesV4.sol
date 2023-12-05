@@ -624,7 +624,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (beneficiary == address(0)) beneficiary = DAO;
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
-    if (_msgSender() != DAO || DAO == address(0) || DAOBalance == 0) revert Forbidden();
+    if (_msgSender() != DAO) revert Forbidden();
     (bool success, ) = beneficiary.call{value: amount}("");
     if (success) {
       DAOBalance -= amount;
