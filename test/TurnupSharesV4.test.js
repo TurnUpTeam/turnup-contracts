@@ -396,7 +396,7 @@ describe("TurnupSharesV4", function () {
     expect(contractBalanceAfterWithdraw).to.equal(0);
   });
 
-  it.only("should batch buy WISH and sell all w/out leaving value in the contract", async function () {
+  it("should batch buy WISH and sell all w/out leaving value in the contract", async function () {
     await init();
 
     const reservedQuantity = 10;
