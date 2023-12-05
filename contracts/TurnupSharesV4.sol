@@ -374,14 +374,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       wishPasses[wisher].totalSupply += amount;
       wishPasses[wisher].balanceOf[_msgSender()] += amount;
       protocolFees += protocolFee;
-      (bool success, ) = sharesSubject.call{value: subjectFee}("");
+      bool success = payable(sharesSubject).send(subjectFee);
       if (!success) revert UnableToSendFunds();
     } else {
       subjectType = SubjectType.KEY;
       sharesBalance[sharesSubject][_msgSender()] += amount;
       sharesSupply[sharesSubject] += amount;
       protocolFees += protocolFee;
-      (bool success, ) = sharesSubject.call{value: subjectFee}("");
+      bool success = payable(sharesSubject).send(subjectFee);
       if (!success) revert UnableToSendFunds();
     }
 
@@ -391,7 +391,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   function _sendFundsBackIfUnused(uint256 amount) internal {
-    (bool success, ) = _msgSender().call{value: amount}("");
+    bool success = payable(_msgSender()).send(amount);
     // if the transaction fails, to avoid either blocking the process or losing the amount
     // we just add the amount to the protocolFees. The user can contact turnup at
     // support@turnup.so to have a manual refund.
@@ -440,7 +440,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
         // on the opposite, the seller will have also the unused subjectFee
         // Instead the protocolFee will be collected by the DAO at the end of the grace period
         wishPasses[sharesSubject].subjectReward -= subjectFee;
-        (bool success, ) = _msgSender().call{value: price + subjectFee}("");
+        bool success = payable(_msgSender()).send(price + subjectFee);
         if (!success) revert UnableToSendFunds();
       } else {
         wishPasses[sharesSubject].subjectReward += subjectFee;
@@ -472,10 +472,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param subjectFee The subject fee
   // @param sharesSubject The subject of the shares
   function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
-    (bool success1, ) = _msgSender().call{value: price - protocolFee - subjectFee}("");
+    bool success1 = payable(_msgSender()).send(price - protocolFee - subjectFee);
     bool success2 = true;
     if (sharesSubject != address(0)) {
-      (success2, ) = sharesSubject.call{value: subjectFee}("");
+      success2 = payable(sharesSubject).send(subjectFee);
     }
     if (!success1 || !success2) revert UnableToSendFunds();
   }
@@ -552,7 +552,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].isClaimReward = true;
 
     if (wishPasses[wisher].subjectReward > 0) {
-      (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");
+      bool success = payable(sharesSubject).send(wishPasses[wisher].subjectReward);
       if (!success) revert UnableToClaimReward();
       protocolFees += wishPasses[wisher].parkedFees;
     }
@@ -580,7 +580,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].reservedQuantity = 0;
     wishPasses[wisher].balanceOf[sharesSubject] += amount;
     protocolFees += protocolFee;
-    (bool success, ) = sharesSubject.call{value: subjectFee}("");
+    bool success = payable(sharesSubject).send(subjectFee);
     if (!success) revert UnableToSendFunds();
 
     uint256 supply = wishPasses[wisher].totalSupply;
@@ -593,7 +593,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
 
-    (bool success, ) = protocolFeeDestination.call{value: amount}("");
+    bool success = payable(protocolFeeDestination).send(amount);
     if (success) {
       protocolFees -= amount;
     } else {
@@ -627,7 +627,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO) revert Forbidden();
-    (bool success, ) = beneficiary.call{value: amount}("");
+    bool success = payable(beneficiary).send(amount);
     if (success) {
       DAOBalance -= amount;
     } else {
