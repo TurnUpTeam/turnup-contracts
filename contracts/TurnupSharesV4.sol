@@ -141,6 +141,59 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   uint256 public DAOBalance;
   uint256 public protocolFees;
 
+  // ReentrancyGuard
+
+  uint256 private constant _NOT_ENTERED = 1;
+  uint256 private constant _ENTERED = 2;
+
+  uint256 private _status;
+  bool private _reentrancyInitialized;
+
+  /**
+   * @dev Prevents a contract from calling itself, directly or indirectly.
+   * Calling a `nonReentrant` function from another `nonReentrant`
+   * function is not supported. It is possible to prevent this from happening
+   * by making the `nonReentrant` function external, and making it call a
+   * `private` function that does the actual work.
+   */
+  modifier nonReentrant() {
+    _nonReentrantBefore();
+    _;
+    _nonReentrantAfter();
+  }
+
+  function _nonReentrantBefore() private {
+    // On the first call to nonReentrant, _status will be _NOT_ENTERED
+    // solhint-disable-next-line custom-errors
+    require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+    // Any calls to nonReentrant after this point will fail
+    _status = _ENTERED;
+  }
+
+  function _nonReentrantAfter() private {
+    // By storing the original value once again, a refund is triggered (see
+    // https://eips.ethereum.org/EIPS/eip-2200)
+    _status = _NOT_ENTERED;
+  }
+
+  /**
+   * @dev Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
+   * `nonReentrant` function in the call stack.
+   */
+  function _reentrancyGuardEntered() internal view returns (bool) {
+    return _status == _ENTERED;
+  }
+
+  function afterUpgrade() external onlyOwner {
+    if (!_reentrancyInitialized) {
+      _status = _NOT_ENTERED;
+      _reentrancyInitialized = true;
+    }
+  }
+
+  // end ReentrancyGuard
+
   // @dev Modifier to check if the contract is setup
   modifier onlyIfSetup() {
     if (protocolFeeDestination == address(0)) revert ProtocolFeeDestinationNotSet();
@@ -193,7 +246,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.3.0";
+    return "v4.3.1";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -328,7 +381,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to buy
-  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup {
+  function buyShares(address sharesSubject, uint256 amount) public payable virtual onlyIfSetup nonReentrant {
     (, uint256 excess) = _buyShares(sharesSubject, amount, msg.value, true);
     if (excess > 0) _sendFundsBackIfUnused(excess);
   }
@@ -374,13 +427,20 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       wishPasses[wisher].totalSupply += amount;
       wishPasses[wisher].balanceOf[_msgSender()] += amount;
       protocolFees += protocolFee;
+      // solhint-disable-next-line check-send-result
       bool success = payable(sharesSubject).send(subjectFee);
       if (!success) revert UnableToSendFunds();
     } else {
       subjectType = SubjectType.KEY;
+      // Silencing wrong warning returned by the solhint
+      // solhint-disable-next-line reentrancy
       sharesBalance[sharesSubject][_msgSender()] += amount;
+      // solhint-disable-next-line reentrancy
       sharesSupply[sharesSubject] += amount;
+      // solhint-disable-next-line reentrancy
       protocolFees += protocolFee;
+      // Another wrong warnign, since there are no multiple sends
+      // solhint-disable-next-line check-send-result, multiple-sends
       bool success = payable(sharesSubject).send(subjectFee);
       if (!success) revert UnableToSendFunds();
     }
@@ -391,11 +451,13 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   function _sendFundsBackIfUnused(uint256 amount) internal {
+    // solhint-disable-next-line check-send-result
     bool success = payable(_msgSender()).send(amount);
     // if the transaction fails, to avoid either blocking the process or losing the amount
     // we just add the amount to the protocolFees. The user can contact turnup at
     // support@turnup.so to have a manual refund.
     emit UnableToRefundUser(_msgSender(), amount);
+    // solhint-disable-next-line reentrancy
     if (!success) protocolFees += amount;
   }
 
@@ -415,7 +477,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   - Authorized Wishes: The shares of the wisher bound to the subject
   // @param sharesSubject The subject of the shares
   // @param amount The amount of shares to sell
-  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup {
+  function sellShares(address sharesSubject, uint256 amount) public virtual onlyIfSetup nonReentrant {
     if (amount == 0) revert InvalidAmount();
     uint256 supply = getSupply(sharesSubject);
     if (supply <= amount) revert CannotSellLastKey();
@@ -440,25 +502,39 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
         // on the opposite, the seller will have also the unused subjectFee
         // Instead the protocolFee will be collected by the DAO at the end of the grace period
         wishPasses[sharesSubject].subjectReward -= subjectFee;
+        // solhint-disable-next-line check-send-result
         bool success = payable(_msgSender()).send(price + subjectFee);
         if (!success) revert UnableToSendFunds();
       } else {
+        // silencing wrong warning
+        // solhint-disable-next-line
         wishPasses[sharesSubject].subjectReward += subjectFee;
+        // solhint-disable-next-line reentrancy
         wishPasses[sharesSubject].parkedFees += protocolFee;
+        // solhint-disable-next-line reentrancy
         _sendSellFunds(price, protocolFee, subjectFee, address(0));
       }
     } else if (authorizedWishes[sharesSubject] != address(0)) {
       subjectType = SubjectType.BIND;
       address wisher = authorizedWishes[sharesSubject];
+      // silencing wrong warning
+      // solhint-disable-next-line reentrancy
       wishPasses[wisher].totalSupply -= amount;
+      // solhint-disable-next-line reentrancy
       wishPasses[wisher].balanceOf[_msgSender()] -= amount;
+      // solhint-disable-next-line reentrancy
       protocolFees += protocolFee;
+      // solhint-disable-next-line reentrancy
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     } else {
       subjectType = SubjectType.KEY;
+      // solhint-disable-next-line reentrancy
       sharesBalance[sharesSubject][_msgSender()] -= amount;
+      // solhint-disable-next-line reentrancy
       sharesSupply[sharesSubject] -= amount;
+      // solhint-disable-next-line reentrancy
       protocolFees += protocolFee;
+      // solhint-disable-next-line reentrancy
       _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
     }
 
@@ -472,9 +548,11 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param subjectFee The subject fee
   // @param sharesSubject The subject of the shares
   function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+    // solhint-disable-next-line check-send-result
     bool success1 = payable(_msgSender()).send(price - protocolFee - subjectFee);
     bool success2 = true;
     if (sharesSubject != address(0)) {
+      // solhint-disable-next-line check-send-result, multiple-sends
       success2 = payable(sharesSubject).send(subjectFee);
     }
     if (!success1 || !success2) revert UnableToSendFunds();
@@ -489,7 +567,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     address[] calldata sharesSubjects,
     uint256[] calldata amounts,
     uint256[] calldata expectedPrices
-  ) public payable virtual {
+  ) public payable virtual nonReentrant {
     if (sharesSubjects.length != amounts.length || sharesSubjects.length != expectedPrices.length) revert WrongAmount();
     if (sharesSubjects.length > 10) {
       // avoid the risk of going out-of-gas
@@ -537,7 +615,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the operator can execute it.
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
-  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator {
+  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator nonReentrant {
     if (sharesSupply[sharesSubject] > 0) revert CannotMakeASubjectABind();
     if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
@@ -552,16 +630,19 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].isClaimReward = true;
 
     if (wishPasses[wisher].subjectReward > 0) {
+      // solhint-disable-next-line check-send-result
       bool success = payable(sharesSubject).send(wishPasses[wisher].subjectReward);
       if (!success) revert UnableToClaimReward();
+      // solhint-disable-next-line reentrancy
       protocolFees += wishPasses[wisher].parkedFees;
     }
+    // solhint-disable-next-line reentrancy
     emit WishBound(sharesSubject, wisher);
   }
 
   // @dev This function is used to claim the reserved wish pass
   //   Only the sharesSubject itself can call this function to make the claim
-  function claimReservedWishPass() external payable virtual {
+  function claimReservedWishPass() external payable virtual nonReentrant {
     address sharesSubject = _msgSender();
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
     address wisher = authorizedWishes[sharesSubject];
@@ -580,6 +661,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     wishPasses[wisher].reservedQuantity = 0;
     wishPasses[wisher].balanceOf[sharesSubject] += amount;
     protocolFees += protocolFee;
+    // solhint-disable-next-line check-send-result
     bool success = payable(sharesSubject).send(subjectFee);
     if (!success) revert UnableToSendFunds();
 
@@ -588,13 +670,14 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used withdraw the protocol fees
-  function withdrawProtocolFees(uint256 amount) external {
+  function withdrawProtocolFees(uint256 amount) external nonReentrant {
     if (amount == 0) amount = protocolFees;
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
-
+    // solhint-disable-next-line check-send-result
     bool success = payable(protocolFeeDestination).send(amount);
     if (success) {
+      // solhint-disable-next-line reentrancy
       protocolFees -= amount;
     } else {
       revert UnableToSendFunds();
@@ -620,15 +703,17 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to transfer unused wish fees to the DAO
-  function withdrawDAOFunds(uint256 amount, address beneficiary) external onlyDAO {
+  function withdrawDAOFunds(uint256 amount, address beneficiary) external onlyDAO nonReentrant {
     if (DAO == address(0)) revert DAONotSetup();
     if (DAOBalance == 0) revert InsufficientFunds();
     if (beneficiary == address(0)) beneficiary = DAO;
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO) revert Forbidden();
+    // solhint-disable-next-line check-send-result
     bool success = payable(beneficiary).send(amount);
     if (success) {
+      // solhint-disable-next-line reentrancy
       DAOBalance -= amount;
     } else {
       revert UnableToSendFunds();
