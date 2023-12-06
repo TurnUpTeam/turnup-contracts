@@ -45,7 +45,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event OperatorUpdated(address operator);
   event DAOUpdated(address dao);
   event WishClosed(address indexed sharesSubject);
-  event UnableToRefundUser(address indexed user, uint256 amount);
 
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
@@ -397,68 +396,58 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       else return (false, expectedPrice);
     }
     uint256 supply = getSupply(sharesSubject);
-    // solhint-disable-next-line reason-string
     if (supply == 0 && sharesSubject != _msgSender()) revert OnlyKeysOwnerCanBuyFirstKey();
-
     uint256 price = getPrice(supply, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
-
-    // solhint-disable-next-line reason-string
     if (expectedPrice < price + protocolFee + subjectFee) {
       if (revertOnPriceError) revert TransactionFailedDueToPrice();
       else return (false, expectedPrice);
     }
-
-    SubjectType subjectType;
-
     if (wishPasses[sharesSubject].owner != address(0)) {
-      if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
-      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
-      if (_msgSender() == sharesSubject) revert WisherCannotBuySellItsWish();
-      subjectType = SubjectType.WISH;
-      wishPasses[sharesSubject].totalSupply += amount;
-      wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
-      wishPasses[sharesSubject].subjectReward += subjectFee;
-      wishPasses[sharesSubject].parkedFees += protocolFee;
+      _buyWish(sharesSubject, supply, amount, price);
     } else if (authorizedWishes[sharesSubject] != address(0)) {
-      subjectType = SubjectType.BIND;
-      address wisher = authorizedWishes[sharesSubject];
-      wishPasses[wisher].totalSupply += amount;
-      wishPasses[wisher].balanceOf[_msgSender()] += amount;
-      protocolFees += protocolFee;
-      // solhint-disable-next-line check-send-result
-      bool success = payable(sharesSubject).send(subjectFee);
-      if (!success) revert UnableToSendFunds();
+      _buyBind(sharesSubject, supply, amount, price);
     } else {
-      subjectType = SubjectType.KEY;
-      // Silencing wrong warning returned by the solhint
-      // solhint-disable-next-line reentrancy
-      sharesBalance[sharesSubject][_msgSender()] += amount;
-      // solhint-disable-next-line reentrancy
-      sharesSupply[sharesSubject] += amount;
-      // solhint-disable-next-line reentrancy
-      protocolFees += protocolFee;
-      // Another wrong warnign, since there are no multiple sends
-      // solhint-disable-next-line check-send-result, multiple-sends
-      bool success = payable(sharesSubject).send(subjectFee);
-      if (!success) revert UnableToSendFunds();
+      _buyKey(sharesSubject, supply, amount, price);
     }
-
-    emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, subjectType);
     // It returns the excess sent by the user if any
     return (true, expectedPrice - price - protocolFee - subjectFee);
   }
 
+  function _buyWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+    if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
+    if (_msgSender() == sharesSubject) revert WisherCannotBuySellItsWish();
+    wishPasses[sharesSubject].totalSupply += amount;
+    wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
+    wishPasses[sharesSubject].subjectReward += getSubjectFee(price);
+    wishPasses[sharesSubject].parkedFees += getProtocolFee(price);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, SubjectType.WISH);
+  }
+
+  function _buyBind(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+    address wisher = authorizedWishes[sharesSubject];
+    wishPasses[wisher].totalSupply += amount;
+    wishPasses[wisher].balanceOf[_msgSender()] += amount;
+    protocolFees += getProtocolFee(price);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, SubjectType.BIND);
+    (bool success, ) = sharesSubject.call{value: getSubjectFee(price)}("");
+    if (!success) revert UnableToSendFunds();
+  }
+
+  function _buyKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+    sharesBalance[sharesSubject][_msgSender()] += amount;
+    sharesSupply[sharesSubject] += amount;
+    protocolFees += getProtocolFee(price);
+    emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, SubjectType.KEY);
+    (bool success, ) = sharesSubject.call{value: getSubjectFee(price)}("");
+    if (!success) revert UnableToSendFunds();
+  }
+
   function _sendFundsBackIfUnused(uint256 amount) internal {
-    // solhint-disable-next-line check-send-result
-    bool success = payable(_msgSender()).send(amount);
-    // if the transaction fails, to avoid either blocking the process or losing the amount
-    // we just add the amount to the protocolFees. The user can contact turnup at
-    // support@turnup.so to have a manual refund.
-    emit UnableToRefundUser(_msgSender(), amount);
-    // solhint-disable-next-line reentrancy
-    if (!success) protocolFees += amount;
+    (bool success, ) = _msgSender().call{value: amount}("");
+    if (!success) revert UnableToSendFunds();
   }
 
   // @dev Check the balance of a given subject and revert if not correct
@@ -481,64 +470,63 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount == 0) revert InvalidAmount();
     uint256 supply = getSupply(sharesSubject);
     if (supply <= amount) revert CannotSellLastKey();
-
     uint256 price = getPrice(supply - amount, amount);
-    uint256 protocolFee = getProtocolFee(price);
-    uint256 subjectFee = getSubjectFee(price);
-
-    SubjectType subjectType;
     uint256 balance = getBalanceOf(sharesSubject, _msgSender());
     _checkBalance(sharesSubject, balance, amount);
-
     if (wishPasses[sharesSubject].owner != address(0)) {
-      if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
-      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME < block.timestamp)
-        revert GracePeriodExpired();
-      subjectType = SubjectType.WISH;
-      wishPasses[sharesSubject].totalSupply -= amount;
-      wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
-      if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) {
-        // since the subject did not bind the wish, the user is not charged for the sale,
-        // on the opposite, the seller will have also the unused subjectFee
-        // Instead the protocolFee will be collected by the DAO at the end of the grace period
-        wishPasses[sharesSubject].subjectReward -= subjectFee;
-        // solhint-disable-next-line check-send-result
-        bool success = payable(_msgSender()).send(price + subjectFee);
-        if (!success) revert UnableToSendFunds();
-      } else {
-        // silencing wrong warning
-        // solhint-disable-next-line
-        wishPasses[sharesSubject].subjectReward += subjectFee;
-        // solhint-disable-next-line reentrancy
-        wishPasses[sharesSubject].parkedFees += protocolFee;
-        // solhint-disable-next-line reentrancy
-        _sendSellFunds(price, protocolFee, subjectFee, address(0));
-      }
+      _sellWish(sharesSubject, supply, amount, price);
     } else if (authorizedWishes[sharesSubject] != address(0)) {
-      subjectType = SubjectType.BIND;
-      address wisher = authorizedWishes[sharesSubject];
-      // silencing wrong warning
-      // solhint-disable-next-line reentrancy
-      wishPasses[wisher].totalSupply -= amount;
-      // solhint-disable-next-line reentrancy
-      wishPasses[wisher].balanceOf[_msgSender()] -= amount;
-      // solhint-disable-next-line reentrancy
-      protocolFees += protocolFee;
-      // solhint-disable-next-line reentrancy
-      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
+      _sellBind(sharesSubject, supply, amount, price);
     } else {
-      subjectType = SubjectType.KEY;
-      // solhint-disable-next-line reentrancy
-      sharesBalance[sharesSubject][_msgSender()] -= amount;
-      // solhint-disable-next-line reentrancy
-      sharesSupply[sharesSubject] -= amount;
-      // solhint-disable-next-line reentrancy
-      protocolFees += protocolFee;
-      // solhint-disable-next-line reentrancy
-      _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
+      _sellKey(sharesSubject, supply, amount, price);
     }
+  }
 
-    emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, subjectType);
+  function _sellWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+    if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME < block.timestamp)
+      revert GracePeriodExpired();
+    wishPasses[sharesSubject].totalSupply -= amount;
+    wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
+    emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, SubjectType.WISH);
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) {
+      // since the subject did not bind the wish, the user is not charged for the sale,
+      // on the opposite, the seller will have also the unused subjectFee
+      // Instead the protocolFee will be collected by the DAO at the end of the grace period
+      wishPasses[sharesSubject].subjectReward -= subjectFee;
+      _sendSellFunds(price + subjectFee, 0, 0, address(0));
+    } else {
+      // silencing wrong warning
+      // solhint-disable-next-line
+      wishPasses[sharesSubject].subjectReward += subjectFee;
+      // solhint-disable-next-line reentrancy
+      wishPasses[sharesSubject].parkedFees += protocolFee;
+      // solhint-disable-next-line reentrancy
+      _sendSellFunds(price, protocolFee, subjectFee, address(0));
+    }
+  }
+
+  function _sellBind(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+    address wisher = authorizedWishes[sharesSubject];
+    wishPasses[wisher].totalSupply -= amount;
+    wishPasses[wisher].balanceOf[_msgSender()] -= amount;
+    protocolFees += protocolFee;
+    emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, SubjectType.BIND);
+    _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
+  }
+
+  function _sellKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+    uint256 protocolFee = getProtocolFee(price);
+    uint256 subjectFee = getSubjectFee(price);
+    sharesBalance[sharesSubject][_msgSender()] -= amount;
+    sharesSupply[sharesSubject] -= amount;
+    protocolFees += protocolFee;
+    emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, SubjectType.KEY);
+    _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
   }
 
   // @dev Internal function to send funds when selling shares or wishes
@@ -548,12 +536,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param subjectFee The subject fee
   // @param sharesSubject The subject of the shares
   function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
-    // solhint-disable-next-line check-send-result
-    bool success1 = payable(_msgSender()).send(price - protocolFee - subjectFee);
+    (bool success1, ) = _msgSender().call{value: price - protocolFee - subjectFee}("");
     bool success2 = true;
     if (sharesSubject != address(0)) {
-      // solhint-disable-next-line check-send-result, multiple-sends
-      success2 = payable(sharesSubject).send(subjectFee);
+      (success2, ) = sharesSubject.call{value: subjectFee}("");
     }
     if (!success1 || !success2) revert UnableToSendFunds();
   }
@@ -584,7 +570,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
         false
       );
       if (success) {
-        consumed += expectedPrices[i];
+        consumed += expectedPrices[i] - excess;
       }
       excesses += excess;
     }
@@ -622,22 +608,16 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
     if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
-
     wishPasses[wisher].subject = sharesSubject;
     authorizedWishes[sharesSubject] = wisher;
-
     if (wishPasses[wisher].isClaimReward) revert ClaimRewardShouldBeFalse();
     wishPasses[wisher].isClaimReward = true;
-
-    if (wishPasses[wisher].subjectReward > 0) {
-      // solhint-disable-next-line check-send-result
-      bool success = payable(sharesSubject).send(wishPasses[wisher].subjectReward);
-      if (!success) revert UnableToClaimReward();
-      // solhint-disable-next-line reentrancy
-      protocolFees += wishPasses[wisher].parkedFees;
-    }
-    // solhint-disable-next-line reentrancy
     emit WishBound(sharesSubject, wisher);
+    if (wishPasses[wisher].subjectReward > 0) {
+      protocolFees += wishPasses[wisher].parkedFees;
+      (bool success, ) = sharesSubject.call{value: wishPasses[wisher].subjectReward}("");
+      if (!success) revert UnableToClaimReward();
+    }
   }
 
   // @dev This function is used to claim the reserved wish pass
@@ -650,23 +630,18 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch(wishPasses[wisher].subject);
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
     if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
-
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
-
     if (msg.value < price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
-
     wishPasses[wisher].reservedQuantity = 0;
     wishPasses[wisher].balanceOf[sharesSubject] += amount;
     protocolFees += protocolFee;
-    // solhint-disable-next-line check-send-result
-    bool success = payable(sharesSubject).send(subjectFee);
-    if (!success) revert UnableToSendFunds();
-
     uint256 supply = wishPasses[wisher].totalSupply;
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply, SubjectType.BIND);
+    (bool success, ) = sharesSubject.call{value: subjectFee}("");
+    if (!success) revert UnableToSendFunds();
   }
 
   // @dev This function is used withdraw the protocol fees
@@ -674,14 +649,9 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount == 0) amount = protocolFees;
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
-    // solhint-disable-next-line check-send-result
-    bool success = payable(protocolFeeDestination).send(amount);
-    if (success) {
-      // solhint-disable-next-line reentrancy
-      protocolFees -= amount;
-    } else {
-      revert UnableToSendFunds();
-    }
+    protocolFees -= amount;
+    (bool success, ) = protocolFeeDestination.call{value: amount}("");
+    if (!success) revert UnableToSendFunds();
   }
 
   // @dev This function is used to close an expired wish
@@ -710,14 +680,9 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (amount == 0) amount = DAOBalance;
     if (amount > DAOBalance) revert InvalidAmount();
     if (_msgSender() != DAO) revert Forbidden();
-    // solhint-disable-next-line check-send-result
-    bool success = payable(beneficiary).send(amount);
-    if (success) {
-      // solhint-disable-next-line reentrancy
-      DAOBalance -= amount;
-    } else {
-      revert UnableToSendFunds();
-    }
+    DAOBalance -= amount;
+    (bool success, ) = beneficiary.call{value: amount}("");
+    if (!success) revert UnableToSendFunds();
   }
 
   // @dev This empty reserved space is put in place to allow future versions to add new
