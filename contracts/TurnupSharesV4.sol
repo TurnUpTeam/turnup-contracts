@@ -636,6 +636,9 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     protocolFees += protocolFee;
     uint256 supply = wishPasses[wisher].totalSupply;
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply, SubjectType.BIND);
+    if (msg.value > price + protocolFee + subjectFee) {
+      _sendFundsBackIfUnused(msg.value - price - protocolFee - subjectFee);
+    }
     (bool success, ) = sharesSubject.call{value: subjectFee}("");
     if (!success) revert UnableToSendFunds();
   }
