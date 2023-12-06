@@ -11,9 +11,7 @@ describe("TurnupSharesV4", function () {
   let turnupShares;
   let owner;
   let project;
-  let buyer, buyer2, buyer3, wished, wished1, wished2, operator, dao, beneficiary;
-  let subject;
-  let wishSubject;
+  let buyer, buyer2, buyer3, wished, wished1, wished2, operator, dao, beneficiary, subject, sub0, sub1, sub2;
 
   const WISH = 0;
   const BIND = 1;
@@ -28,10 +26,25 @@ describe("TurnupSharesV4", function () {
   }
 
   before(async function () {
-    [owner, project, buyer, buyer2, buyer3, wished, wished1, wished2, operator, subject2, dao, beneficiary, subject] =
-      await ethers.getSigners();
+    [
+      owner,
+      project,
+      buyer,
+      buyer2,
+      buyer3,
+      wished,
+      wished1,
+      wished2,
+      operator,
+      subject2,
+      dao,
+      beneficiary,
+      subject,
+      sub0,
+      sub1,
+      sub2,
+    ] = await ethers.getSigners();
     // subject = owner.address;
-    wishSubject = wished2.address;
   });
 
   beforeEach(async function () {
@@ -758,6 +771,33 @@ describe("TurnupSharesV4", function () {
     ).to.be.revertedWith("TooManyKeys()");
   });
 
+  it("should return the excesses to the sender", async function () {
+    await init();
+
+    const balanceBefore = await ethers.provider.getBalance(buyer.address);
+    let price = await turnupShares.getBuyPriceAfterFee(sub0.address, 1);
+
+    // initialize the keys
+    for (let address of [sub0, sub1, sub2]) {
+      await turnupShares.connect(address).buyShares(address.address, 1, {value: price});
+    }
+
+    let buyPrice = await turnupShares.getBuyPriceAfterFee(sub0.address, 5);
+
+    const sharesSubjects = [sub0.address, sub1.address, sub2.address];
+    // the second amount will fail
+    const amounts = [5, 8, 5];
+    const expectedPrices = [buyPrice, buyPrice, buyPrice];
+
+    let gasCost = await executeAndReturnGasCost(
+      turnupShares.connect(buyer).batchBuyShares(sharesSubjects, amounts, expectedPrices, {value: buyPrice.mul(3)})
+    );
+
+    const balanceAfter = await ethers.provider.getBalance(buyer.address);
+
+    expect(balanceAfter).to.equal(balanceBefore.sub(buyPrice.mul(2)).sub(gasCost));
+  });
+
   it("should revert new witch too large", async function () {
     await init();
     const reservedQty = 100;
@@ -859,7 +899,7 @@ describe("TurnupSharesV4", function () {
     );
   });
 
-  it("should revert batch buying wrong amount", async function () {
+  it("should revert buy is price value changes", async function () {
     await init();
     // Create 2 wish passes
     const reservedQty = 10;

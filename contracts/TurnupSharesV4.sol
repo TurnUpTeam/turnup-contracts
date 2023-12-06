@@ -560,7 +560,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       revert TooManyKeys();
     }
     uint256 consumed = 0;
-    uint256 excesses = 0;
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       (bool success, uint256 excess) = _buyShares(
         sharesSubjects[i],
@@ -572,13 +571,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       if (success) {
         consumed += expectedPrices[i] - excess;
       }
-      excesses += excess;
     }
     if (msg.value < consumed) revert InsufficientFunds();
     uint256 remain = msg.value - consumed;
-    if (remain > excesses) {
-      _sendFundsBackIfUnused(msg.value - excesses);
-    }
+    _sendFundsBackIfUnused(remain);
   }
 
   // @dev This function is used to create a new wish
