@@ -2,6 +2,11 @@ const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const DeployUtils = require("../scripts/lib/DeployUtils");
 
+let counter = 1;
+function cl(...args) {
+  console.log("\n  >>>>", counter++, ...args, "\n");
+}
+
 describe("TurnupSharesV4", function () {
   let turnupShares;
   let owner;
@@ -204,20 +209,40 @@ describe("TurnupSharesV4", function () {
     await init();
 
     // owner buys keys
+    const subjectKeyAmount = 4;
 
-    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, 4);
-    await turnupShares.connect(subject).buyShares(subject.address, 4, {value: expectedPrice});
+    const contractBalanceBefore = await ethers.provider.getBalance(turnupShares.address);
+    expect(contractBalanceBefore).to.equal(0);
+
+    let price = await turnupShares.getBuyPrice(subject.address, subjectKeyAmount);
+    let protocolFee = await turnupShares.getProtocolFee(price);
+    let subjectFee;
+    let totalSubjectFee = await turnupShares.getSubjectFee(price);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, subjectKeyAmount);
+    await turnupShares.connect(subject).buyShares(subject.address, subjectKeyAmount, {value: expectedPrice});
+
+    const contractBalanceAfterFirstBuy = await ethers.provider.getBalance(turnupShares.address);
+    expect(contractBalanceAfterFirstBuy).to.equal(price.add(protocolFee));
 
     // buyer buys keys
 
-    expect(await turnupShares.sharesSupply(subject.address)).to.equal(4);
+    expect(await turnupShares.sharesSupply(subject.address)).to.equal(subjectKeyAmount);
 
     const amountToBuy = 5;
 
     expect(await turnupShares.getBuyPrice(subject.address, amountToBuy)).equal("95000000000000000");
-
+    price = await turnupShares.getBuyPrice(subject.address, amountToBuy);
+    protocolFee = await turnupShares.getProtocolFee(price);
+    subjectFee = await turnupShares.getSubjectFee(price);
+    totalSubjectFee = totalSubjectFee.add(subjectFee);
     expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amountToBuy);
     await turnupShares.connect(buyer).buyShares(subject.address, amountToBuy, {value: expectedPrice});
+
+    const contractBalanceAfterSecondBuy = await ethers.provider.getBalance(turnupShares.address);
+    expect(contractBalanceAfterSecondBuy).to.equal(contractBalanceAfterFirstBuy.add(price).add(protocolFee));
+
+    expect(await turnupShares.getBalanceOf(subject.address, buyer.address)).to.equal(amountToBuy);
+
     expect(await turnupShares.sharesBalance(subject.address, buyer.address)).to.equal(amountToBuy);
 
     expect(await turnupShares.getSellPriceAfterFee(subject.address, 5)).equal("85500000000000000");
@@ -226,31 +251,44 @@ describe("TurnupSharesV4", function () {
 
     // Now buyer sells the shares.
     let amountToSell = 3;
+    price = await turnupShares.getSellPrice(subject.address, amountToSell);
+    subjectFee = await turnupShares.getSubjectFee(price);
+    protocolFee = await turnupShares.getProtocolFee(price);
+    totalSubjectFee = totalSubjectFee.add(subjectFee);
+
     let sellPriceAfterFee = await turnupShares.getSellPriceAfterFee(subject.address, amountToSell);
-    let sellPrice = await turnupShares.getSellPrice(subject.address, amountToSell);
 
-    await expect(turnupShares.connect(subject).sellShares(subject.address, 4)).revertedWith("CannotSellLastKey()");
+    // sell
+    await expect(turnupShares.connect(subject).sellShares(subject.address, subjectKeyAmount)).revertedWith(
+      "CannotSellLastKey()"
+    );
 
-    let gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).sellShares(subject.address, amountToSell));
+    expect(await turnupShares.getSupply(subject.address)).to.equal(amountToBuy + subjectKeyAmount);
+
+    await turnupShares.connect(buyer).sellShares(subject.address, amountToSell);
+
+    expect(await turnupShares.getBalanceOf(subject.address, buyer.address)).to.equal(amountToBuy - amountToSell);
+
+    const contractBalanceAfterFirstSell = await ethers.provider.getBalance(turnupShares.address);
+
+    let sellerValue = price.sub(protocolFee).sub(subjectFee);
+
+    expect(contractBalanceAfterFirstSell).to.equal(contractBalanceAfterSecondBuy.sub(sellerValue).sub(subjectFee));
 
     const buyerShares = await turnupShares.sharesBalance(subject.address, buyer.address);
-
-    await expect(turnupShares.connect(buyer).sellShares(subject.address, amountToSell)).revertedWith(
-      `InsufficientKeys(${buyerShares})`
-    );
+    await expect(turnupShares.connect(buyer).sellShares(subject.address, 3)).revertedWith(`InsufficientKeys(${buyerShares})`);
 
     amountToSell = 2;
     sellPrice = await turnupShares.getSellPrice(subject.address, amountToSell);
     sellPriceAfterFee = await turnupShares.getSellPriceAfterFee(subject.address, amountToSell);
-    let protocolFee = await turnupShares.getProtocolFee(sellPrice);
-    let subjectFee = await turnupShares.getSubjectFee(sellPrice);
+    protocolFee = await turnupShares.getProtocolFee(sellPrice);
+    totalSubjectFee = await turnupShares.getSubjectFee(sellPrice);
 
     const projectBalance = await ethers.provider.getBalance(project.address);
     const ownerBalance = await ethers.provider.getBalance(subject.address);
     const contractBalance = await ethers.provider.getBalance(turnupShares.address);
     const buyerBalance = await ethers.provider.getBalance(buyer.address);
-
-    gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).sellShares(subject.address, amountToSell));
+    let gasCost = await executeAndReturnGasCost(turnupShares.connect(buyer).sellShares(subject.address, amountToSell));
 
     // Now let's check the final balances
     const finalOwnerBalance = await ethers.provider.getBalance(subject.address);
@@ -259,7 +297,7 @@ describe("TurnupSharesV4", function () {
 
     // since the owner is the seller and the subject, it would add(subjectFee) and subtract(subjectFee)
     expect(finalContractBalance).to.equal(contractBalance.sub(sellPrice).add(protocolFee));
-    expect(finalOwnerBalance).to.equal(ownerBalance.add(subjectFee));
+    expect(finalOwnerBalance).to.equal(ownerBalance.add(totalSubjectFee));
     expect(finalBuyerBalance).to.equal(buyerBalance.add(sellPriceAfterFee).sub(gasCost));
   });
 
