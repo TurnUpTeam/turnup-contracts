@@ -383,10 +383,17 @@ describe("TurnupSharesV4", function () {
     expect(await turnupShares.getWishBalanceOf(wished2PseudoAddress, buyer.address)).to.equal(buyAmount - sellAmount);
   });
 
-  it("should allow batch buying multiple wish passes", async function () {
+  it.only("should allow batch buying multiple wish passes", async function () {
     await init();
     // Create 2 wish passes
     const reservedQty = 10;
+
+    const wrongAddress = "0x00000000" + buyer.address.slice(10);
+
+    await expect(turnupShares.connect(operator).newWishPass(toChecksumAddress(wrongAddress), reservedQty)).to.be.revertedWith(
+      "InvalidWishedPseudoAddress()"
+    );
+
     await turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQty);
     await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
 
