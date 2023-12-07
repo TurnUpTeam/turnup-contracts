@@ -9,15 +9,17 @@ function cl(...args) {
   console.log("\n  >>>>", counter++, ...args, "\n");
 }
 
+function makePseudoAddress(address) {
+  return toChecksumAddress("0x0000000000" + address.slice(12).toLowerCase());
+}
+
 describe("TurnupSharesV4", function () {
   let turnupShares;
   let owner;
   let project;
   let buyer, buyer2, buyer3, wished, wished1, wished2, operator, dao, beneficiary, subject, sub0, sub1, sub2;
 
-  const wished1PseudoAddress = toChecksumAddress("0x0000000000a900fa2b585dd299e03d12FA4293BC");
-  const wished2PseudoAddress = toChecksumAddress("0x0000000000991cd0dFcb48F0a06a40FA1aF46EBC");
-  const wished3PseudoAddress = toChecksumAddress("0x0000000000991cd0dFcb48FCCCCa40FA1aF46EBC");
+  let wished1PseudoAddress, wished2PseudoAddress, wished3PseudoAddress;
 
   const WISH = 0;
   const BIND = 1;
@@ -50,7 +52,9 @@ describe("TurnupSharesV4", function () {
       sub1,
       sub2,
     ] = await ethers.getSigners();
-    // subject = owner.address;
+    wished1PseudoAddress = makePseudoAddress(wished.address);
+    wished2PseudoAddress = makePseudoAddress(wished1.address);
+    wished3PseudoAddress = makePseudoAddress(wished2.address);
   });
 
   beforeEach(async function () {
