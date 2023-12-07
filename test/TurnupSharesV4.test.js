@@ -10,7 +10,7 @@ function cl(...args) {
 }
 
 function makePseudoAddress(address) {
-  return toChecksumAddress("0x0000000000" + address.slice(12).toLowerCase());
+  return toChecksumAddress("0x0000000000" + address.slice(12));
 }
 
 describe("TurnupSharesV4", function () {
