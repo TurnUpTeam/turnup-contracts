@@ -1,5 +1,7 @@
 const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
+const {toChecksumAddress} = require("ethereumjs-util");
+
 const DeployUtils = require("../scripts/lib/DeployUtils");
 
 let counter = 1;
@@ -12,6 +14,10 @@ describe("TurnupSharesV4", function () {
   let owner;
   let project;
   let buyer, buyer2, buyer3, wished, wished1, wished2, operator, dao, beneficiary, subject, sub0, sub1, sub2;
+
+  const wished1PseudoAddress = toChecksumAddress("0x0000000000a900fa2b585dd299e03d12FA4293BC");
+  const wished2PseudoAddress = toChecksumAddress("0x0000000000991cd0dFcb48F0a06a40FA1aF46EBC");
+  const wished3PseudoAddress = toChecksumAddress("0x0000000000991cd0dFcb48FCCCCa40FA1aF46EBC");
 
   const WISH = 0;
   const BIND = 1;
@@ -59,7 +65,7 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setProtocolFeePercent(protocolFee);
     const subjectFee = ethers.utils.parseUnits("50000000", "gwei"); // example fee
     await turnupShares.setSubjectFeePercent(subjectFee);
-    await expect(turnupShares.newWishPass(wished.address, 1)).revertedWith("OperatorNotSet()");
+    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("OperatorNotSet()");
     await turnupShares.setOperator(operator.address);
   }
 
@@ -169,7 +175,7 @@ describe("TurnupSharesV4", function () {
       .withArgs(subject.address, subject.address, true, amount, expectedPrice, amount, KEY);
 
     await expect(turnupShares.connect(operator).newWishPass(subject.address, 10)).to.be.revertedWith(
-      "CannotMakeASubjectAWish()"
+      "InvalidWishedPseudoAddress()"
     );
 
     // buyer buys shares
@@ -203,7 +209,7 @@ describe("TurnupSharesV4", function () {
     subjectFee = await turnupShares.getSubjectFee(buyPrice);
     expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount2);
 
-    projectBalance = await ethers.provider.getBalance(project.address);
+    const projectBalance = await ethers.provider.getBalance(project.address);
     ownerBalance = await ethers.provider.getBalance(subject.address);
     contractBalance = await ethers.provider.getBalance(turnupShares.address);
     buyerBalance = await ethers.provider.getBalance(buyer.address);
@@ -327,10 +333,10 @@ describe("TurnupSharesV4", function () {
   it("should allow the owner to create a new wish pass", async function () {
     await init();
     const reservedQuantity = 10;
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity);
-    const wishPass = await turnupShares.wishPasses(wished.address);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
+    const wishPass = await turnupShares.wishPasses(wished2PseudoAddress);
 
-    expect(wishPass.owner).to.equal(wished.address);
+    expect(wishPass.owner).to.equal(wished2PseudoAddress);
     expect(wishPass.reservedQuantity).to.equal(reservedQuantity);
   });
 
@@ -345,63 +351,59 @@ describe("TurnupSharesV4", function () {
     await init();
     // Owner creates wish pass
     const reservedQty = 10;
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
 
     // Buyer purchases some wish pass shares
     const buyAmount = 5;
-    const buyPrice = await turnupShares.getBuyPriceAfterFee(wished.address, buyAmount);
+    const buyPrice = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, buyAmount);
 
-    await expect(turnupShares.connect(wished).buyShares(wished.address, buyAmount, {value: buyPrice})).to.be.revertedWith(
-      "WisherCannotBuySellItsWish()"
-    );
+    await turnupShares.connect(buyer).buyShares(wished2PseudoAddress, buyAmount, {value: buyPrice});
 
-    await turnupShares.connect(buyer).buyShares(wished.address, buyAmount, {value: buyPrice});
-
-    const buyerWishBalance = await turnupShares.getBalanceOf(wished.address, buyer.address);
+    const buyerWishBalance = await turnupShares.getBalanceOf(wished2PseudoAddress, buyer.address);
     expect(buyerWishBalance).to.equal(buyAmount);
 
-    const wishedWishBalance = await turnupShares.getBalanceOf(wished.address, wished.address);
+    const wishedWishBalance = await turnupShares.getBalanceOf(wished2PseudoAddress, wished2PseudoAddress);
     expect(wishedWishBalance).to.equal(0);
 
-    expect((await turnupShares.wishPasses(wished.address)).totalSupply.toNumber()).to.equal(15);
+    expect((await turnupShares.wishPasses(wished2PseudoAddress)).totalSupply.toNumber()).to.equal(15);
 
-    expect(await turnupShares.getWishBalanceOf(wished.address, buyer.address)).to.equal(buyAmount);
+    expect(await turnupShares.getWishBalanceOf(wished2PseudoAddress, buyer.address)).to.equal(buyAmount);
     // Verify buyer wish pass balance
 
     // Buyer sells some wish pass shares
     const sellAmount = 2;
-    const sellPrice = await turnupShares.getSellPriceAfterFee(wished.address, sellAmount);
+    const sellPrice = await turnupShares.getSellPriceAfterFee(wished2PseudoAddress, sellAmount);
 
-    await turnupShares.connect(buyer).sellShares(wished.address, sellAmount);
+    await turnupShares.connect(buyer).sellShares(wished2PseudoAddress, sellAmount);
 
-    expect(await turnupShares.getWishBalanceOf(wished.address, buyer.address)).to.equal(buyAmount - sellAmount);
+    expect(await turnupShares.getWishBalanceOf(wished2PseudoAddress, buyer.address)).to.equal(buyAmount - sellAmount);
   });
 
   it("should allow batch buying multiple wish passes", async function () {
     await init();
     // Create 2 wish passes
     const reservedQty = 10;
-    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
-    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
 
     // Get batch buy prices
     const wish1Amount = 5;
     const wish2Amount = 3;
-    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
-    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1PseudoAddress, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, wish2Amount);
 
     // Batch buy
     await turnupShares
       .connect(buyer)
-      .batchBuyShares([wished1.address, wished2.address], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
+      .batchBuyShares([wished1PseudoAddress, wished2PseudoAddress], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
         value: wish1Price.add(wish2Price),
       });
 
     // Verify balances
-    const wish1Balance = await turnupShares.getWishBalanceOf(wished1.address, buyer.address);
+    const wish1Balance = await turnupShares.getWishBalanceOf(wished1PseudoAddress, buyer.address);
     expect(wish1Balance).to.equal(wish1Amount);
 
-    const wish2Balance = await turnupShares.getWishBalanceOf(wished2.address, buyer.address);
+    const wish2Balance = await turnupShares.getWishBalanceOf(wished2PseudoAddress, buyer.address);
     expect(wish2Balance).to.equal(wish2Amount);
   });
 
@@ -463,9 +465,9 @@ describe("TurnupSharesV4", function () {
     await init();
 
     const reservedQuantity = 10;
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
 
-    const supplyBeforeBuy = await turnupShares.getSupply(wished.address);
+    const supplyBeforeBuy = await turnupShares.getSupply(wished2PseudoAddress);
     expect(supplyBeforeBuy).to.equal(reservedQuantity);
 
     // buyer batch buys shares
@@ -478,7 +480,7 @@ describe("TurnupSharesV4", function () {
     let totalShares = 0;
     let buyPrice = ethers.BigNumber.from("0");
     for (let i = 0; i < amounts.length; i++) {
-      sharesSubjects[i] = wished.address;
+      sharesSubjects[i] = wished2PseudoAddress;
       totalShares += amounts[i];
       let price = await turnupShares.getPrice(expectedSupply, amounts[i]);
       let protocolFee = await turnupShares.getProtocolFee(price);
@@ -500,14 +502,14 @@ describe("TurnupSharesV4", function () {
     const contractBalanceAfter = await ethers.provider.getBalance(turnupShares.address);
     expect(contractBalanceAfter).to.equal(buyPrice);
 
-    const supplyAfterBuy = await turnupShares.getSupply(wished.address);
+    const supplyAfterBuy = await turnupShares.getSupply(wished2PseudoAddress);
     expect(supplyAfterBuy).to.equal(expectedSupply);
 
-    const sellPrice = await turnupShares.getSellPrice(wished.address, totalShares);
+    const sellPrice = await turnupShares.getSellPrice(wished2PseudoAddress, totalShares);
     let sellProtocolFee = await turnupShares.getProtocolFee(sellPrice);
     let sellSubjectFee = await turnupShares.getSubjectFee(sellPrice);
 
-    await turnupShares.connect(buyer).sellShares(wished.address, totalShares);
+    await turnupShares.connect(buyer).sellShares(wished2PseudoAddress, totalShares);
 
     const contractBalanceAfterSell = await ethers.provider.getBalance(turnupShares.address);
 
@@ -515,7 +517,7 @@ describe("TurnupSharesV4", function () {
       expectedProtocolFee.add(sellProtocolFee).add(expectedSubjectFee).add(sellSubjectFee)
     );
 
-    await turnupShares.connect(operator).bindWishPass(subject.address, wished.address);
+    await turnupShares.connect(operator).bindWishPass(subject.address, wished2PseudoAddress);
     const contractBalanceAfterBind = await ethers.provider.getBalance(turnupShares.address);
     expect(contractBalanceAfterBind).to.equal(expectedProtocolFee.add(sellProtocolFee));
 
@@ -533,27 +535,27 @@ describe("TurnupSharesV4", function () {
     const reservedQuantity = 10;
 
     // Owner creates a new wish pass
-    await expect(turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity))
+    await expect(turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity))
       .to.emit(turnupShares, "WishCreated")
-      .withArgs(wished.address, reservedQuantity);
+      .withArgs(wished2PseudoAddress, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
 
-    await expect(turnupShares.connect(operator).bindWishPass(wished.address, wished.address)).to.be.revertedWith(
+    await expect(turnupShares.connect(operator).bindWishPass(wished2PseudoAddress, wished2PseudoAddress)).to.be.revertedWith(
       "SubjectCannotBeAWish()"
     );
 
-    await expect(turnupShares.connect(operator).bindWishPass(subject2.address, wished.address)).to.be.revertedWith(
+    await expect(turnupShares.connect(operator).bindWishPass(subject2.address, wished2PseudoAddress)).to.be.revertedWith(
       "CannotMakeASubjectABind()"
     );
 
     // Owner binds the wish pass to a subject
-    await expect(turnupShares.connect(operator).bindWishPass(subject.address, wished.address))
+    await expect(turnupShares.connect(operator).bindWishPass(subject.address, wished2PseudoAddress))
       .to.emit(turnupShares, "WishBound")
-      .withArgs(subject.address, wished.address);
+      .withArgs(subject.address, wished2PseudoAddress);
 
     // Check if the wish pass has been bound correctly
-    expect(await turnupShares.authorizedWishes(subject.address)).to.equal(wished.address);
-    const wishPass = await turnupShares.wishPasses(wished.address);
+    expect(await turnupShares.authorizedWishes(subject.address)).to.equal(wished2PseudoAddress);
+    const wishPass = await turnupShares.wishPasses(wished2PseudoAddress);
     expect(wishPass.subject).to.equal(subject.address);
   });
 
@@ -562,13 +564,13 @@ describe("TurnupSharesV4", function () {
     const reservedQuantity = 10;
 
     // operator creates a new wish pass
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
 
     // Owner tries to bind the wish pass
-    await expect(turnupShares.bindWishPass(subject.address, wished.address)).to.be.revertedWith("NotTheOperator()");
+    await expect(turnupShares.bindWishPass(subject.address, wished2PseudoAddress)).to.be.revertedWith("NotTheOperator()");
 
     // Non-operator tries to bind the wish pass
-    await expect(turnupShares.connect(buyer).bindWishPass(subject.address, wished.address)).to.be.revertedWith(
+    await expect(turnupShares.connect(buyer).bindWishPass(subject.address, wished2PseudoAddress)).to.be.revertedWith(
       "NotTheOperator()"
     );
   });
@@ -578,12 +580,12 @@ describe("TurnupSharesV4", function () {
     const reservedQuantity = 10;
 
     // Owner creates a new wish pass and binds it
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity);
-    await turnupShares.connect(operator).bindWishPass(subject.address, wished.address);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
+    await turnupShares.connect(operator).bindWishPass(subject.address, wished2PseudoAddress);
 
     // Try to bind the same wish pass again
-    await expect(turnupShares.connect(operator).bindWishPass(subject.address, wished.address)).to.be.revertedWith(
-      `WishAlreadyBound("${wished.address}")`
+    await expect(turnupShares.connect(operator).bindWishPass(subject.address, wished2PseudoAddress)).to.be.revertedWith(
+      `WishAlreadyBound("${wished2PseudoAddress}")`
     );
   });
 
@@ -592,12 +594,12 @@ describe("TurnupSharesV4", function () {
     const reservedQuantity = 10;
 
     // Owner creates a new wish pass
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
 
     // Attempt to bind with a zero subject address
-    await expect(turnupShares.connect(operator).bindWishPass(ethers.constants.AddressZero, wished.address)).to.be.revertedWith(
-      "InvalidZeroAddress()"
-    );
+    await expect(
+      turnupShares.connect(operator).bindWishPass(ethers.constants.AddressZero, wished2PseudoAddress)
+    ).to.be.revertedWith("InvalidZeroAddress()");
 
     // Attempt to bind with a zero wisher address
     await expect(turnupShares.connect(operator).bindWishPass(subject.address, ethers.constants.AddressZero)).to.be.revertedWith(
@@ -609,7 +611,7 @@ describe("TurnupSharesV4", function () {
     await init();
     const reservedQuantity = 10;
     const amountToBuy = 5;
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
 
     // Owner creates a new wish pass
     await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
@@ -634,7 +636,7 @@ describe("TurnupSharesV4", function () {
     await init();
     const reservedQuantity = 10;
     const amountToBuy = 5;
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
     const authorizedSubject = buyer2.address;
 
     // Owner creates a new wish pass
@@ -665,18 +667,18 @@ describe("TurnupSharesV4", function () {
     const sharesSubject = buyer3.address;
 
     // Owner creates a new wish pass for the 'wished' address
-    await turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
 
     // Owner binds the wish pass to the 'wished' address
-    await turnupShares.connect(operator).bindWishPass(sharesSubject, wished.address);
+    await turnupShares.connect(operator).bindWishPass(sharesSubject, wished2PseudoAddress);
 
     // Calculate the expected price for claiming the wish pass
     const buyPrice = await turnupShares.getBuyPrice(ethers.constants.AddressZero, reservedQuantity);
     const protocolFee = await turnupShares.getProtocolFee(buyPrice);
     const subjectFee = await turnupShares.getSubjectFee(buyPrice);
-    const totalPrice = buyPrice.add(protocolFee).add(subjectFee);
+    const totalPrice = buyPrice.add(protocolFee);
 
-    expect((await turnupShares.wishPasses(wished.address)).reservedQuantity).to.equal(reservedQuantity);
+    expect((await turnupShares.wishPasses(wished2PseudoAddress)).reservedQuantity).to.equal(reservedQuantity);
 
     // Simulate the 'wished' address claiming the reserved wish pass by sending the correct total price
     const tx = await turnupShares.connect(buyer3).claimReservedWishPass({value: totalPrice});
@@ -687,12 +689,12 @@ describe("TurnupSharesV4", function () {
       .withArgs(sharesSubject, sharesSubject, true, reservedQuantity, buyPrice, reservedQuantity, BIND);
 
     // Check if the wish pass balance of the 'wished' address is updated correctly
-    let balance = await turnupShares.getWishBalanceOf(sharesSubject, wished.address);
+    let balance = await turnupShares.getWishBalanceOf(sharesSubject, wished2PseudoAddress);
     expect(balance).to.equal(0);
 
     // Check if the reserved quantity for the 'wished' address is set to 0 after claiming
-    const wishPass = await turnupShares.wishPasses(wished.address);
-    expect((await turnupShares.wishPasses(wished.address)).reservedQuantity).to.equal(0);
+    const wishPass = await turnupShares.wishPasses(wished2PseudoAddress);
+    expect((await turnupShares.wishPasses(wished2PseudoAddress)).reservedQuantity).to.equal(0);
   });
 
   it("should be upgradeable by the owner", async function () {
@@ -714,18 +716,18 @@ describe("TurnupSharesV4", function () {
     await init();
     // Create 2 wish passes
     const reservedQty = 10;
-    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
-    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
 
     // Get batch buy prices
     const wish1Amount = 5;
     const wish2Amount = 3;
-    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
-    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1PseudoAddress, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, wish2Amount);
 
     // Batch buy
     await expect(
-      turnupShares.connect(buyer).batchBuyShares([wished1.address], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
+      turnupShares.connect(buyer).batchBuyShares([wished1PseudoAddress], [wish1Amount, wish2Amount], [wish1Price, wish2Price], {
         value: wish1Price.add(wish2Price),
       })
     ).to.be.revertedWith("WrongAmount()");
@@ -733,16 +735,19 @@ describe("TurnupSharesV4", function () {
 
   it("should revert batch too many keys", async function () {
     await init();
+
+    const string = "0x0000000001000000000000000000000000000000";
+
     // Create 2 wish passes
     const reservedQty = 10;
-    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
-    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
 
     // Get batch buy prices
     const wish1Amount = 5;
     const wish2Amount = 3;
-    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
-    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1PseudoAddress, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, wish2Amount);
 
     // Batch buy
     await expect(
@@ -750,17 +755,17 @@ describe("TurnupSharesV4", function () {
         .connect(buyer)
         .batchBuyShares(
           [
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
-            wished1.address,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
+            wished1PseudoAddress,
           ],
           [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
           [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -802,7 +807,7 @@ describe("TurnupSharesV4", function () {
     await init();
     const reservedQty = 100;
     // Create wish passes
-    await expect(turnupShares.connect(operator).newWishPass(wished1.address, reservedQty)).to.be.revertedWith(
+    await expect(turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQty)).to.be.revertedWith(
       "ReserveQuantityTooLarge()"
     );
   });
@@ -812,13 +817,13 @@ describe("TurnupSharesV4", function () {
     const reservedQuantity = 10;
 
     // Owner creates a new wish pass
-    await expect(turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity))
+    await expect(turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity))
       .to.emit(turnupShares, "WishCreated")
-      .withArgs(wished.address, reservedQuantity);
+      .withArgs(wished2PseudoAddress, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
 
     // Owner binds the wish pass to a subject
-    await expect(turnupShares.connect(operator).bindWishPass(buyer3.address, wished1.address)).to.be.revertedWith(
+    await expect(turnupShares.connect(operator).bindWishPass(buyer3.address, wished1PseudoAddress)).to.be.revertedWith(
       "WishNotFound()"
     );
   });
@@ -827,16 +832,16 @@ describe("TurnupSharesV4", function () {
     await init();
     const reservedQuantity = 10;
     // Owner creates a new wish pass
-    await expect(turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity))
+    await expect(turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity))
       .to.emit(turnupShares, "WishCreated")
-      .withArgs(wished.address, reservedQuantity);
+      .withArgs(wished2PseudoAddress, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
 
     // Owner binds the wish pass to a subject
-    await turnupShares.connect(operator).bindWishPass(buyer3.address, wished.address);
+    await turnupShares.connect(operator).bindWishPass(buyer3.address, wished2PseudoAddress);
 
-    await expect(turnupShares.connect(operator).bindWishPass(buyer3.address, wished.address)).to.be.revertedWith(
-      `WishAlreadyBound("${wished.address}")`
+    await expect(turnupShares.connect(operator).bindWishPass(buyer3.address, wished2PseudoAddress)).to.be.revertedWith(
+      `WishAlreadyBound("${wished2PseudoAddress}")`
     );
   });
 
@@ -846,12 +851,12 @@ describe("TurnupSharesV4", function () {
     const buyPrice = await turnupShares.getBuyPrice(ethers.constants.AddressZero, reservedQuantity);
     const protocolFee = await turnupShares.getProtocolFee(buyPrice);
     const subjectFee = await turnupShares.getSubjectFee(buyPrice);
-    const totalPrice = buyPrice.add(protocolFee).add(subjectFee);
+    const totalPrice = buyPrice.add(protocolFee);
 
     // Owner creates a new wish pass
-    await expect(turnupShares.connect(operator).newWishPass(wished.address, reservedQuantity))
+    await expect(turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity))
       .to.emit(turnupShares, "WishCreated")
-      .withArgs(wished.address, reservedQuantity);
+      .withArgs(wished2PseudoAddress, reservedQuantity);
     await turnupShares.setFeeDestination(project.address);
 
     await expect(turnupShares.connect(buyer3).claimReservedWishPass({value: totalPrice})).to.be.revertedWith("WishNotFound()");
@@ -870,7 +875,7 @@ describe("TurnupSharesV4", function () {
     await init();
     const reservedQuantity = 10;
     const amountToBuy = 5;
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
 
     // Owner creates a new wish pass
     await turnupShares.connect(operator).newWishPass(wisher, reservedQuantity);
@@ -881,7 +886,7 @@ describe("TurnupSharesV4", function () {
     const subjectFee = await turnupShares.getSubjectFee(price);
     const totalPrice = price.add(protocolFee).add(subjectFee);
 
-    await turnupShares.connect(operator).bindWishPass(buyer.address, wished.address);
+    await turnupShares.connect(operator).bindWishPass(buyer.address, wished2PseudoAddress);
 
     await expect(turnupShares.connect(buyer).buyShares(wisher, amountToBuy, {value: totalPrice})).to.revertedWith(
       "BoundCannotBeBuyOrSell()"
@@ -903,18 +908,18 @@ describe("TurnupSharesV4", function () {
     await init();
     // Create 2 wish passes
     const reservedQty = 10;
-    await turnupShares.connect(operator).newWishPass(wished1.address, reservedQty);
-    await turnupShares.connect(operator).newWishPass(wished2.address, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQty);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
 
     // Get batch buy prices
     const wish1Amount = 5;
     const wish2Amount = 3;
-    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1.address, wish1Amount);
-    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2.address, wish2Amount);
+    const wish1Price = await turnupShares.getBuyPriceAfterFee(wished1PseudoAddress, wish1Amount);
+    const wish2Price = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, wish2Amount);
 
     // Batch buy
     await expect(
-      turnupShares.connect(buyer).buyShares(wished1.address, wish1Amount, {
+      turnupShares.connect(buyer).buyShares(wished1PseudoAddress, wish1Amount, {
         value: wish1Price.sub(wish2Price),
       })
     ).to.be.revertedWith("TransactionFailedDueToPrice()");
@@ -924,7 +929,7 @@ describe("TurnupSharesV4", function () {
     await init();
     const reservedQuantity = 10;
     const amountToBuy = 5;
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
     const authorizedSubject = buyer2.address;
 
     // Owner creates a new wish pass
@@ -938,7 +943,7 @@ describe("TurnupSharesV4", function () {
     await init();
     const amountToBuy = 5;
     const reservedQuantity = 10;
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
     const authorizedSubject = buyer2.address;
 
     // // Owner creates a new wish pass
@@ -958,31 +963,29 @@ describe("TurnupSharesV4", function () {
     await init();
     const amountToBuy = 5;
     const reservedQty = 10;
-    const wishedAddress = buyer.address;
-    await turnupShares.connect(operator).newWishPass(wishedAddress, reservedQty);
-    let expectedPrice = await turnupShares.getBuyPriceAfterFee(wishedAddress, amountToBuy);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, amountToBuy);
 
-    await turnupShares.connect(subject).buyShares(wishedAddress, amountToBuy, {value: expectedPrice});
-    await turnupShares.connect(operator).bindWishPass(buyer2.address, wishedAddress);
+    await turnupShares.connect(subject).buyShares(wished2PseudoAddress, amountToBuy, {value: expectedPrice});
+    await turnupShares.connect(operator).bindWishPass(buyer2.address, wished2PseudoAddress);
   });
 
   it("should revert when user buy and bind bad address", async function () {
     await init();
     const amountToBuy = 5;
     const reservedQty = 10;
-    const wishedAddress = buyer.address;
-    await turnupShares.connect(operator).newWishPass(wishedAddress, reservedQty);
-    let expectedPrice = await turnupShares.getBuyPriceAfterFee(wishedAddress, amountToBuy);
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQty);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, amountToBuy);
 
-    await turnupShares.connect(subject).buyShares(wishedAddress, amountToBuy, {value: expectedPrice});
-    await expect(turnupShares.connect(operator).bindWishPass(turnupShares.address, wishedAddress)).to.revertedWith(
+    await turnupShares.connect(subject).buyShares(wished2PseudoAddress, amountToBuy, {value: expectedPrice});
+    await expect(turnupShares.connect(operator).bindWishPass(turnupShares.address, wished2PseudoAddress)).to.revertedWith(
       "UnableToClaimReward()"
     );
   });
 
   it("should manage an expired wish that sold out", async function () {
     await init();
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
 
     // Owner creates a new wish pass
     await turnupShares.connect(operator).newWishPass(wisher, 10);
@@ -1057,7 +1060,7 @@ describe("TurnupSharesV4", function () {
 
   it("should manage an expired wish sale", async function () {
     await init();
-    const wisher = wished.address;
+    const wisher = wished2PseudoAddress;
 
     // Owner creates a new wish pass
     await turnupShares.connect(operator).newWishPass(wisher, 10);
@@ -1070,7 +1073,7 @@ describe("TurnupSharesV4", function () {
     buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 4);
     await turnupShares.connect(buyer).buyShares(wisher, 4, {value: buyPrice});
 
-    // buyer2 buys 12
+    // buyer2 buys twelve
     buyPrice = await turnupShares.getBuyPriceAfterFee(wisher, 12);
     await turnupShares.connect(buyer2).buyShares(wisher, 12, {value: buyPrice});
 
@@ -1137,48 +1140,67 @@ describe("TurnupSharesV4", function () {
   it("subjectReward should be 0 at end of sell", async function () {
     await init();
 
+    const reservedQuantity = 10;
+    const five = 5;
+    const seven = 7;
+    const twelve = 12;
+
     // buyer buys 5
-    await turnupShares.connect(operator).newWishPass(buyer.address, 5);
-    let buyPrice = await turnupShares.getBuyPriceAfterFee(buyer.address, 5);
-    await turnupShares.connect(subject).buyShares(buyer.address, 5, {value: buyPrice});
+    await turnupShares.connect(operator).newWishPass(wished1PseudoAddress, reservedQuantity);
+    let price = await turnupShares.getBuyPrice(wished1PseudoAddress, five);
+    let buyPrice = await turnupShares.getBuyPriceAfterFee(wished1PseudoAddress, five);
+    const protocolFee1 = await turnupShares.getProtocolFee(price);
+    const subjectFee1 = await turnupShares.getSubjectFee(price);
+
+    await turnupShares.connect(subject).buyShares(wished1PseudoAddress, five, {value: buyPrice});
 
     // buyer2 buys 12
-    await turnupShares.connect(operator).newWishPass(buyer2.address, 12);
-    buyPrice = await turnupShares.getBuyPriceAfterFee(buyer2.address, 12);
-    await turnupShares.connect(subject).buyShares(buyer2.address, 12, {value: buyPrice});
+    await turnupShares.connect(operator).newWishPass(wished2PseudoAddress, reservedQuantity);
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wished2PseudoAddress, twelve);
+    price = await turnupShares.getBuyPrice(wished2PseudoAddress, twelve);
+    const protocolFee2 = await turnupShares.getProtocolFee(price);
+    const subjectFee2 = await turnupShares.getSubjectFee(price);
+    await turnupShares.connect(subject).buyShares(wished2PseudoAddress, twelve, {value: buyPrice});
 
-    // buyer3 buys 7
-    await turnupShares.connect(operator).newWishPass(buyer3.address, 7);
-    buyPrice = await turnupShares.getBuyPriceAfterFee(buyer3.address, 7);
-    await turnupShares.connect(subject).buyShares(buyer3.address, 7, {value: buyPrice});
+    // buyer3 buys seven
+    await turnupShares.connect(operator).newWishPass(wished3PseudoAddress, reservedQuantity);
+    buyPrice = await turnupShares.getBuyPriceAfterFee(wished3PseudoAddress, seven);
+    price = await turnupShares.getBuyPrice(wished3PseudoAddress, seven);
+    const protocolFee3 = await turnupShares.getProtocolFee(price);
+    const subjectFee3 = await turnupShares.getSubjectFee(price);
+    await turnupShares.connect(subject).buyShares(wished3PseudoAddress, seven, {value: buyPrice});
+
+    let wish1Status = await turnupShares.wishPasses(wished1PseudoAddress);
+    expect(wish1Status.subjectReward).to.equal(subjectFee1);
+    expect(wish1Status.parkedFees).to.equal(protocolFee1);
+    let wish2Status = await turnupShares.wishPasses(wished2PseudoAddress);
+    expect(wish2Status.subjectReward).to.equal(subjectFee2);
+    expect(wish2Status.parkedFees).to.equal(protocolFee2);
+    let wish3Status = await turnupShares.wishPasses(wished3PseudoAddress);
+    expect(wish3Status.subjectReward).to.equal(subjectFee3);
+    expect(wish3Status.parkedFees).to.equal(protocolFee3);
 
     // the wish expires
     await increaseBlockTimestampBy(90 * 24 * 60 * 60 + 1);
 
     // buyers sell everything
-    const price1 = await turnupShares.getSellPrice(buyer.address, 5);
-    const protocolFee1 = await turnupShares.getProtocolFee(price1);
-    await turnupShares.connect(subject).sellShares(buyer.address, 5);
-    const price2 = await turnupShares.getSellPrice(buyer2.address, 12);
-    const protocolFee2 = await turnupShares.getProtocolFee(price2);
-    await turnupShares.connect(subject).sellShares(buyer2.address, 12);
-    const price3 = await turnupShares.getSellPrice(buyer3.address, 7);
-    const protocolFee3 = await turnupShares.getProtocolFee(price3);
-    await turnupShares.connect(subject).sellShares(buyer3.address, 7);
+    await turnupShares.connect(subject).sellShares(wished1PseudoAddress, five);
+    await turnupShares.connect(subject).sellShares(wished2PseudoAddress, twelve);
+    await turnupShares.connect(subject).sellShares(wished3PseudoAddress, seven);
 
-    expect(await turnupShares.getBalanceOf(buyer.address, buyer.address)).to.equal(0);
-    expect(await turnupShares.getBalanceOf(buyer2.address, buyer2.address)).to.equal(0);
-    expect(await turnupShares.getBalanceOf(buyer3.address, buyer3.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(wished1PseudoAddress, buyer.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(wished2PseudoAddress, buyer2.address)).to.equal(0);
+    expect(await turnupShares.getBalanceOf(wished3PseudoAddress, buyer3.address)).to.equal(0);
 
-    const buyerStatus = await turnupShares.wishPasses(buyer.address);
-    expect(buyerStatus.subjectReward).to.equal("0");
-    expect(buyerStatus.parkedFees).to.equal(protocolFee1);
-    const buyer2Status = await turnupShares.wishPasses(buyer2.address);
-    expect(buyer2Status.subjectReward).to.equal("0");
-    expect(buyer2Status.parkedFees).to.equal(protocolFee2);
-    const buyer3Status = await turnupShares.wishPasses(buyer3.address);
-    expect(buyer3Status.subjectReward).to.equal("0");
-    expect(buyer3Status.parkedFees).to.equal(protocolFee3);
+    wish1Status = await turnupShares.wishPasses(wished1PseudoAddress);
+    expect(wish1Status.subjectReward).to.equal("0");
+    expect(wish1Status.parkedFees).to.equal(protocolFee1);
+    wish2Status = await turnupShares.wishPasses(wished2PseudoAddress);
+    expect(wish2Status.subjectReward).to.equal("0");
+    expect(wish2Status.parkedFees).to.equal(protocolFee2);
+    wish3Status = await turnupShares.wishPasses(wished3PseudoAddress);
+    expect(wish3Status.subjectReward).to.equal("0");
+    expect(wish3Status.parkedFees).to.equal(protocolFee3);
   });
 
   it("testing withdrawProtocolFees", async function () {

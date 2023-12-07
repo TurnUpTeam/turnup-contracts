@@ -71,7 +71,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error NotTheOperator();
   error OperatorNotSet();
   error TooManyKeys();
-  error CannotMakeASubjectAWish();
   error CannotMakeASubjectABind();
   error SubjectCannotBeAWish();
   error UpgradedAlreadyInitialized();
@@ -85,7 +84,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error DAONotSetup();
   error NotCloseableOrAlreadyClosed();
   error InsufficientFunds();
-  error WisherCannotBuySellItsWish();
+  error InvalidWishedPseudoAddress();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -418,7 +417,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   function _buyWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
-    if (_msgSender() == sharesSubject) revert WisherCannotBuySellItsWish();
     wishPasses[sharesSubject].totalSupply += amount;
     wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
     wishPasses[sharesSubject].subjectReward += getSubjectFee(price);
@@ -582,7 +580,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
   function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOperator {
-    if (sharesSupply[wisher] > 0) revert CannotMakeASubjectAWish();
+    if (uint160(wisher) >= uint160(0x0000000001000000000000000000000000000000)) revert InvalidWishedPseudoAddress();
     if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != address(0)) revert ExistingWish(wishPasses[wisher].owner);
@@ -629,15 +627,15 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
     uint256 protocolFee = getProtocolFee(price);
-    uint256 subjectFee = getSubjectFee(price);
-    if (msg.value < price + protocolFee + subjectFee) revert TransactionFailedDueToPrice();
+    if (msg.value < price + protocolFee) revert TransactionFailedDueToPrice();
     wishPasses[wisher].reservedQuantity = 0;
     wishPasses[wisher].balanceOf[sharesSubject] += amount;
     protocolFees += protocolFee;
     uint256 supply = wishPasses[wisher].totalSupply;
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply, SubjectType.BIND);
-    (bool success, ) = sharesSubject.call{value: subjectFee + msg.value - (price + protocolFee + subjectFee)}("");
-    if (!success) revert UnableToSendFunds();
+    if (msg.value - (price + protocolFee) > 0) {
+      _sendFundsBackIfUnused(msg.value - (price + protocolFee));
+    }
   }
 
   // @dev This function is used withdraw the protocol fees

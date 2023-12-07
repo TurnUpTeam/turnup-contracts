@@ -23,11 +23,6 @@
       },
       {
         "inputs": [],
-        "name": "CannotMakeASubjectAWish",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "CannotSellLastKey",
         "type": "error"
       },
@@ -97,6 +92,11 @@
           }
         ],
         "name": "InvalidWish",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidWishedPseudoAddress",
         "type": "error"
       },
       {
@@ -219,11 +219,6 @@
       {
         "inputs": [],
         "name": "WishNotFound",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "WisherCannotBuySellItsWish",
         "type": "error"
       },
       {

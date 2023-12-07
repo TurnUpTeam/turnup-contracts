@@ -56,6 +56,9 @@ devDependencies:
   ethereumjs-abi:
     specifier: ^0.6.8
     version: 0.6.8
+  ethereumjs-util:
+    specifier: ^7.1.5
+    version: 7.1.5
   ethers:
     specifier: ^5.7.2
     version: 5.7.2
