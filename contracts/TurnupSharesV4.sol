@@ -244,7 +244,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.3.1";
+    return "v4.3.2";
   }
 
   // @dev Helper to get the balance of a user for a given wish
