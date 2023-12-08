@@ -244,7 +244,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.3.2";
+    return "v4.3.3";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -580,7 +580,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
   function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOperator {
-    if (uint160(wisher) >= uint160(0x0000000001000000000000000000000000000000)) revert InvalidWishedPseudoAddress();
+    if (uint160(wisher) >= uint160(0x0000000000000100000000000000000000000000)) revert InvalidWishedPseudoAddress();
     if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != address(0)) revert ExistingWish(wishPasses[wisher].owner);

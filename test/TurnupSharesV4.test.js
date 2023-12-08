@@ -10,7 +10,7 @@ function cl(...args) {
 }
 
 function makePseudoAddress(address) {
-  return toChecksumAddress("0x0000000000" + address.slice(12));
+  return toChecksumAddress("0x00000000000000" + address.slice(16));
 }
 
 describe("TurnupSharesV4", function () {
@@ -60,7 +60,7 @@ describe("TurnupSharesV4", function () {
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
     await turnupShares.afterUpgrade();
-    expect(await turnupShares.getVer()).to.equal("v4.3.2");
+    expect(await turnupShares.getVer()).to.equal("v4.3.3");
   });
 
   async function init() {
@@ -383,7 +383,7 @@ describe("TurnupSharesV4", function () {
     expect(await turnupShares.getWishBalanceOf(wished2PseudoAddress, buyer.address)).to.equal(buyAmount - sellAmount);
   });
 
-  it.only("should allow batch buying multiple wish passes", async function () {
+  it("should allow batch buying multiple wish passes", async function () {
     await init();
     // Create 2 wish passes
     const reservedQty = 10;
