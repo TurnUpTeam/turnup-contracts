@@ -2,7 +2,7 @@ const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
 
-const DeployUtils = require("../scripts/lib/DeployUtils");
+const DeployUtils = require("deploy-utils");
 
 let counter = 1;
 function cl(...args) {
@@ -26,7 +26,7 @@ describe("TurnupSharesV4", function () {
   const KEY = 2;
   const addr0 = "0x" + "0".repeat(40);
 
-  const deployUtils = new DeployUtils(ethers);
+  const deployUtils = new DeployUtils();
 
   async function increaseBlockTimestampBy(offset) {
     await this.ethers.provider.send("evm_increaseTime", [offset]);
@@ -709,9 +709,12 @@ describe("TurnupSharesV4", function () {
   });
 
   it("should be upgradeable by the owner", async function () {
-    const Upgraded = await ethers.getContractFactory("TurnupSharesV4b");
-    const upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
-
+    turnupShares = await deployUtils.deployProxy("TurnupSharesV3");
+    let Upgraded = await ethers.getContractFactory("TurnupSharesV4");
+    let upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
+    expect(await upgraded.getVer()).to.equal("v4.3.3");
+    Upgraded = await ethers.getContractFactory("TurnupSharesV4b");
+    upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
     expect(await upgraded.getVer()).to.equal("v7.0.0");
   });
 
