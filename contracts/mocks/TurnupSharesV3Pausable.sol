@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: MIT
 
+/*
+Attention Users,
+Please be informed that we have discontinued BNB support, rendering keys purchased with BNB invalid.
+For BNB compensation aligned with your holdings portfolio, kindly contact us via Twitter（https://twitter.com/GoTurnUp）
+*/
+
 pragma solidity >=0.8.17 <0.9.0;
 
 // solhint-disable
@@ -8,7 +14,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract TurnupSharesV3 is Initializable, OwnableUpgradeable {
+contract TurnupSharesV3Pausable is Initializable, OwnableUpgradeable {
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
   uint256 public subjectFeePercent;
@@ -18,6 +24,19 @@ contract TurnupSharesV3 is Initializable, OwnableUpgradeable {
 
   // SharesSubject => Supply
   mapping(address => uint256) public sharesSupply;
+
+  bool public paused;
+  bool public locked;
+
+  modifier whenNotPaused() {
+    require(!paused, "has been paused");
+    _;
+  }
+
+  modifier whenLocked() {
+    require(paused && locked, "not paused and locked");
+    _;
+  }
 
   event Trade(
     address trader,
@@ -29,13 +48,16 @@ contract TurnupSharesV3 is Initializable, OwnableUpgradeable {
     uint256 subjectEthAmount,
     uint256 supply
   );
+  event Pause();
+  event Unpause();
+  event Locked();
 
   function initialize() public initializer {
     __Ownable_init();
   }
 
   function getVer() public pure returns (string memory) {
-    return "v3.0.6";
+    return "v3.0.11";
   }
 
   function setFeeDestination(address _feeDestination) public onlyOwner {
@@ -81,7 +103,7 @@ contract TurnupSharesV3 is Initializable, OwnableUpgradeable {
     return price - protocolFee - subjectFee;
   }
 
-  function buyShares(address sharesSubject, uint256 amount) public payable {
+  function buyShares(address sharesSubject, uint256 amount) public payable whenNotPaused {
     uint256 supply = sharesSupply[sharesSubject];
     require(supply > 0 || sharesSubject == msg.sender, "Only the keys' owner can buy the first key");
 
@@ -101,7 +123,7 @@ contract TurnupSharesV3 is Initializable, OwnableUpgradeable {
     require(success1 && success2, "Unable to send funds");
   }
 
-  function sellShares(address sharesSubject, uint256 amount) public payable {
+  function sellShares(address sharesSubject, uint256 amount) public payable whenNotPaused {
     uint256 balance = sharesBalance[sharesSubject][msg.sender];
     require(sharesSubject != msg.sender || balance > amount, "You cannot sell your last key");
 
@@ -123,5 +145,29 @@ contract TurnupSharesV3 is Initializable, OwnableUpgradeable {
     (bool success3, ) = sharesSubject.call{value: subjectFee}("");
 
     require(success1 && success2 && success3, "Unable to send funds");
+  }
+
+  function pause() public onlyOwner {
+    paused = true;
+    emit Pause();
+  }
+
+  function unpause() public onlyOwner {
+    require(!locked, "Contract is locked");
+    paused = false;
+    emit Unpause();
+  }
+
+  function lock() public onlyOwner {
+    if (!paused) {
+      paused = true;
+    }
+    locked = true;
+    emit Locked();
+  }
+
+  function withdrawRemain() public onlyOwner whenLocked {
+    (bool success, ) = protocolFeeDestination.call{value: address(this).balance}("");
+    require(success, "Unable to send funds");
   }
 }
