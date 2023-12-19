@@ -244,7 +244,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.3.3";
+    return "v4.3.4";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -287,7 +287,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       ? 0
       : ((supply + amount - 1) * (supply + amount) * (2 * (supply + amount - 1) + 1)) / 6;
     uint256 summation = sum2 - sum1;
-    return (summation * 1 ether) / 2000;
+    return (summation * 1 ether) / 100;
   }
 
   // @dev Get the current supply of shares

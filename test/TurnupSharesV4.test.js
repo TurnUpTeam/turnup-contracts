@@ -60,7 +60,7 @@ describe("TurnupSharesV4", function () {
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
     await turnupShares.afterUpgrade();
-    expect(await turnupShares.getVer()).to.equal("v4.3.3");
+    expect(await turnupShares.getVer()).to.equal("v4.3.4");
   });
 
   async function init() {
@@ -253,7 +253,7 @@ describe("TurnupSharesV4", function () {
 
     const amountToBuy = 5;
 
-    expect(await turnupShares.getBuyPrice(subject.address, amountToBuy)).equal("95000000000000000");
+    expect(await turnupShares.getBuyPrice(subject.address, amountToBuy)).equal("1900000000000000000");
     price = await turnupShares.getBuyPrice(subject.address, amountToBuy);
     protocolFee = await turnupShares.getProtocolFee(price);
     subjectFee = await turnupShares.getSubjectFee(price);
@@ -268,7 +268,7 @@ describe("TurnupSharesV4", function () {
 
     expect(await turnupShares.sharesBalance(subject.address, buyer.address)).to.equal(amountToBuy);
 
-    expect(await turnupShares.getSellPriceAfterFee(subject.address, 5)).equal("85500000000000000");
+    expect(await turnupShares.getSellPriceAfterFee(subject.address, 5)).equal("1710000000000000000");
 
     expect(await turnupShares.sharesSupply(subject.address)).to.equal(9);
 
@@ -712,7 +712,7 @@ describe("TurnupSharesV4", function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV3");
     let Upgraded = await ethers.getContractFactory("TurnupSharesV4");
     let upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
-    expect(await upgraded.getVer()).to.equal("v4.3.3");
+    expect(await upgraded.getVer()).to.equal("v4.3.4");
     Upgraded = await ethers.getContractFactory("TurnupSharesV4b");
     upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
     expect(await upgraded.getVer()).to.equal("v7.0.0");
@@ -1054,22 +1054,22 @@ describe("TurnupSharesV4", function () {
 
     // there is a remaining because of people buying and selling and buying again,
     // accumulating more rewards than what are returned back during the final sale
-    expect((await turnupShares.wishPasses(wisher)).subjectReward).to.equal("184050000000000000");
+    expect((await turnupShares.wishPasses(wisher)).subjectReward).to.equal("3681000000000000000");
 
     expect(await turnupShares.getBalanceOf(wisher, buyer.address)).to.equal(0);
     expect(await turnupShares.getBalanceOf(wisher, buyer2.address)).to.equal(0);
     expect(await turnupShares.getBalanceOf(wisher, buyer3.address)).to.equal(0);
 
     const whishStatus = await turnupShares.wishPasses(wisher);
-    expect(whishStatus.subjectReward).to.equal("184050000000000000");
-    expect(whishStatus.parkedFees).to.equal("490150000000000000");
+    expect(whishStatus.subjectReward).to.equal("3681000000000000000");
+    expect(whishStatus.parkedFees).to.equal("9803000000000000000");
 
     // the wish ends
     await increaseBlockTimestampBy(30 * 24 * 60 * 60 + 1);
 
     await expect(turnupShares.closeExpiredWish(wisher)).to.emit(turnupShares, "WishClosed").withArgs(wisher);
 
-    expect(await turnupShares.DAOBalance()).to.equal("674200000000000000");
+    expect(await turnupShares.DAOBalance()).to.equal("13484000000000000000");
   });
 
   it("should manage an expired wish sale", async function () {
@@ -1143,12 +1143,12 @@ describe("TurnupSharesV4", function () {
 
     await expect(turnupShares.connect(dao).closeExpiredWish(wisher)).to.emit(turnupShares, "WishClosed").withArgs(wisher);
 
-    expect(await turnupShares.DAOBalance()).to.equal("1175575000000000000");
+    expect(await turnupShares.DAOBalance()).to.equal("23511500000000000000");
 
     let balanceBefore = await ethers.provider.getBalance(beneficiary.address);
     await turnupShares.connect(dao).withdrawDAOFunds(0, beneficiary.address);
     let balanceAfter = await ethers.provider.getBalance(beneficiary.address);
-    expect(balanceAfter.sub(balanceBefore).toString()).to.equal("1175575000000000000");
+    expect(balanceAfter.sub(balanceBefore).toString()).to.equal("23511500000000000000");
   });
 
   it("subjectReward should be 0 at end of sell", async function () {
