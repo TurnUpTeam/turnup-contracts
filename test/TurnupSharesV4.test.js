@@ -2,7 +2,7 @@ const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
 
-const DeployUtils = require("deploy-utils");
+const DeployUtils = require("eth-deploy-utils");
 
 let counter = 1;
 function cl(...args) {
@@ -69,8 +69,8 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setProtocolFeePercent(protocolFee);
     const subjectFee = ethers.utils.parseUnits("50000000", "gwei"); // example fee
     await turnupShares.setSubjectFeePercent(subjectFee);
-    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("OperatorNotSet()");
-    await turnupShares.setOperator(operator.address);
+    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("NotTheOperator()");
+    await turnupShares.setOperator(operator.address, true);
   }
 
   async function executeAndReturnGasCost(call) {

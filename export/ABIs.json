@@ -265,6 +265,12 @@
             "internalType": "address",
             "name": "operator",
             "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "active",
+            "type": "bool"
           }
         ],
         "name": "OperatorUpdated",
@@ -834,6 +840,25 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "_operator",
+            "type": "address"
+          }
+        ],
+        "name": "isOperator",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "wisher",
             "type": "address"
           },
@@ -970,6 +995,11 @@
             "internalType": "address",
             "name": "_operator",
             "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "active",
+            "type": "bool"
           }
         ],
         "name": "setOperator",

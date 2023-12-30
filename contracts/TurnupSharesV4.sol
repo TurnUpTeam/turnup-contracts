@@ -42,7 +42,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event ProtocolFeeDestinationUpdated(address protocolFeeDestination);
   event ProtocolFeePercentUpdated(uint256 protocolFeePercent);
   event SubjectFeePercentUpdated(uint256 subjectFeePercent);
-  event OperatorUpdated(address operator);
+  event OperatorUpdated(address operator, bool active);
   event DAOUpdated(address dao);
   event WishClosed(address indexed sharesSubject);
 
@@ -147,6 +147,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   uint256 private _status;
   bool private _reentrancyInitialized;
 
+  address[] internal _operators;
+
   /**
    * @dev Prevents a contract from calling itself, directly or indirectly.
    * Calling a `nonReentrant` function from another `nonReentrant`
@@ -202,8 +204,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev Modifier to check if the caller is the operator
   modifier onlyOperator() {
-    if (operator == address(0)) revert OperatorNotSet();
-    if (operator != _msgSender()) revert NotTheOperator();
+    if (!isOperator(_msgSender())) revert NotTheOperator();
     _;
   }
 
@@ -222,12 +223,34 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     __Ownable_init();
   }
 
+  function isOperator(address _operator) public view returns (bool) {
+    if (_operator == address(0)) return false;
+    for (uint256 i = 0; i < _operators.length; i++) {
+      if (_operators[i] == _operator) return true;
+    }
+    return false;
+  }
+
   // @dev Set the operator
   // @param _operator The address of the operator
-  function setOperator(address _operator) public onlyDAO {
+  function setOperator(address _operator, bool active) public onlyDAO {
     if (_operator == address(0)) revert InvalidZeroAddress();
-    operator = _operator;
-    emit OperatorUpdated(_operator);
+    for (uint256 i = 0; i < _operators.length; i++) {
+      if (_operators[i] == _operator) {
+        if (!active) {
+          _operators[i] = _operators[_operators.length - 1];
+          _operators.pop();
+          emit OperatorUpdated(_operator, active);
+          return;
+        } else {
+          return;
+        }
+      }
+    }
+    if (active) {
+      _operators.push(_operator);
+      emit OperatorUpdated(_operator, active);
+    }
   }
 
   // @dev Set the DAO

@@ -2,7 +2,7 @@ const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
 
-const DeployUtils = require("deploy-utils");
+const DeployUtils = require("eth-deploy-utils");
 
 let counter = 1;
 function cl(...args) {
