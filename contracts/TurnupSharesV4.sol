@@ -125,6 +125,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     KEY
   }
 
+  // we cannot remove this, because it would make the contract not upgradeable
   address public operator;
 
   // the duration of the wish. If the wish subject does not join the system before the deadline, the wish expires
@@ -229,6 +230,10 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
       if (_operators[i] == _operator) return true;
     }
     return false;
+  }
+
+  function listOperators() public view returns (address[] memory) {
+    return _operators;
   }
 
   // @dev Set the operator
@@ -706,5 +711,5 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // variables without shifting down storage in the inheritance chain.
   // See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
 
-  uint256[50] private __gap;
+  uint256[49] private __gap;
 }

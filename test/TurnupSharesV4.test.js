@@ -71,6 +71,7 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setSubjectFeePercent(subjectFee);
     await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("NotTheOperator()");
     await turnupShares.setOperator(operator.address, true);
+    expect((await turnupShares.listOperators())[0]).to.equal(operator.address);
   }
 
   async function executeAndReturnGasCost(call) {
