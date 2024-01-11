@@ -244,7 +244,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.3.4";
+    return "v4.4.0";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -579,7 +579,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the operator can execute it.
   // @param wisher The address of the wisher
   // @param reservedQuantity The amount of shares to reserve for the wisher
-  function newWishPass(address wisher, uint256 reservedQuantity) external virtual onlyOperator {
+  function newWishPass(address wisher, uint256 reservedQuantity) public virtual onlyOperator {
     if (uint160(wisher) >= uint160(0x0000000000000100000000000000000000000000)) revert InvalidWishedPseudoAddress();
     if (reservedQuantity == 0 || reservedQuantity > 50) revert ReserveQuantityTooLarge();
     if (wisher == address(0)) revert InvalidZeroAddress();
@@ -595,7 +595,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   //   Only the operator can execute it.
   // @param sharesSubject The address of the subject
   // @param wisher The address of the wisher
-  function bindWishPass(address sharesSubject, address wisher) external virtual onlyOperator nonReentrant {
+  function bindWishPass(address sharesSubject, address wisher) public virtual onlyOperator nonReentrant {
     if (sharesSupply[sharesSubject] > 0) revert CannotMakeASubjectABind();
     if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
@@ -616,7 +616,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   // @dev This function is used to claim the reserved wish pass
   //   Only the sharesSubject itself can call this function to make the claim
-  function claimReservedWishPass() external payable virtual nonReentrant {
+  function claimReservedWishPass() public payable virtual nonReentrant {
     address sharesSubject = _msgSender();
     if (authorizedWishes[sharesSubject] == address(0)) revert WishNotFound();
     address wisher = authorizedWishes[sharesSubject];
@@ -649,7 +649,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to close an expired wish
-  function closeExpiredWish(address sharesSubject) external onlyDAO {
+  function closeExpiredWish(address sharesSubject) public virtual onlyDAO {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
       revert WishNotExpiredYet();

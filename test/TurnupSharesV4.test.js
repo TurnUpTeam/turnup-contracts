@@ -2,7 +2,7 @@ const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
 
-const DeployUtils = require("deploy-utils");
+const DeployUtils = require("eth-deploy-utils");
 
 let counter = 1;
 function cl(...args) {
@@ -60,7 +60,7 @@ describe("TurnupSharesV4", function () {
   beforeEach(async function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV4");
     await turnupShares.afterUpgrade();
-    expect(await turnupShares.getVer()).to.equal("v4.3.4");
+    expect(await turnupShares.getVer()).to.equal("v4.4.0");
   });
 
   async function init() {
@@ -712,7 +712,7 @@ describe("TurnupSharesV4", function () {
     turnupShares = await deployUtils.deployProxy("TurnupSharesV3");
     let Upgraded = await ethers.getContractFactory("TurnupSharesV4");
     let upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
-    expect(await upgraded.getVer()).to.equal("v4.3.4");
+    expect(await upgraded.getVer()).to.equal("v4.4.0");
     Upgraded = await ethers.getContractFactory("TurnupSharesV4b");
     upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
     expect(await upgraded.getVer()).to.equal("v7.0.0");
