@@ -13,7 +13,7 @@ contract TurnupSharesV4Pausable is TurnupSharesV4 {
   bool public paused;
   bool public frozen;
 
-  modifier ifActive() {
+  modifier ifActive() virtual {
     if (paused || frozen) revert PausedOrFrozen();
     _;
   }

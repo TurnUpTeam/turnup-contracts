@@ -10,37 +10,44 @@ import {TurnupSharesV4Pausable} from "./TurnupSharesV4Pausable.sol";
 contract TurnupSharesV5 is TurnupSharesV4Pausable {
   error InvalidLength();
   error ContractIsActive();
+  error NotActiveYet();
 
-  modifier onlyWhenPaused() {
-    if (!paused) revert ContractIsActive();
+  bool public isActive;
+
+  modifier ifActive() virtual override {
+    if (!isActive) revert NotActiveYet();
+    _;
+  }
+
+  modifier ifNotActive() {
+    if (isActive) revert ContractIsActive();
     _;
   }
 
   function unpause() external override onlyOwner {
-    // Version 5 is not pausable
-    // this is a no-op
+    isActive = true;
+  }
+
+  function pause() external override onlyOwner {
+    // when active it cannot be paused again
   }
 
   function freeze() external override onlyOwner {
-    // Version 5 is not freezable
-    // this is a no-op
+    // Not freezable
   }
 
   function prefillSharesBalances(
     address[] calldata sharesSubjects,
     address[] calldata users,
     uint256[] calldata amounts
-  ) external onlyOwner onlyWhenPaused {
+  ) external onlyOwner ifNotActive {
     if (sharesSubjects.length != users.length || sharesSubjects.length != amounts.length) revert InvalidLength();
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       sharesBalance[sharesSubjects[i]][users[i]] = amounts[i];
     }
   }
 
-  function prefillSharesSupply(
-    address[] calldata sharesSubjects,
-    uint256[] calldata amounts
-  ) external onlyOwner onlyWhenPaused {
+  function prefillSharesSupply(address[] calldata sharesSubjects, uint256[] calldata amounts) external onlyOwner ifNotActive {
     if (sharesSubjects.length != amounts.length) revert InvalidLength();
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       sharesSupply[sharesSubjects[i]] = amounts[i];
@@ -50,7 +57,7 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
   function prefillAuthorizedWishes(
     address[] calldata sharesSubjects,
     address[] calldata wishes
-  ) external onlyOwner onlyWhenPaused {
+  ) external onlyOwner ifNotActive {
     if (sharesSubjects.length != wishes.length) revert InvalidLength();
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       authorizedWishes[sharesSubjects[i]] = wishes[i];
@@ -67,7 +74,7 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     uint256 reservedQuantity,
     uint256 subjectReward,
     uint256 parkedFees
-  ) external onlyOwner onlyWhenPaused {
+  ) external onlyOwner ifNotActive {
     wishPasses[wisher].owner = owner;
     wishPasses[wisher].totalSupply = totalSupply;
     wishPasses[wisher].createdAt = createdAt;
@@ -82,7 +89,7 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     address wisher,
     address[] calldata users,
     uint256[] calldata balances
-  ) external onlyOwner onlyWhenPaused {
+  ) external onlyOwner ifNotActive {
     if (users.length != balances.length) revert InvalidLength();
     for (uint256 i = 0; i < balances.length; i++) {
       wishPasses[wisher].balanceOf[users[i]] = balances[i];
