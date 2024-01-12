@@ -183,7 +183,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     return _status == _ENTERED;
   }
 
-  function afterUpgrade() external onlyOwner {
+  function afterUpgrade() public onlyOwner {
     if (!_reentrancyInitialized) {
       _status = _NOT_ENTERED;
       _reentrancyInitialized = true;

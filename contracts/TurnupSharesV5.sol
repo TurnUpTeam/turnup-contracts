@@ -24,6 +24,9 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     _;
   }
 
+  // solhint-disable-next-line
+  receive() external payable {}
+
   function unpause() external override onlyOwner {
     isActive = true;
   }
@@ -34,6 +37,13 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
 
   function freeze() external override onlyOwner {
     // Not freezable
+  }
+
+  // solhint-disable-next-line
+  function prefillVariables(uint256 DAOBalance_, uint256 protocolFees_) external onlyOwner ifNotActive {
+    afterUpgrade();
+    DAOBalance = DAOBalance_;
+    protocolFees = protocolFees_;
   }
 
   function prefillSharesBalances(
