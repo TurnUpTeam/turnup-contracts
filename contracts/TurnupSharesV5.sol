@@ -13,6 +13,7 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
   error NotActiveYet();
 
   bool public isActive;
+  TurnupSharesV4Pausable private _source;
 
   modifier ifActive() virtual override {
     if (!isActive) revert NotActiveYet();
@@ -39,6 +40,10 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     // Not freezable
   }
 
+  function setSource(address source_) external onlyOwner {
+    _source = TurnupSharesV4Pausable(source_);
+  }
+
   // solhint-disable-next-line
   function prefillVariables(uint256 DAOBalance_, uint256 protocolFees_) external onlyOwner ifNotActive {
     afterUpgrade();
@@ -46,45 +51,36 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     protocolFees = protocolFees_;
   }
 
-  function prefillSharesBalances(
-    address[] calldata sharesSubjects,
-    address[] calldata users,
-    uint256[] calldata amounts
-  ) external onlyOwner ifNotActive {
-    if (sharesSubjects.length != users.length || sharesSubjects.length != amounts.length) revert InvalidLength();
+  function prefillSharesBalances(address[] calldata sharesSubjects, address[] calldata users) external onlyOwner ifNotActive {
+    if (sharesSubjects.length != users.length) revert InvalidLength();
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
-      sharesBalance[sharesSubjects[i]][users[i]] = amounts[i];
+      sharesBalance[sharesSubjects[i]][users[i]] = _source.sharesBalance(sharesSubjects[i], users[i]);
     }
   }
 
-  function prefillSharesSupply(address[] calldata sharesSubjects, uint256[] calldata amounts) external onlyOwner ifNotActive {
-    if (sharesSubjects.length != amounts.length) revert InvalidLength();
+  function prefillSharesSupply(address[] calldata sharesSubjects) external onlyOwner ifNotActive {
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
-      sharesSupply[sharesSubjects[i]] = amounts[i];
+      sharesSupply[sharesSubjects[i]] = _source.sharesSupply(sharesSubjects[i]);
     }
   }
 
-  function prefillAuthorizedWishes(
-    address[] calldata sharesSubjects,
-    address[] calldata wishes
-  ) external onlyOwner ifNotActive {
-    if (sharesSubjects.length != wishes.length) revert InvalidLength();
+  function prefillAuthorizedWishes(address[] calldata sharesSubjects) external onlyOwner ifNotActive {
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
-      authorizedWishes[sharesSubjects[i]] = wishes[i];
+      authorizedWishes[sharesSubjects[i]] = _source.authorizedWishes(sharesSubjects[i]);
     }
   }
 
-  function prefillWishPass(
-    address wisher,
-    address owner,
-    uint256 totalSupply,
-    uint256 createdAt,
-    address subject,
-    bool isClaimReward,
-    uint256 reservedQuantity,
-    uint256 subjectReward,
-    uint256 parkedFees
-  ) external onlyOwner ifNotActive {
+  function prefillWishPass(address wisher) external onlyOwner ifNotActive {
+    (
+      address owner,
+      uint256 totalSupply,
+      uint256 createdAt,
+      address subject,
+      bool isClaimReward,
+      uint256 reservedQuantity,
+      uint256 subjectReward,
+      uint256 parkedFees
+    ) = _source.wishPasses(wisher);
     wishPasses[wisher].owner = owner;
     wishPasses[wisher].totalSupply = totalSupply;
     wishPasses[wisher].createdAt = createdAt;
@@ -95,14 +91,9 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     wishPasses[wisher].parkedFees = parkedFees;
   }
 
-  function prefillWishPassBalances(
-    address wisher,
-    address[] calldata users,
-    uint256[] calldata balances
-  ) external onlyOwner ifNotActive {
-    if (users.length != balances.length) revert InvalidLength();
-    for (uint256 i = 0; i < balances.length; i++) {
-      wishPasses[wisher].balanceOf[users[i]] = balances[i];
+  function prefillWishPassBalances(address wisher, address[] calldata users) external onlyOwner ifNotActive {
+    for (uint256 i = 0; i < users.length; i++) {
+      wishPasses[wisher].balanceOf[users[i]] = _source.getWishPassBalance(wisher, users[i]);
     }
   }
 
