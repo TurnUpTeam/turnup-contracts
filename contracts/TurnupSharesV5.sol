@@ -45,32 +45,32 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
   }
 
   // solhint-disable-next-line
-  function prefillVariables(uint256 DAOBalance_, uint256 protocolFees_) external onlyOwner ifNotActive {
+  function importVariables(uint256 DAOBalance_, uint256 protocolFees_) external onlyOwner ifNotActive {
     afterUpgrade();
     DAOBalance = DAOBalance_;
     protocolFees = protocolFees_;
   }
 
-  function prefillSharesBalances(address[] calldata sharesSubjects, address[] calldata users) external onlyOwner ifNotActive {
+  function importSharesBalances(address[] calldata sharesSubjects, address[] calldata users) external onlyOwner ifNotActive {
     if (sharesSubjects.length != users.length) revert InvalidLength();
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       sharesBalance[sharesSubjects[i]][users[i]] = _source.sharesBalance(sharesSubjects[i], users[i]);
     }
   }
 
-  function prefillSharesSupply(address[] calldata sharesSubjects) external onlyOwner ifNotActive {
+  function importSharesSupply(address[] calldata sharesSubjects) external onlyOwner ifNotActive {
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       sharesSupply[sharesSubjects[i]] = _source.sharesSupply(sharesSubjects[i]);
     }
   }
 
-  function prefillAuthorizedWishes(address[] calldata sharesSubjects) external onlyOwner ifNotActive {
+  function importAuthorizedWishes(address[] calldata sharesSubjects) external onlyOwner ifNotActive {
     for (uint256 i = 0; i < sharesSubjects.length; i++) {
       authorizedWishes[sharesSubjects[i]] = _source.authorizedWishes(sharesSubjects[i]);
     }
   }
 
-  function prefillWishPass(address wisher) external onlyOwner ifNotActive {
+  function importWishPass(address wisher) external onlyOwner ifNotActive {
     (
       address owner,
       uint256 totalSupply,
@@ -91,7 +91,7 @@ contract TurnupSharesV5 is TurnupSharesV4Pausable {
     wishPasses[wisher].parkedFees = parkedFees;
   }
 
-  function prefillWishPassBalances(address wisher, address[] calldata users) external onlyOwner ifNotActive {
+  function importWishPassBalances(address wisher, address[] calldata users) external onlyOwner ifNotActive {
     for (uint256 i = 0; i < users.length; i++) {
       wishPasses[wisher].balanceOf[users[i]] = _source.getWishPassBalance(wisher, users[i]);
     }
