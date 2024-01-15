@@ -3,9 +3,9 @@
 if [[ ! -d "./flattened" ]]; then
   mkdir flattened
 fi
-FOLDER=""
+FOLDER=
 if [[ "$2" != "" ]]; then
-  FOLDER=$2/
+  FOLDER="$2/"
 fi
-NODE_ENV=test npx hardhat flatten contracts/$FOLDER$1.sol > ./flattened/$1-flattened.sol
-bin/clean-licenses-in-flattened.js $1
+NODE_ENV="test" npx hardhat flatten "contracts/$FOLDER$1.sol" > "./flattened/$1-flattened.sol"
+bin/clean-licenses-in-flattened.js "$1"
