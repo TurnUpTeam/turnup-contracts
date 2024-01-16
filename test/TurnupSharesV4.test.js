@@ -70,8 +70,9 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setProtocolFeePercent(protocolFee);
     const subjectFee = ethers.utils.parseUnits("50000000", "gwei"); // example fee
     await turnupShares.setSubjectFeePercent(subjectFee);
-    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("OperatorNotSet()");
-    await turnupShares.setOperator(operator.address);
+    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("NotTheOperator()");
+    await turnupShares.setOperator(operator.address, true);
+    expect((await turnupShares.listOperators())[0]).to.equal(operator.address);
   }
 
   async function executeAndReturnGasCost(call) {
