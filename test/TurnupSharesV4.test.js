@@ -1284,6 +1284,8 @@ describe("TurnupSharesV4", function () {
     const balanceAfter = await lfgToken.balanceOf(subject.address);
     expect(balanceAfter).to.equal("6912000000000000000000");
 
+    expect(await turnupShares.getNumberOfStakes(subject.address)).to.equal(0);
+
     sellPrice = await turnupShares.getSellPrice(subject.address, amountToSell);
 
     await expect(turnupShares.connect(subject).sellShares(subject.address, amountToSell))
