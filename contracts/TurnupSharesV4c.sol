@@ -8,6 +8,7 @@ import {TurnupSharesV4} from "./TurnupSharesV4.sol";
 //import "hardhat/console.sol";
 
 contract TurnupSharesV4c is TurnupSharesV4 {
+  event StakeSubject(address indexed sharesSubject, uint32 amount, uint32 lockedFrom, uint32 lockTime);
   error InvalidLockTime();
 
   struct Stake {
@@ -26,6 +27,15 @@ contract TurnupSharesV4c is TurnupSharesV4 {
 
   function getVer() public pure virtual override returns (string memory) {
     return "v4.5.0";
+  }
+
+  function getNumberOfStakes(address sharesSubject) external view returns (uint256) {
+    return stakes[sharesSubject].length;
+  }
+
+  function getStakeByIndex(address sharesSubject, uint256 index) external view returns (uint32, uint32, uint32) {
+    Stake storage stake = stakes[sharesSubject][index];
+    return (stake.amount, stake.lockedFrom, stake.lockedUntil);
   }
 
   function _sellKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual override {
@@ -55,7 +65,10 @@ contract TurnupSharesV4c is TurnupSharesV4 {
     address sharesSubject = _msgSender();
     uint256 availableBalance = nonStakedBalance(sharesSubject);
     if (amount > availableBalance) revert InsufficientKeys(availableBalance);
-    stakes[sharesSubject].push(Stake(amount, uint32(block.timestamp), uint32(block.timestamp) + lockTime));
+    uint32 lockedFrom = uint32(block.timestamp);
+    uint32 lockedUntil = lockedFrom + lockTime;
+    stakes[sharesSubject].push(Stake(amount, lockedFrom, lockedUntil));
+    emit StakeSubject(sharesSubject, amount, lockedFrom, lockedUntil);
   }
 
   function setRewardsPool(address rewardsPool_) public onlyDAO {

@@ -1,8 +1,9 @@
 const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
-
 const DeployUtils = require("eth-deploy-utils");
+
+const {getTimestamp, increaseBlockTimestampBy} = require("./helpers");
 
 let counter = 1;
 function cl(...args) {
@@ -1238,68 +1239,55 @@ describe("TurnupSharesV4", function () {
     let upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
     expect(await upgraded.getVer()).to.equal("v4.5.0");
 
-    const amount = 1; // example amount
+    turnupShares = await deployUtils.attach("TurnupSharesV4c", upgraded.address);
+    const lfgToken = await deployUtils.deploy("LFGTokenMock");
+    const keysPool = await deployUtils.deploy("KeysPoolMock", turnupShares.address, lfgToken.address);
+    await lfgToken.setPool(keysPool.address);
+    await turnupShares.setRewardsPool(keysPool.address);
+
+    const amount = 10;
 
     // owner buys shares
 
     let buyPrice = await turnupShares.getBuyPrice(subject.address, amount);
     let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount);
 
-    await expect(turnupShares.connect(subject).buyShares(subject.address, 0, {value: expectedPrice})).to.be.revertedWith(
-      "InvalidAmount()"
-    );
-
     await expect(turnupShares.connect(subject).buyShares(subject.address, amount, {value: expectedPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
-      .withArgs(subject.address, subject.address, true, amount, expectedPrice, amount, KEY);
+      .withArgs(subject.address, subject.address, true, amount, buyPrice, amount, KEY);
 
-    await expect(turnupShares.connect(operator).newWishPass(subject.address, 10)).to.be.revertedWith(
-      "InvalidWishedPseudoAddress()"
-    );
+    const ts = (await getTimestamp()) + 1;
+    await expect(turnupShares.connect(subject).stakeSubject(8, 24 * 3600 * 10))
+      .to.emit(turnupShares, "StakeSubject") // Check if the Trade event is emitted
+      .withArgs(subject.address, 8, ts, ts + 24 * 3600 * 10);
 
-    // buyer buys shares
+    expect(await turnupShares.getNumberOfStakes(subject.address)).to.equal(1);
+    const [amount2, lockedFrom, lockedUntil] = await turnupShares.getStakeByIndex(subject.address, 0);
+    expect(amount2).to.equal(8);
+    expect(lockedFrom).to.equal(ts);
+    expect(lockedUntil).to.equal(ts + 24 * 3600 * 10);
 
-    buyPrice = await turnupShares.getBuyPrice(subject.address, amount);
-    let protocolFee = await turnupShares.getProtocolFee(buyPrice);
-    let subjectFee = await turnupShares.getSubjectFee(buyPrice);
-    expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount);
-    expect(expectedPrice).to.equal(buyPrice.add(protocolFee).add(subjectFee));
+    let amountToSell = 3;
+    await expect(turnupShares.connect(subject).sellShares(subject.address, amountToSell)).revertedWith("InsufficientKeys(2)");
 
-    let subjectBalanceBefore = await ethers.provider.getBalance(subject.address);
-    let ownerBalance = await ethers.provider.getBalance(subject.address);
-    let contractBalance = await ethers.provider.getBalance(turnupShares.address);
-    let buyerBalance = await ethers.provider.getBalance(buyer.address);
+    let sellPrice = await turnupShares.getSellPrice(subject.address, 1);
 
-    let gasCost = await executeAndReturnGasCost(
-      turnupShares.connect(buyer).buyShares(subject.address, amount, {value: expectedPrice})
-    );
+    await expect(turnupShares.connect(subject).sellShares(subject.address, 1))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject.address, subject.address, false, 1, sellPrice, 9, KEY);
 
-    let subjectBalanceAfter = await ethers.provider.getBalance(subject.address);
-    expect(subjectBalanceAfter).to.equal(subjectBalanceBefore.add(subjectFee));
+    await increaseBlockTimestampBy(24 * 3600 * 10 + 1);
 
-    expect(await ethers.provider.getBalance(subject.address)).equal(ownerBalance.add(subjectFee));
-    expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
-    expect(await turnupShares.sharesBalance(subject.address, buyer.address)).to.equal(amount);
+    const balanceBefore = await lfgToken.balanceOf(subject.address);
+    expect(balanceBefore).to.equal(0);
+    await keysPool.claimRewards(subject.address);
+    const balanceAfter = await lfgToken.balanceOf(subject.address);
+    expect(balanceAfter).to.equal("6912000000000000000000");
 
-    const amount2 = 3;
-    buyPrice = await turnupShares.getBuyPrice(subject.address, amount2);
-    protocolFee = await turnupShares.getProtocolFee(buyPrice);
-    subjectFee = await turnupShares.getSubjectFee(buyPrice);
-    expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount2);
+    sellPrice = await turnupShares.getSellPrice(subject.address, amountToSell);
 
-    const projectBalance = await ethers.provider.getBalance(project.address);
-    ownerBalance = await ethers.provider.getBalance(subject.address);
-    contractBalance = await ethers.provider.getBalance(turnupShares.address);
-    buyerBalance = await ethers.provider.getBalance(buyer.address);
-
-    gasCost = await executeAndReturnGasCost(
-      turnupShares.connect(buyer).buyShares(subject.address, amount2, {value: expectedPrice})
-    );
-
-    expect(await ethers.provider.getBalance(subject.address)).equal(ownerBalance.add(subjectFee));
-    expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
-    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
-    expect(await turnupShares.sharesBalance(subject.address, buyer.address)).to.equal(amount + amount2);
+    await expect(turnupShares.connect(subject).sellShares(subject.address, amountToSell))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject.address, subject.address, false, amountToSell, sellPrice, 6, KEY);
   });
 });
