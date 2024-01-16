@@ -46,8 +46,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   event DAOUpdated(address dao);
   event WishClosed(address indexed sharesSubject);
 
-  event Stake(address indexed sharesSubject, uint32 amount, uint32 lockedUntil);
-
   error InvalidZeroAddress();
   error ExistingWish(address wisher);
   error WishAlreadyBound(address wisher);
@@ -87,7 +85,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   error NotCloseableOrAlreadyClosed();
   error InsufficientFunds();
   error InvalidWishedPseudoAddress();
-  error InvalidLockTime();
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -128,13 +125,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     KEY
   }
 
-  struct Stake {
-    uint32 amount;
-    uint32 lockedFrom;
-    uint32 lockedUntil;
-    bool rewardClaimed;
-  }
-
   address public operator;
 
   // the duration of the wish. If the wish subject does not join the system before the deadline, the wish expires
@@ -156,9 +146,6 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   uint256 private _status;
   bool private _reentrancyInitialized;
-
-  mapping(address => Stake[]) public stakes;
-
 
   /**
    * @dev Prevents a contract from calling itself, directly or indirectly.
@@ -257,7 +244,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev Helper to get the version of the contract
   // @return The version of the contract
   function getVer() public pure virtual returns (string memory) {
-    return "v4.5.0";
+    return "v4.3.4";
   }
 
   // @dev Helper to get the balance of a user for a given wish
@@ -402,7 +389,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 amount,
     uint256 expectedPrice,
     bool revertOnPriceError
-  ) internal returns (bool, uint256) {
+  ) internal virtual returns (bool, uint256) {
     if (amount == 0) {
       if (revertOnPriceError) revert InvalidAmount();
       else return (false, expectedPrice);
@@ -427,7 +414,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     return (true, expectedPrice - price - protocolFee - subjectFee);
   }
 
-  function _buyWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+  function _buyWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
     wishPasses[sharesSubject].totalSupply += amount;
@@ -437,7 +424,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     emit Trade(_msgSender(), sharesSubject, true, amount, price, supply + amount, SubjectType.WISH);
   }
 
-  function _buyBind(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+  function _buyBind(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     address wisher = authorizedWishes[sharesSubject];
     wishPasses[wisher].totalSupply += amount;
     wishPasses[wisher].balanceOf[_msgSender()] += amount;
@@ -447,7 +434,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (!success) revert UnableToSendFunds();
   }
 
-  function _buyKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+  function _buyKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     sharesBalance[sharesSubject][_msgSender()] += amount;
     sharesSupply[sharesSubject] += amount;
     protocolFees += getProtocolFee(price);
@@ -456,7 +443,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (!success) revert UnableToSendFunds();
   }
 
-  function _sendFundsBackIfUnused(uint256 amount) internal {
+  function _sendFundsBackIfUnused(uint256 amount) internal virtual {
     (bool success, ) = _msgSender().call{value: amount}("");
     if (!success) revert UnableToSendFunds();
   }
@@ -465,7 +452,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param sharesSubject The subject of the shares
   // @param balance The balance of the subject
   // @param amount The amount to check
-  function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view {
+  function _checkBalance(address sharesSubject, uint256 balance, uint256 amount) internal view virtual {
     if (balance < amount) revert InsufficientKeys(balance);
     if (sharesSubject == _msgSender() && balance == amount) revert CannotSellLastKey();
   }
@@ -493,43 +480,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     }
   }
 
-  function nonStakedBalance(address sharesSubject) public view returns(uint256) {
-    uint256 stakedBalance;
-    for (uint256 i = 0; i < stakes[sharesSubject].length; i++) {
-      Stake storage stake = stakes[sharesSubject][i];
-      if (stake.lockedUntil > block.timestamp) {
-        stakedBalance += stake.amount;
-      }
-    }
-    return sharesBalance[sharesSubject][sharesSubject] - stakedBalance;
-  }
-
-  function stake(uint32 amount, uint32 lockTime) public {
-    if (amount == 0) revert InvalidAmount();
-    if (lockTime < 1 weeks) revert InvalidLockTime();
-    uint256 availableBalance = nonStakedBalance(_msgSender());
-    if (amount > availableBalance) revert InsufficientKeys(availableBalance);
-    stakes[_msgSender()].push(Stake(amount, uint32(block.timestamp), uint32(block.timestamp) + lockTime), false);
-  }
-
-  // must be called by rewardsPool
-  function claimRewards(address sharesSubject) public {
-    // rewards are counted by the number of keys multiplied by the number of days
-    uint256 reward;
-    for (uint256 i = 0; i < stakes[sharesSubject].length; i++) {
-      Stake storage stake = stakes[sharesSubject][i];
-      if (stake.lockedUntil < block.timestamp && !stake.rewardClaimed) {
-        reward += stake.amount;
-        stake.rewardClaimed = true;
-      }
-    }
-    if (reward > 0) {
-      (bool success, ) = _msgSender().call{value: reward}("");
-      if (!success) revert UnableToSendFunds();
-    }
-  }
-
-  function _sellWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+  function _sellWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
@@ -555,7 +506,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     }
   }
 
-  function _sellBind(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
+  function _sellBind(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     address wisher = authorizedWishes[sharesSubject];
@@ -566,15 +517,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     _sendSellFunds(price, protocolFee, subjectFee, sharesSubject);
   }
 
-  function _sellKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal {
-    if (subjectFee == _msgSender()) {
-      if (stakes[subjectFee].lockedUntil < block.timestamp) {
-        // stake expired
-        delete stakes[subjectFee];
-      } else if (amount > _availableBalance(sharesSubject)) {
-        revert InsufficientKeys(_availableBalance(sharesSubject));
-      }
-    }
+  function _sellKey(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     sharesBalance[sharesSubject][_msgSender()] -= amount;
@@ -590,7 +533,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @param protocolFee The protocol fee
   // @param subjectFee The subject fee
   // @param sharesSubject The subject of the shares
-  function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal {
+  function _sendSellFunds(uint256 price, uint256 protocolFee, uint256 subjectFee, address sharesSubject) internal virtual {
     (bool success1, ) = _msgSender().call{value: price - protocolFee - subjectFee}("");
     bool success2 = true;
     if (sharesSubject != address(0)) {
@@ -696,7 +639,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used withdraw the protocol fees
-  function withdrawProtocolFees(uint256 amount) external nonReentrant {
+  function withdrawProtocolFees(uint256 amount) external virtual nonReentrant {
     if (amount == 0) amount = protocolFees;
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || protocolFees == 0) revert Forbidden();
@@ -706,7 +649,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to close an expired wish
-  function closeExpiredWish(address sharesSubject) external onlyDAO {
+  function closeExpiredWish(address sharesSubject) external virtual onlyDAO {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
     if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
       revert WishNotExpiredYet();
@@ -724,7 +667,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   }
 
   // @dev This function is used to transfer unused wish fees to the DAO
-  function withdrawDAOFunds(uint256 amount, address beneficiary) external onlyDAO nonReentrant {
+  function withdrawDAOFunds(uint256 amount, address beneficiary) external virtual onlyDAO nonReentrant {
     if (DAO == address(0)) revert DAONotSetup();
     if (DAOBalance == 0) revert InsufficientFunds();
     if (beneficiary == address(0)) beneficiary = DAO;

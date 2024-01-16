@@ -2,7 +2,7 @@ const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
 
-const DeployUtils = require("deploy-utils");
+const DeployUtils = require("eth-deploy-utils");
 
 let counter = 1;
 function cl(...args) {
@@ -1230,5 +1230,76 @@ describe("TurnupSharesV4", function () {
     await turnupShares.connect(buyer).buyShares(buyer.address, 5, {value: buyPrice});
 
     await turnupShares.connect(buyer).withdrawProtocolFees(0);
+  });
+
+  it("should allow users to stake shares after upgrade", async function () {
+    await init();
+    let Upgraded = await ethers.getContractFactory("TurnupSharesV4c");
+    let upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
+    expect(await upgraded.getVer()).to.equal("v4.5.0");
+
+    const amount = 1; // example amount
+
+    // owner buys shares
+
+    let buyPrice = await turnupShares.getBuyPrice(subject.address, amount);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount);
+
+    await expect(turnupShares.connect(subject).buyShares(subject.address, 0, {value: expectedPrice})).to.be.revertedWith(
+      "InvalidAmount()"
+    );
+
+    await expect(turnupShares.connect(subject).buyShares(subject.address, amount, {value: expectedPrice}))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject.address, subject.address, true, amount, expectedPrice, amount, KEY);
+
+    await expect(turnupShares.connect(operator).newWishPass(subject.address, 10)).to.be.revertedWith(
+      "InvalidWishedPseudoAddress()"
+    );
+
+    // buyer buys shares
+
+    buyPrice = await turnupShares.getBuyPrice(subject.address, amount);
+    let protocolFee = await turnupShares.getProtocolFee(buyPrice);
+    let subjectFee = await turnupShares.getSubjectFee(buyPrice);
+    expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount);
+    expect(expectedPrice).to.equal(buyPrice.add(protocolFee).add(subjectFee));
+
+    let subjectBalanceBefore = await ethers.provider.getBalance(subject.address);
+    let ownerBalance = await ethers.provider.getBalance(subject.address);
+    let contractBalance = await ethers.provider.getBalance(turnupShares.address);
+    let buyerBalance = await ethers.provider.getBalance(buyer.address);
+
+    let gasCost = await executeAndReturnGasCost(
+      turnupShares.connect(buyer).buyShares(subject.address, amount, {value: expectedPrice})
+    );
+
+    let subjectBalanceAfter = await ethers.provider.getBalance(subject.address);
+    expect(subjectBalanceAfter).to.equal(subjectBalanceBefore.add(subjectFee));
+
+    expect(await ethers.provider.getBalance(subject.address)).equal(ownerBalance.add(subjectFee));
+    expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
+    expect(await turnupShares.sharesBalance(subject.address, buyer.address)).to.equal(amount);
+
+    const amount2 = 3;
+    buyPrice = await turnupShares.getBuyPrice(subject.address, amount2);
+    protocolFee = await turnupShares.getProtocolFee(buyPrice);
+    subjectFee = await turnupShares.getSubjectFee(buyPrice);
+    expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount2);
+
+    const projectBalance = await ethers.provider.getBalance(project.address);
+    ownerBalance = await ethers.provider.getBalance(subject.address);
+    contractBalance = await ethers.provider.getBalance(turnupShares.address);
+    buyerBalance = await ethers.provider.getBalance(buyer.address);
+
+    gasCost = await executeAndReturnGasCost(
+      turnupShares.connect(buyer).buyShares(subject.address, amount2, {value: expectedPrice})
+    );
+
+    expect(await ethers.provider.getBalance(subject.address)).equal(ownerBalance.add(subjectFee));
+    expect(await ethers.provider.getBalance(buyer.address)).equal(buyerBalance.sub(expectedPrice).sub(gasCost));
+    expect(await ethers.provider.getBalance(turnupShares.address)).equal(contractBalance.add(expectedPrice).sub(subjectFee));
+    expect(await turnupShares.sharesBalance(subject.address, buyer.address)).to.equal(amount + amount2);
   });
 });
