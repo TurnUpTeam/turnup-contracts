@@ -10,6 +10,7 @@ import {TurnupSharesV4} from "./TurnupSharesV4.sol";
 contract TurnupSharesV4c is TurnupSharesV4 {
   event StakeSubject(address indexed sharesSubject, uint32 amount, uint32 lockedFrom, uint32 lockTime);
   error InvalidLockTime();
+  error StakingNotActiveYet();
 
   struct Stake {
     uint32 amount;
@@ -62,6 +63,7 @@ contract TurnupSharesV4c is TurnupSharesV4 {
   function stakeSubject(uint32 amount, uint32 lockTime) external {
     if (amount == 0) revert InvalidAmount();
     if (lockTime < 1 weeks) revert InvalidLockTime();
+    if (rewardsPool == address(0)) revert StakingNotActiveYet();
     address sharesSubject = _msgSender();
     uint256 availableBalance = nonStakedBalance(sharesSubject);
     if (amount > availableBalance) revert InsufficientKeys(availableBalance);
