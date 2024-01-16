@@ -639,6 +639,8 @@ describe("TurnupSharesV4", function () {
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
       .withArgs(buyer.address, wisher, true, amountToBuy, price, reservedQuantity + amountToBuy, WISH);
 
+    expect(await turnupShares.getWishBalanceOf(wisher, buyer.address)).to.equal(amountToBuy);
+
     // Check the new total supply and balance for the wisher
     expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(reservedQuantity + amountToBuy);
     expect(await turnupShares.getWishBalanceOf(wisher, buyer.address)).to.equal(amountToBuy);
