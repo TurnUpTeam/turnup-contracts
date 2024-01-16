@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 // for security it is better to lock the version
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";

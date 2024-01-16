@@ -1240,11 +1240,25 @@ describe("TurnupSharesV4", function () {
     expect(await upgraded.getVer()).to.equal("v4.5.0");
 
     turnupShares = await deployUtils.attach("TurnupSharesV4c", upgraded.address);
-    const lfgToken = await deployUtils.deploy("LFGTokenMock");
-    const keysPool = await deployUtils.deploy("KeysPoolMock", turnupShares.address, lfgToken.address);
-    await lfgToken.setPool(keysPool.address);
-    await turnupShares.setRewardsPool(keysPool.address);
 
+    let maxSupply = ethers.utils.parseEther("3000000000");
+    let initialSupply = ethers.utils.parseEther("900000000");
+    let amountReservedToPool = ethers.utils.parseEther("300000000");
+    let amountReservedToSharesPool = ethers.utils.parseEther("200000000");
+    let maxLockTime = 365 * 24 * 3600;
+    const lfgToken = await deployUtils.deployProxy(
+      "LFGToken",
+      owner.address,
+      maxSupply,
+      initialSupply,
+      amountReservedToPool,
+      amountReservedToSharesPool,
+      maxLockTime
+    );
+
+    const sharesPool = await deployUtils.deploy("SharesPool", turnupShares.address, lfgToken.address);
+    await lfgToken.setSharesPool(sharesPool.address);
+    await turnupShares.setRewardsPool(sharesPool.address);
     const amount = 10;
 
     // owner buys shares
@@ -1280,7 +1294,7 @@ describe("TurnupSharesV4", function () {
 
     const balanceBefore = await lfgToken.balanceOf(subject.address);
     expect(balanceBefore).to.equal(0);
-    await keysPool.claimRewards(subject.address);
+    await sharesPool.claimRewards(subject.address);
     const balanceAfter = await lfgToken.balanceOf(subject.address);
     expect(balanceAfter).to.equal("6912000000000000000000");
 
