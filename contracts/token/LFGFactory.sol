@@ -17,12 +17,12 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
   using AddressUpgradeable for address;
   using SafeMathUpgradeable for uint256;
 
-  event MintRequested(uint256 orderId, uint256 amount, address to, uint256 lockedUntil);
-  event CancelRequest(uint256 orderId, uint256 amount, address account, uint256 lockedUntil);
-  event OperatorSet(address operator, bool active);
+  event MintRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
+  event CancelRequest(uint256 indexed orderId, uint256 amount, address indexed account, uint256 lockedUntil);
+  event OperatorSet(address indexed operator, bool active);
   event DailyMintedAmountsUpdated(uint256 maxDailyMinted);
-  event BurnToUnlockMission(address burner, uint256 unlockId, uint256 burnedAmount);
-  event BurnByLootFee(address burner, uint256 orderId, uint256 burnedAmount);
+  event BurnToUnlockMission(address indexed burner, uint256 unlockId, uint256 burnedAmount);
+  event BurnByLootFee(address indexed burner, uint256 orderId, uint256 burnedAmount);
 
   error SignatureExpired();
   error SignatureAlreadyUsed();

@@ -4804,7 +4804,7 @@
         "anonymous": false,
         "inputs": [
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "address",
             "name": "burner",
             "type": "address"
@@ -4829,7 +4829,7 @@
         "anonymous": false,
         "inputs": [
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "address",
             "name": "burner",
             "type": "address"
@@ -4854,7 +4854,7 @@
         "anonymous": false,
         "inputs": [
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "uint256",
             "name": "orderId",
             "type": "uint256"
@@ -4866,7 +4866,7 @@
             "type": "uint256"
           },
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "address",
             "name": "account",
             "type": "address"
@@ -4911,7 +4911,7 @@
         "anonymous": false,
         "inputs": [
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "uint256",
             "name": "orderId",
             "type": "uint256"
@@ -4923,7 +4923,7 @@
             "type": "uint256"
           },
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "address",
             "name": "to",
             "type": "address"
@@ -4942,7 +4942,7 @@
         "anonymous": false,
         "inputs": [
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "address",
             "name": "operator",
             "type": "address"
