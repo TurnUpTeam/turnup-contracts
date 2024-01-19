@@ -109,6 +109,8 @@ interface ICorePool {
 
   function stake(uint256 _amount, uint64 _lockUntil) external;
 
+  function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockedUntil) external;
+
   function unstake(uint256 _depositId, uint256 _amount) external;
 
   function updateStakeLock(uint256 depositId, uint64 lockedUntil) external;

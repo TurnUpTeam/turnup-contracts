@@ -8,12 +8,15 @@ import {AddressUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Addr
 import {SafeMathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "./LFGToken.sol";
+import {ICorePool} from "../pool/ICorePool.sol";
 
 //import {console} from "hardhat/console.sol";
 
-contract LFGFactory is Initializable, ValidatableUpgradeable {
+contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpgradeable {
   using AddressUpgradeable for address;
   using SafeMathUpgradeable for uint256;
 
@@ -35,14 +38,15 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
   error OperatorAlreadySet();
   error OperatorNotSet();
   error NotAuthorized();
+  error WrongRequest();
 
   // this error should never happen. If it happens, we are in trouble
   error CapReachedForPool();
 
   struct MintRequest {
-    address account;
-    uint256 amount;
-    uint256 lockedUntil;
+    uint64 orderId;
+    uint160 amount;
+    uint32 lockedUntil;
   }
 
   enum BurnReason {
@@ -50,33 +54,35 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
     LootFee
   }
 
+  struct PoolConfig {
+    uint128 supplyReservedToPool;
+    uint128 poolSupply;
+    uint128 minted;
+    uint128 maxDailyMinted;
+    address pool;
+    mapping(address operator => bool) operators;
+  }
+
   LFGToken public lfg;
 
   mapping(bytes32 => bool) private _usedSignatures;
-  uint256 private _minted;
   mapping(uint256 => uint256) private _dailyMinted;
-  uint256 private _maxDailyMinted;
+  mapping(address => MintRequest) private _mintRequests;
 
-  mapping(address operator => bool) private _operators;
-
-  mapping(uint256 => MintRequest) private _mintRequests;
-
-  uint256 public supplyReservedToPool;
-  uint256 public poolSupply;
-  address public pool;
+  PoolConfig public poolConfig;
 
   modifier onlyOperator() {
-    if (!_operators[_msgSender()]) revert NotAuthorized();
+    if (!poolConfig.operators[_msgSender()]) revert NotAuthorized();
     _;
   }
 
   modifier onlyPool() {
-    if (pool == address(0) || pool != _msgSender()) revert NotAuthorized();
+    if (poolConfig.pool == address(0) || poolConfig.pool != _msgSender()) revert NotAuthorized();
     _;
   }
 
   function getMaxDailyMinted() public view returns (uint256) {
-    return _maxDailyMinted;
+    return poolConfig.maxDailyMinted;
   }
 
   function getDailyMinted(uint256 day) public view returns (uint256) {
@@ -91,22 +97,27 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
   }
 
   function initForPool(uint256 amount) public onlyOwner {
-    supplyReservedToPool = amount;
+    poolConfig.supplyReservedToPool = uint128(amount);
   }
 
   function setPool(address pool_) public onlyOwner {
     if (pool_ == address(0)) revert NoZeroAddress();
-    pool = pool_;
+    poolConfig.pool = pool_;
   }
 
   function setOperator(address operator, bool active) public onlyOwner {
     if (active) {
-      if (_operators[operator]) revert OperatorAlreadySet();
-      _operators[operator] = true;
+      if (poolConfig.operators[operator]) revert OperatorAlreadySet();
+      poolConfig.operators[operator] = true;
     } else {
-      if (!_operators[operator]) revert OperatorNotSet();
-      delete _operators[operator];
+      if (!poolConfig.operators[operator]) revert OperatorNotSet();
+      delete poolConfig.operators[operator];
     }
+    emit OperatorSet(operator, active);
+  }
+
+  function isOperator(address operator) public view returns (bool) {
+    return poolConfig.operators[operator];
   }
 
   function _addInitialValidators(address[] memory validators_) internal {
@@ -118,16 +129,16 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
   function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner {
     uint256 _lfgMaxSupply = 2 * 10 ** 27;
     if (maxDailyMinted_ > _lfgMaxSupply / 365) revert InvalidDailyMintedAmounts();
-    _maxDailyMinted = maxDailyMinted_;
+    poolConfig.maxDailyMinted = uint128(maxDailyMinted_);
     emit DailyMintedAmountsUpdated(maxDailyMinted_);
   }
 
   function _updateDailyMinted(uint256 amount) internal {
     uint256 today = block.timestamp / 1 days;
     _dailyMinted[today] += amount;
-    if (_dailyMinted[today] > _maxDailyMinted) revert InvalidDailyMintedAmounts();
-    _minted += amount;
-    if (_minted > lfg.maxSupply() / 2) revert CapReachedForTurnUp();
+    if (_dailyMinted[today] > poolConfig.maxDailyMinted) revert InvalidDailyMintedAmounts();
+    poolConfig.minted += uint128(amount);
+    if (poolConfig.minted > lfg.maxSupply() / 2) revert CapReachedForTurnUp();
   }
 
   // this is called by any user, via TurnUp, to apply for minting LFG
@@ -138,24 +149,44 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
     uint256 timestamp,
     uint256 validFor, // Usually fixed to 2 hours for apply
     bytes calldata signature
-  ) external {
+  ) external nonReentrant {
     if (timestamp < block.timestamp - validFor) revert SignatureExpired();
     if (!signedByValidator(hashLfgApply(orderId, amount, lockedUntil, _msgSender(), timestamp, validFor), signature))
       revert InvalidSignature();
     _saveSignatureAsUsed(signature);
     _updateDailyMinted(amount);
     lfg.mintAndLock(_msgSender(), amount, lockedUntil);
-    _mintRequests[orderId] = MintRequest(_msgSender(), amount, lockedUntil);
+    _mintRequests[_msgSender()] = MintRequest(uint64(orderId), uint160(amount), uint32(lockedUntil));
     emit MintRequested(orderId, amount, _msgSender(), lockedUntil);
   }
 
-  function cancelApplicationToMintLfg(uint256 orderId) external {
-    if (!_operators[_msgSender()]) revert NotAuthorized();
-    MintRequest memory request = _mintRequests[orderId];
-    _minted -= request.amount;
-    lfg.revertMint(request.account, request.amount, request.lockedUntil);
-    emit CancelRequest(orderId, request.amount, request.account, request.lockedUntil);
-    delete _mintRequests[orderId];
+  function applyToMintLfgAndStake(
+    address staker,
+    uint256 orderId,
+    uint256 amount,
+    uint256 lockedUntil, // the end of the lock time for the stake
+    uint256 timestamp,
+    uint256 validFor, // Usually fixed to 2 hours for apply
+    bytes calldata signature
+  ) external nonReentrant {
+    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
+    if (!signedByValidator(hashLfgApply(orderId, amount, lockedUntil, _msgSender(), timestamp, validFor), signature))
+      revert InvalidSignature();
+    _saveSignatureAsUsed(signature);
+    _updateDailyMinted(amount);
+    lfg.mintAndLock(address(this), amount, 0);
+    lfg.approve(poolConfig.pool, amount);
+    ICorePool(poolConfig.pool).stakeAfterMint(staker, amount, uint64(lockedUntil));
+  }
+
+  function cancelApplicationToMintLfg(uint256 orderId, address account) external nonReentrant {
+    if (!poolConfig.operators[_msgSender()]) revert NotAuthorized();
+    MintRequest memory request = _mintRequests[account];
+    if (request.orderId != orderId) revert WrongRequest();
+    poolConfig.minted -= uint128(request.amount);
+    lfg.revertMint(account, request.amount, request.lockedUntil);
+    emit CancelRequest(orderId, request.amount, account, request.lockedUntil);
+    delete _mintRequests[account];
   }
 
   function hashLfgApply(
@@ -177,7 +208,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
     uint256 timestamp,
     uint256 validFor,
     bytes calldata signature
-  ) external {
+  ) external nonReentrant {
     if (timestamp < block.timestamp - validFor) revert SignatureExpired();
     if (!signedByValidator(hashBurnLfg(orderId, _msgSender(), uint8(reason), amount, timestamp, validFor), signature))
       revert InvalidSignature();
@@ -215,9 +246,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable {
     return _usedSignatures[key];
   }
 
-  function mintByPool(address to, uint256 amount) external onlyPool {
-    if (poolSupply + amount > supplyReservedToPool) revert CapReachedForPool();
-    poolSupply += amount;
+  function mintByPool(address to, uint256 amount) external onlyPool nonReentrant {
+    if (poolConfig.poolSupply + amount > poolConfig.supplyReservedToPool) revert CapReachedForPool();
+    poolConfig.poolSupply += uint128(amount);
     lfg.mintAndLock(to, amount, 0);
   }
 }

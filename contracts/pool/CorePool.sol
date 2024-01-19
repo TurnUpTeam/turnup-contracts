@@ -21,12 +21,6 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
   /// @dev Token holder storage, maps token holder address to their data record
   mapping(address => User) public users;
 
-  /// @dev CorePool.sol weight, 100 for TOKEN pool or 900 for TOKEN/ETH
-  uint32 public weight;
-
-  /// @dev Block number of the last yield distribution event
-  uint64 public lastYieldDistribution;
-
   /// @dev Used to calculate yield rewards
   /// @dev This value is different from "reward per token" used in locked pool
   /// @dev Note: stakes are different in duration and "weight" reflects that
@@ -64,38 +58,43 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
   LFGToken public lfg;
 
-  /**
-   * @dev TOKEN/block determines yield farming reward base
-   *      used by the yield pools controlled by the factory
-   */
-  uint192 public tokenPerBlock;
+  struct Config {
+    /**
+     * @dev TOKEN/block determines yield farming reward base
+     *      used by the yield pools controlled by the factory
+     */
+    uint192 tokenPerBlock;
+    /// @dev CorePool.sol weight, 100 for TOKEN pool or 900 for TOKEN/ETH
+    uint32 weight;
+    /// @dev Block number of the last yield distribution event
+    uint64 lastYieldDistribution;
+    /**
+     * @dev The yield is distributed proportionally to pool weights;
+     *      total weight is here to help in determining the proportion
+     */
+    uint32 totalWeight;
+    /**
+     * @dev TOKEN/block decreases by 3% every blocks/update (set to 91252 blocks during deployment);
+     */
+    uint32 blocksPerUpdate;
+    /**
+     * @dev End block is the last block when TOKEN/block can be decreased;
+     *      it is implied that yield farming stops after that block
+     */
+    uint32 endBlock;
+    uint32 decayFactor;
+    /**
+     * @dev Each time the TOKEN/block ratio gets updated, the block number
+     *      when the operation has occurred gets recorded into `lastRatioUpdate`
+     * @dev This block number is then used to check if blocks/update `blocksPerUpdate`
+     *      has passed when decreasing yield reward by 3%
+     */
+    uint32 lastRatioUpdate;
+  }
 
-  /**
-   * @dev The yield is distributed proportionally to pool weights;
-   *      total weight is here to help in determining the proportion
-   */
-  uint32 public totalWeight;
+  Config public config;
 
-  /**
-   * @dev TOKEN/block decreases by 3% every blocks/update (set to 91252 blocks during deployment);
-   */
-  uint32 public blocksPerUpdate;
-
-  /**
-   * @dev End block is the last block when TOKEN/block can be decreased;
-   *      it is implied that yield farming stops after that block
-   */
-  uint32 public endBlock;
-
-  uint32 public decayFactor;
-
-  /**
-   * @dev Each time the TOKEN/block ratio gets updated, the block number
-   *      when the operation has occurred gets recorded into `lastRatioUpdate`
-   * @dev This block number is then used to check if blocks/update `blocksPerUpdate`
-   *      has passed when decreasing yield reward by 3%
-   */
-  uint32 public lastRatioUpdate;
+  address public factory;
 
   error PoolTokenAddressNotSet();
   error TokenBlockNotSet();
@@ -103,6 +102,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
   error InitBlockNotSet();
   error InvalidEndBlock();
   error PoolWeightNotSet();
+  error NotAuthorized();
 
   function initialize(
     address _lfg,
@@ -111,7 +111,8 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     uint32 _initBlock,
     uint32 _endBlock,
     uint32 _weight,
-    uint256 _minLockTime
+    uint256 _minLockTime,
+    address _factory
   ) public initializer {
     __Ownable_init();
     if (_lfg == address(0)) revert PoolTokenAddressNotSet();
@@ -126,15 +127,16 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
     overrideLFGPerBlock(_tokenPerBlock);
     overrideBlocksPerUpdate(_blocksPerUpdate);
-    lastRatioUpdate = _initBlock;
-    endBlock = _endBlock;
+    config.lastRatioUpdate = _initBlock;
+    config.endBlock = _endBlock;
 
-    weight = _weight;
-    totalWeight = _weight;
-    lastYieldDistribution = _initBlock;
+    config.weight = _weight;
+    config.totalWeight = _weight;
+    config.lastYieldDistribution = _initBlock;
 
     setMinLockTime(_minLockTime);
-    decayFactor = 97;
+    config.decayFactor = 97;
+    factory = _factory;
   }
 
   /**
@@ -149,9 +151,11 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
     // if smart contract state was not updated recently, `yieldRewardsPerWeight` value
     // is outdated and we need to recalculate it in order to calculate pending rewards correctly
-    if (blockNumber() > lastYieldDistribution && usersLockingWeight != 0) {
-      uint256 multiplier = blockNumber() > endBlock ? endBlock - lastYieldDistribution : blockNumber() - lastYieldDistribution;
-      uint256 rewards = (multiplier * weight * tokenPerBlock) / totalWeight;
+    if (blockNumber() > config.lastYieldDistribution && usersLockingWeight != 0) {
+      uint256 multiplier = blockNumber() > config.endBlock
+        ? config.endBlock - config.lastYieldDistribution
+        : blockNumber() - config.lastYieldDistribution;
+      uint256 rewards = (multiplier * config.weight * config.tokenPerBlock) / config.totalWeight;
 
       // recalculated value for `yieldRewardsPerWeight`
       newYieldRewardsPerWeight = rewardToWeight(rewards, usersLockingWeight) + yieldRewardsPerWeight;
@@ -215,7 +219,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    */
   function stake(uint256 _amount, uint64 _lockUntil) external override {
     // delegate call to an internal function
-    _stake(msg.sender, _amount, _lockUntil);
+    _stake(_msgSender(), _amount, _lockUntil, _msgSender());
   }
 
   /**
@@ -228,7 +232,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    */
   function unstake(uint256 _depositId, uint256 _amount) external override {
     // delegate call to an internal function
-    _unstake(msg.sender, _depositId, _amount);
+    _unstake(_msgSender(), _depositId, _amount);
   }
 
   /**
@@ -244,7 +248,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    */
   function updateStakeLock(uint256 depositId, uint64 lockedUntil) external override {
     // delegate call to an internal function
-    _updateStakeLock(msg.sender, depositId, lockedUntil);
+    _updateStakeLock(_msgSender(), depositId, lockedUntil);
   }
 
   /**
@@ -276,7 +280,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    */
   function processRewards() external override {
     // delegate call to an internal function
-    _processRewards(msg.sender);
+    _processRewards(_msgSender());
   }
 
   /**
@@ -289,10 +293,10 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    */
   function _setWeight(uint32 _weight) internal {
     // emit an event logging old and new weight values
-    emit PoolWeightUpdated(weight, _weight);
+    emit PoolWeightUpdated(config.weight, _weight);
 
     // set the new weight value
-    weight = _weight;
+    config.weight = _weight;
   }
 
   /**
@@ -322,13 +326,28 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
   error InvalidLockInternal();
 
   /**
+   * @notice Stakes specified amount of tokens for the specified amount of time,
+   *      and pays pending yield rewards if any
+   *
+   * @dev Requires amount to stake to be greater than zero
+   *
+   * @param _amount amount of tokens to stake
+   * @param _lockUntil stake period as unix timestamp; zero means no locking
+   */
+  function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external override {
+    if (_msgSender() != factory) revert NotAuthorized();
+    // delegate call to an internal function
+    _stake(_staker, _amount, _lockUntil, factory);
+  }
+
+  /**
    * @dev Used internally, mostly by children implementations, see stake()
    *
    * @param _staker an address which stakes tokens and which will receive them back
    * @param _amount amount of tokens to stake
    * @param _lockUntil stake period as unix timestamp; zero means no locking
    */
-  function _stake(address _staker, uint256 _amount, uint64 _lockUntil) internal virtual {
+  function _stake(address _staker, uint256 _amount, uint64 _lockUntil, address lfgSender) internal virtual {
     // validate the inputs
     if (_amount == 0) revert ZeroAmount();
     // we need to the limit of max locking time to limit the yield bonus
@@ -348,7 +367,8 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     // read the current balance
     uint256 previousBalance = lfg.balanceOf(address(this));
     // transfer `_amount`; note: some tokens may get burnt here
-    lfg.safeTransferFrom(address(msg.sender), address(this), _amount);
+    // the lfgSender can be the user or the factory
+    lfg.safeTransferFrom(lfgSender, address(this), _amount);
     // read new balance, usually this is just the difference `previousBalance - _amount`
     uint256 newBalance = lfg.balanceOf(address(this));
     // calculate real amount taking into account deflation
@@ -486,7 +506,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     // update global variable
     usersLockingWeight = usersLockingWeight - previousWeight + newWeight;
 
-    lfg.safeTransfer(msg.sender, _amount);
+    lfg.safeTransfer(_msgSender(), _amount);
 
     // emit an event
     emit Unstaked(_staker, _amount);
@@ -505,43 +525,43 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     }
     // check bound conditions and if these are not met -
     // exit silently, without emitting an event
-    if (lastYieldDistribution >= endBlock) {
+    if (config.lastYieldDistribution >= config.endBlock) {
       return;
     }
-    if (blockNumber() <= lastYieldDistribution) {
+    if (blockNumber() <= config.lastYieldDistribution) {
       return;
     }
     // if locking weight is zero - update only `lastYieldDistribution` and exit
     if (usersLockingWeight == 0) {
-      lastYieldDistribution = uint64(blockNumber());
+      config.lastYieldDistribution = uint64(blockNumber());
       return;
     }
     // to calculate the reward we need to know how many blocks passed, and reward per block
-    uint256 currentBlock = blockNumber() > endBlock ? endBlock : blockNumber();
-    uint256 blocksPassed = currentBlock - lastYieldDistribution;
+    uint256 currentBlock = blockNumber() > config.endBlock ? config.endBlock : blockNumber();
+    uint256 blocksPassed = currentBlock - config.lastYieldDistribution;
 
     // calculate the reward
-    uint256 rewards = (blocksPassed * tokenPerBlock * weight) / totalWeight;
+    uint256 rewards = (blocksPassed * config.tokenPerBlock * config.weight) / config.totalWeight;
 
     totalYieldReward += rewards;
 
     // update rewards per weight and `lastYieldDistribution`
     yieldRewardsPerWeight += rewardToWeight(rewards, usersLockingWeight);
-    lastYieldDistribution = uint64(currentBlock);
+    config.lastYieldDistribution = uint64(currentBlock);
 
     // emit an event
-    emit Synchronized(yieldRewardsPerWeight, lastYieldDistribution);
+    emit Synchronized(yieldRewardsPerWeight, config.lastYieldDistribution);
   }
 
   function shouldUpdateRatio() public view override returns (bool) {
     // if yield farming period has ended
-    if (blockNumber() > endBlock) {
+    if (blockNumber() > config.endBlock) {
       // TOKEN/block reward cannot be updated anymore
       return false;
     }
 
     // check if blocks/update (91252 blocks) have passed since last update
-    return blockNumber() >= lastRatioUpdate + blocksPerUpdate;
+    return blockNumber() >= config.lastRatioUpdate + config.blocksPerUpdate;
   }
 
   error TooFrequent();
@@ -551,31 +571,31 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     if (!shouldUpdateRatio()) revert TooFrequent();
 
     // decreases TOKEN/block reward by 3%
-    tokenPerBlock = (tokenPerBlock * decayFactor) / 100;
+    config.tokenPerBlock = (config.tokenPerBlock * config.decayFactor) / 100;
 
     // set current block as the last ratio update block
-    lastRatioUpdate = uint32(blockNumber());
+    config.lastRatioUpdate = uint32(blockNumber());
 
     // emit an event
-    emit TokenRatioUpdated(tokenPerBlock);
+    emit TokenRatioUpdated(config.tokenPerBlock);
   }
 
   function overrideLFGPerBlock(uint192 _tokenPerBlock) public override onlyOwner {
-    tokenPerBlock = _tokenPerBlock;
+    config.tokenPerBlock = _tokenPerBlock;
     // emit an event
-    emit TokenRatioUpdated(tokenPerBlock);
+    emit TokenRatioUpdated(config.tokenPerBlock);
   }
 
   function overrideBlocksPerUpdate(uint32 _blocksPerUpdate) public override onlyOwner {
-    blocksPerUpdate = _blocksPerUpdate;
+    config.blocksPerUpdate = _blocksPerUpdate;
   }
 
   function overrideEndblock(uint32 _endBlock) public override onlyOwner {
-    endBlock = _endBlock;
+    config.endBlock = _endBlock;
   }
 
   function overrideDecayFactor(uint32 _decayFactor) public override onlyOwner {
-    decayFactor = _decayFactor;
+    config.decayFactor = _decayFactor;
   }
 
   /**

@@ -2679,6 +2679,11 @@
       },
       {
         "inputs": [],
+        "name": "NotAuthorized",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "PoolTokenAddressNotSet",
         "type": "error"
       },
@@ -2946,11 +2951,46 @@
       },
       {
         "inputs": [],
-        "name": "blocksPerUpdate",
+        "name": "config",
         "outputs": [
           {
+            "internalType": "uint192",
+            "name": "tokenPerBlock",
+            "type": "uint192"
+          },
+          {
             "internalType": "uint32",
-            "name": "",
+            "name": "weight",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint64",
+            "name": "lastYieldDistribution",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint32",
+            "name": "totalWeight",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "blocksPerUpdate",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "endBlock",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "decayFactor",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "lastRatioUpdate",
             "type": "uint32"
           }
         ],
@@ -2959,25 +2999,12 @@
       },
       {
         "inputs": [],
-        "name": "decayFactor",
+        "name": "factory",
         "outputs": [
           {
-            "internalType": "uint32",
+            "internalType": "address",
             "name": "",
-            "type": "uint32"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "endBlock",
-        "outputs": [
-          {
-            "internalType": "uint32",
-            "name": "",
-            "type": "uint32"
+            "type": "address"
           }
         ],
         "stateMutability": "view",
@@ -3108,37 +3135,16 @@
             "internalType": "uint256",
             "name": "_minLockTime",
             "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "_factory",
+            "type": "address"
           }
         ],
         "name": "initialize",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "lastRatioUpdate",
-        "outputs": [
-          {
-            "internalType": "uint32",
-            "name": "",
-            "type": "uint32"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "lastYieldDistribution",
-        "outputs": [
-          {
-            "internalType": "uint64",
-            "name": "",
-            "type": "uint64"
-          }
-        ],
-        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -3360,36 +3366,33 @@
         "type": "function"
       },
       {
-        "inputs": [],
-        "name": "sync",
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_staker",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "_amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint64",
+            "name": "_lockUntil",
+            "type": "uint64"
+          }
+        ],
+        "name": "stakeAfterMint",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
       },
       {
         "inputs": [],
-        "name": "tokenPerBlock",
-        "outputs": [
-          {
-            "internalType": "uint192",
-            "name": "",
-            "type": "uint192"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "totalWeight",
-        "outputs": [
-          {
-            "internalType": "uint32",
-            "name": "",
-            "type": "uint32"
-          }
-        ],
-        "stateMutability": "view",
+        "name": "sync",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
@@ -3503,19 +3506,6 @@
             "internalType": "uint256",
             "name": "",
             "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "weight",
-        "outputs": [
-          {
-            "internalType": "uint32",
-            "name": "",
-            "type": "uint32"
           }
         ],
         "stateMutability": "view",
@@ -4801,6 +4791,11 @@
         "type": "error"
       },
       {
+        "inputs": [],
+        "name": "WrongRequest",
+        "type": "error"
+      },
+      {
         "anonymous": false,
         "inputs": [
           {
@@ -5036,6 +5031,49 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "staker",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          }
+        ],
+        "name": "applyToMintLfgAndStake",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "uint256",
             "name": "orderId",
             "type": "uint256"
@@ -5077,6 +5115,11 @@
             "internalType": "uint256",
             "name": "orderId",
             "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
           }
         ],
         "name": "cancelApplicationToMintLfg",
@@ -5262,6 +5305,25 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "operator",
+            "type": "address"
+          }
+        ],
+        "name": "isOperator",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "bytes",
             "name": "_signature",
             "type": "bytes"
@@ -5324,25 +5386,32 @@
       },
       {
         "inputs": [],
-        "name": "pool",
+        "name": "poolConfig",
         "outputs": [
+          {
+            "internalType": "uint128",
+            "name": "supplyReservedToPool",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint128",
+            "name": "poolSupply",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint128",
+            "name": "minted",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint128",
+            "name": "maxDailyMinted",
+            "type": "uint128"
+          },
           {
             "internalType": "address",
-            "name": "",
+            "name": "pool",
             "type": "address"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "poolSupply",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -5405,19 +5474,6 @@
             "internalType": "bool",
             "name": "",
             "type": "bool"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "supplyReservedToPool",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
           }
         ],
         "stateMutability": "view",

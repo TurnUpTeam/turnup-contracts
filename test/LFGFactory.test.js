@@ -109,9 +109,9 @@ describe("LFGFactory", function () {
       expect(await lfg.balanceOf(bob.address)).to.equal(amount);
       expect(await lfg.availableBalanceOf(bob.address)).to.equal(0);
 
-      await expect(factory.connect(owner).cancelApplicationToMintLfg(orderId)).revertedWith("NotAuthorized");
+      await expect(factory.connect(owner).cancelApplicationToMintLfg(orderId, bob.address)).revertedWith("NotAuthorized");
 
-      await expect(factory.connect(operator).cancelApplicationToMintLfg(orderId))
+      await expect(factory.connect(operator).cancelApplicationToMintLfg(orderId, bob.address))
         .emit(factory, "CancelRequest")
         .withArgs(orderId, amount, bob.address, lockedUntil);
 

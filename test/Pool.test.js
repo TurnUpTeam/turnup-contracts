@@ -90,7 +90,8 @@ describe("LFGFactory", function () {
       blockNumber + 2,
       blockNumber + threeYearsBlocks,
       weight,
-      minLockTime
+      minLockTime,
+      factory.address
     );
 
     await lfg.setPool(pool.address);
