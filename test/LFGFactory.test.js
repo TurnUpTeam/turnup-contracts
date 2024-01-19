@@ -3,14 +3,25 @@ const EthDeployUtils = require("eth-deploy-utils");
 
 const deployUtils = new EthDeployUtils();
 
-const {signPackedData, privateKeyByWallet, getTimestamp, addr0, increaseBlockTimestampBy} = require("./helpers");
+const {
+  signPackedData,
+  privateKeyByWallet,
+  getTimestamp,
+  addr0,
+  increaseBlockTimestampBy,
+  getBlockNumber,
+} = require("./helpers");
 const {ethers} = require("hardhat");
 
 describe("LFGFactory", function () {
   let factory;
   let lfg;
+  let pool;
 
   let owner, bob, alice, fred, operator, validator, tokenHolder;
+
+  const blocksPerWeek = 42000 * 7;
+  const threeYearsBlocks = 42000 * 365 * 3;
 
   const BurnReason = {
     UnlockMission: 0,
@@ -44,6 +55,51 @@ describe("LFGFactory", function () {
     await factory.setOperator(operator.address, true);
 
     await lfg.setFactory(factory.address);
+
+    const blockNumber = await getBlockNumber();
+
+    const reservedToPool = BigInt((await lfg.amountReservedToPool()).toString());
+
+    const tokenPerBlock = (reservedToPool * 489n) / (BigInt(Math.floor(threeYearsBlocks)) * 100n);
+
+    function validateInitialAmountPerBlock(reservedAmount, initialAmount, blocksPerPeriod, decayPeriods, decayFactor = 97n) {
+      let startAmount = initialAmount;
+      for (let i = 0; i < decayPeriods; i++) {
+        reservedAmount -= initialAmount * blocksPerPeriod;
+        initialAmount = (initialAmount * decayFactor) / 100n;
+      }
+      expect(reservedAmount > 0n).to.be.true;
+      expect(initialAmount < startAmount / 10n).to.be.true;
+    }
+
+    validateInitialAmountPerBlock(
+      BigInt((await lfg.amountReservedToPool()).toString()),
+      BigInt(tokenPerBlock.toString()),
+      BigInt(blocksPerWeek),
+      104n,
+      97n
+    );
+
+    // on Polygon there are ~42000 blocks per day
+
+    const weight = 200;
+    // 1 month
+    const minLockTime = 3600 * 24 * 30;
+
+    pool = await deployUtils.deployProxy(
+      "CorePool",
+      lfg.address,
+      tokenPerBlock,
+      blocksPerWeek,
+      blockNumber + 2,
+      blockNumber + threeYearsBlocks,
+      weight,
+      minLockTime,
+      factory.address
+    );
+
+    await lfg.setPool(pool.address);
+    await factory.setPool(pool.address);
   }
 
   async function getSignature(hash, signer) {
@@ -157,6 +213,36 @@ describe("LFGFactory", function () {
 
       const balanceAfterBurn = await lfg.balanceOf(bob.address);
       expect(balanceAfterBurn).to.equal(balance.sub(burnedAmount));
+    });
+  });
+
+  describe("applyToMintLfgAndStake", function () {
+    it("should apply LFG correctly", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const ts = await getTimestamp();
+      const validFor = 60 * 60 * 2;
+      const t90days = 3600 * 24 * 90;
+      // staking until 90 days from now
+      const lockedUntil = ts + t90days;
+
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(
+        factory.connect(bob).applyToMintLfgAndStake(bob.address, orderId, amount, lockedUntil, ts, validFor, signature)
+      )
+        .to.emit(lfg, "Transfer")
+        .withArgs(addr0, pool.address, amount)
+        .to.emit(pool, "Staked")
+        .withArgs(bob.address, amount);
+
+      await increaseBlockTimestampBy(lockedUntil - ts + t90days + 1);
+      let bobBalanceBefore = await lfg.balanceOf(bob.address);
+      let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
+      expect(pendingYieldingRewards).to.be.equal("31898238747553809749");
+
+      await expect(pool.connect(bob).unstake(0, amount)).to.emit(pool, "Unstaked").withArgs(bob.address, amount);
     });
   });
 });

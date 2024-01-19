@@ -13,7 +13,7 @@ const {
 } = require("./helpers");
 const {ethers} = require("hardhat");
 
-describe("LFGFactory", function () {
+describe("CorePool", function () {
   let factory;
   let lfg;
   let pool;
@@ -123,6 +123,25 @@ describe("LFGFactory", function () {
 
     let bobBalanceAfter = await lfg.balanceOf(bob.address);
     expect(bobBalanceAfter.sub(bobBalanceBefore).sub(pendingYieldingRewards).gt(0)).to.be.true;
+
+    await increaseBlockTimestampBy(3600 * 24 * 11);
+
+    bobBalanceBefore = await lfg.balanceOf(bob.address);
+    pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
+    const depositLength = await pool.getDepositsLength(bob.address);
+    expect(depositLength).to.be.equal(1);
+    const deposit = await pool.getDeposit(bob.address, 0);
+    const unstakeAmount = deposit.tokenAmount.div(2);
+    await expect(pool.connect(bob).unstake(0, unstakeAmount)).to.emit(pool, "Unstaked").withArgs(bob.address, unstakeAmount);
+    bobBalanceAfter = await lfg.balanceOf(bob.address);
+    expect(bobBalanceAfter.sub(bobBalanceBefore).sub(pendingYieldingRewards).gt(0)).to.be.true;
+
+    await increaseBlockTimestampBy(3600 * 24);
+
+    await expect(pool.connect(bob).unstake(0, unstakeAmount)).to.emit(pool, "Unstaked").withArgs(bob.address, unstakeAmount);
+
+    const balanceNow = await lfg.balanceOf(bob.address);
+    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("313796477495105980135");
   });
 
   it("should let bob, alice and fred stake some LFG and get rewards", async function () {
