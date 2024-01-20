@@ -1,8 +1,9 @@
 const {ethers, upgrades} = require("hardhat");
 const {expect} = require("chai");
 const {toChecksumAddress} = require("ethereumjs-util");
+const DeployUtils = require("eth-deploy-utils");
 
-const DeployUtils = require("deploy-utils");
+const {getTimestamp, increaseBlockTimestampBy} = require("./helpers");
 
 let counter = 1;
 function cl(...args) {
@@ -69,8 +70,9 @@ describe("TurnupSharesV4", function () {
     await turnupShares.setProtocolFeePercent(protocolFee);
     const subjectFee = ethers.utils.parseUnits("50000000", "gwei"); // example fee
     await turnupShares.setSubjectFeePercent(subjectFee);
-    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("OperatorNotSet()");
-    await turnupShares.setOperator(operator.address);
+    await expect(turnupShares.newWishPass(wished2PseudoAddress, 1)).revertedWith("NotTheOperator()");
+    await turnupShares.setOperator(operator.address, true);
+    expect((await turnupShares.listOperators())[0]).to.equal(operator.address);
   }
 
   async function executeAndReturnGasCost(call) {
@@ -637,6 +639,8 @@ describe("TurnupSharesV4", function () {
     await expect(turnupShares.connect(buyer).buyShares(wisher, amountToBuy, {value: totalPrice}))
       .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
       .withArgs(buyer.address, wisher, true, amountToBuy, price, reservedQuantity + amountToBuy, WISH);
+
+    expect(await turnupShares.getWishBalanceOf(wisher, buyer.address)).to.equal(amountToBuy);
 
     // Check the new total supply and balance for the wisher
     expect((await turnupShares.wishPasses(wisher)).totalSupply).to.equal(reservedQuantity + amountToBuy);
@@ -1230,5 +1234,79 @@ describe("TurnupSharesV4", function () {
     await turnupShares.connect(buyer).buyShares(buyer.address, 5, {value: buyPrice});
 
     await turnupShares.connect(buyer).withdrawProtocolFees(0);
+  });
+
+  it("should allow users to stake shares after upgrade", async function () {
+    await init();
+    let Upgraded = await ethers.getContractFactory("TurnupSharesV4c");
+    let upgraded = await upgrades.upgradeProxy(turnupShares.address, Upgraded);
+    expect(await upgraded.getVer()).to.equal("v4.5.0");
+
+    turnupShares = await deployUtils.attach("TurnupSharesV4c", upgraded.address);
+
+    let maxSupply = ethers.utils.parseEther("3000000000");
+    let initialSupply = ethers.utils.parseEther("900000000");
+    let amountReservedToPool = ethers.utils.parseEther("300000000");
+    let amountReservedToSharesPool = ethers.utils.parseEther("200000000");
+    let maxLockTime = 365 * 24 * 3600;
+    const lfgToken = await deployUtils.deployProxy(
+      "LFGToken",
+      owner.address,
+      maxSupply,
+      initialSupply,
+      amountReservedToPool,
+      amountReservedToSharesPool,
+      maxLockTime
+    );
+
+    const sharesPool = await deployUtils.deploy("SharesPool", turnupShares.address, lfgToken.address);
+    await lfgToken.setSharesPool(sharesPool.address);
+    await turnupShares.setRewardsPool(sharesPool.address);
+    const amount = 10;
+
+    // owner buys shares
+
+    let buyPrice = await turnupShares.getBuyPrice(subject.address, amount);
+    let expectedPrice = await turnupShares.getBuyPriceAfterFee(subject.address, amount);
+
+    await expect(turnupShares.connect(subject).buyShares(subject.address, amount, {value: expectedPrice}))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject.address, subject.address, true, amount, buyPrice, amount, KEY);
+
+    const ts = (await getTimestamp()) + 1;
+    await expect(turnupShares.connect(subject).stakeSubject(8, 24 * 3600 * 10))
+      .to.emit(turnupShares, "StakeSubject") // Check if the Trade event is emitted
+      .withArgs(subject.address, 8, ts, ts + 24 * 3600 * 10);
+
+    expect(await turnupShares.getNumberOfStakes(subject.address)).to.equal(1);
+    const [amount2, lockedFrom, lockedUntil] = await turnupShares.getStakeByIndex(subject.address, 0);
+    expect(amount2).to.equal(8);
+    expect(lockedFrom).to.equal(ts);
+    expect(lockedUntil).to.equal(ts + 24 * 3600 * 10);
+
+    let amountToSell = 3;
+    await expect(turnupShares.connect(subject).sellShares(subject.address, amountToSell)).revertedWith("InsufficientKeys(2)");
+
+    let sellPrice = await turnupShares.getSellPrice(subject.address, 1);
+
+    await expect(turnupShares.connect(subject).sellShares(subject.address, 1))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject.address, subject.address, false, 1, sellPrice, 9, KEY);
+
+    await increaseBlockTimestampBy(24 * 3600 * 10 + 1);
+
+    const balanceBefore = await lfgToken.balanceOf(subject.address);
+    expect(balanceBefore).to.equal(0);
+    await sharesPool.claimRewards(subject.address);
+    const balanceAfter = await lfgToken.balanceOf(subject.address);
+    expect(balanceAfter).to.equal("6912000000000000000000");
+
+    expect(await turnupShares.getNumberOfStakes(subject.address)).to.equal(0);
+
+    sellPrice = await turnupShares.getSellPrice(subject.address, amountToSell);
+
+    await expect(turnupShares.connect(subject).sellShares(subject.address, amountToSell))
+      .to.emit(turnupShares, "Trade") // Check if the Trade event is emitted
+      .withArgs(subject.address, subject.address, false, amountToSell, sellPrice, 6, KEY);
   });
 });
