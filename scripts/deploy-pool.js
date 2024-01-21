@@ -21,8 +21,6 @@ async function main() {
 
   const reservedToPool = BigInt((await lfg.amountReservedToPool()).toString());
   const tokenPerBlock = (reservedToPool * 489n) / (BigInt(Math.floor(threeYearsBlocks)) * 100n);
-  // Alternatively, we can calculate it as
-  // const tokenPerBlock = reservedPool / 9404907n
 
   const weight = 200;
 

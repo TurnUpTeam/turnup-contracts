@@ -13,7 +13,7 @@ const {
 } = require("./helpers");
 const {ethers} = require("hardhat");
 
-describe.only("CorePool", function () {
+describe("CorePool", function () {
   let factory;
   let lfg;
   let pool;
@@ -56,9 +56,9 @@ describe.only("CorePool", function () {
 
     const reservedToPool = BigInt((await lfg.amountReservedToPool()).toString());
 
-    // const tokenPerBlock = (reservedToPool * 489n) / (BigInt(Math.floor(threeYearsBlocks)) * 100n);
+    const tokenPerBlock = (reservedToPool * 489n) / (BigInt(Math.floor(threeYearsBlocks)) * 100n);
 
-    const tokenPerBlock = reservedToPool / 9404907n;
+    // const tokenPerBlock = reservedToPool / 9404907n;
 
     function validateInitialAmountPerBlock(reservedAmount, initialAmount, blocksPerPeriod, decayPeriods, decayFactor = 97n) {
       let startAmount = initialAmount;
@@ -121,7 +121,7 @@ describe.only("CorePool", function () {
 
     let bobBalanceBefore = await lfg.balanceOf(bob.address);
     let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-    expect(pendingYieldingRewards).to.be.equal("31898242055975936805");
+    expect(pendingYieldingRewards).to.be.equal("31898238747549531165");
 
     await pool.connect(bob).processRewards();
 
@@ -145,7 +145,7 @@ describe.only("CorePool", function () {
     await expect(pool.connect(bob).unstake(0, unstakeAmount)).to.emit(pool, "Unstaked").withArgs(bob.address, unstakeAmount);
 
     const balanceNow = await lfg.balanceOf(bob.address);
-    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("313796484111962250317");
+    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("313796477495105980135");
   });
 
   it("should let bob, alice and fred stake some LFG and get rewards", async function () {
@@ -165,11 +165,11 @@ describe.only("CorePool", function () {
 
     let bobBalanceBefore = await lfg.balanceOf(bob.address);
     let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-    expect(pendingYieldingRewards).to.be.equal("53188885799374036515");
+    expect(pendingYieldingRewards).to.be.equal("53188880282720078855");
     pendingYieldingRewards = await pool.pendingYieldRewards(alice.address);
-    expect(pendingYieldingRewards).to.be.equal("32583157041213333600");
+    expect(pendingYieldingRewards).to.be.equal("32583153661745023335");
     pendingYieldingRewards = await pool.pendingYieldRewards(fred.address);
-    expect(pendingYieldingRewards).to.be.equal("9922683327342011000");
+    expect(pendingYieldingRewards).to.be.equal("9922682298180907750");
 
     await pool.connect(bob).processRewards();
 

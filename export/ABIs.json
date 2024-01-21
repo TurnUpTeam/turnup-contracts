@@ -5031,11 +5031,6 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "staker",
-            "type": "address"
-          },
-          {
             "internalType": "uint256",
             "name": "orderId",
             "type": "uint256"
@@ -5224,6 +5219,11 @@
             "internalType": "address",
             "name": "to",
             "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isForStake",
+            "type": "bool"
           },
           {
             "internalType": "uint256",

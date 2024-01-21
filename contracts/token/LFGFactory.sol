@@ -151,7 +151,14 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     bytes calldata signature
   ) external nonReentrant {
     if (timestamp < block.timestamp - validFor) revert SignatureExpired();
-    if (!signedByValidator(hashLfgApply(orderId, amount, lockedUntil, _msgSender(), timestamp, validFor), signature))
+    if (_mintRequests[_msgSender()].lockedUntil > 0) {
+      if (_mintRequests[_msgSender()].lockedUntil > block.timestamp) revert WrongRequest();
+      else {
+        delete _mintRequests[_msgSender()];
+        lfg.unlock(_msgSender(), _mintRequests[_msgSender()].amount, _mintRequests[_msgSender()].lockedUntil);
+      }
+    }
+    if (!signedByValidator(hashLfgApply(orderId, amount, lockedUntil, _msgSender(), false, timestamp, validFor), signature))
       revert InvalidSignature();
     _saveSignatureAsUsed(signature);
     _updateDailyMinted(amount);
@@ -161,7 +168,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   }
 
   function applyToMintLfgAndStake(
-    address staker,
     uint256 orderId,
     uint256 amount,
     uint256 lockedUntil, // the end of the lock time for the stake
@@ -170,13 +176,13 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     bytes calldata signature
   ) external nonReentrant {
     if (timestamp < block.timestamp - validFor) revert SignatureExpired();
-    if (!signedByValidator(hashLfgApply(orderId, amount, lockedUntil, _msgSender(), timestamp, validFor), signature))
+    if (!signedByValidator(hashLfgApply(orderId, amount, lockedUntil, _msgSender(), true, timestamp, validFor), signature))
       revert InvalidSignature();
     _saveSignatureAsUsed(signature);
     _updateDailyMinted(amount);
     lfg.mintAndLock(address(this), amount, 0);
     lfg.approve(poolConfig.pool, amount);
-    ICorePool(poolConfig.pool).stakeAfterMint(staker, amount, uint64(lockedUntil));
+    ICorePool(poolConfig.pool).stakeAfterMint(_msgSender(), amount, uint64(lockedUntil));
   }
 
   function cancelApplicationToMintLfg(uint256 orderId, address account) external nonReentrant {
@@ -194,11 +200,13 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     uint256 amount,
     uint256 lockedUntil,
     address to,
+    bool isForStake,
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
     if (validFor > 1 weeks) revert InvalidDeadline();
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, orderId, amount, timestamp, validFor, lockedUntil, to));
+    return
+      keccak256(abi.encodePacked("\x19\x01", block.chainid, orderId, amount, lockedUntil, to, isForStake, timestamp, validFor));
   }
 
   function burnLfg(
