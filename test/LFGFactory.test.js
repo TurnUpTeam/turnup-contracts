@@ -123,7 +123,7 @@ describe("LFGFactory", function () {
       const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       const validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, false, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
@@ -155,7 +155,7 @@ describe("LFGFactory", function () {
       const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       const validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, false, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
@@ -187,7 +187,7 @@ describe("LFGFactory", function () {
       let lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       let validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, false, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
@@ -226,12 +226,10 @@ describe("LFGFactory", function () {
       // staking until 90 days from now
       const lockedUntil = ts + t90days;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, true, ts, validFor);
       let signature = await getSignature(hash, validator);
 
-      await expect(
-        factory.connect(bob).applyToMintLfgAndStake(bob.address, orderId, amount, lockedUntil, ts, validFor, signature)
-      )
+      await expect(factory.connect(bob).applyToMintLfgAndStake(orderId, amount, lockedUntil, ts, validFor, signature))
         .to.emit(lfg, "Transfer")
         .withArgs(addr0, pool.address, amount)
         .to.emit(pool, "Staked")

@@ -81,7 +81,7 @@ async function main() {
   const blocksPerWeek = 42000 * 7;
   const threeYearsBlocks = 42000 * 365 * 3;
 
-  const reservedToPool = amountReservedToPool.toString();
+  const reservedToPool = BigInt(amountReservedToPool.toString());
   const tokenPerBlock = (reservedToPool * 489n) / (BigInt(Math.floor(threeYearsBlocks)) * 100n);
 
   const weight = 200;
@@ -89,19 +89,19 @@ async function main() {
   // 16 weeks
   const minLockTime = 3600 * 24 * 7 * 16;
 
-  const pool = await deployUtils.deployProxy(
-      "Pool",
-      lfg.address,
-      tokenPerBlock,
-      blocksPerWeek,
-      blockNumber + 2,
-      blockNumber + threeYearsBlocks,
-      weight,
-      minLockTime
+  const pool = await deployProxy(
+    "CorePool",
+    lfg.address,
+    tokenPerBlock,
+    blocksPerWeek,
+    blockNumber + 2,
+    blockNumber + threeYearsBlocks,
+    weight,
+    minLockTime,
+    factory.address
   );
 
   await lfg.setPool(pool.address);
-
 }
 
 main()
