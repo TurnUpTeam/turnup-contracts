@@ -21,6 +21,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   using SafeMathUpgradeable for uint256;
 
   event MintRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
+  event MintAndStakeRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
   event CancelRequest(uint256 indexed orderId, uint256 amount, address indexed account, uint256 lockedUntil);
   event OperatorSet(address indexed operator, bool active);
   event DailyMintedAmountsUpdated(uint256 maxDailyMinted);
@@ -183,6 +184,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     lfg.mintAndLock(address(this), amount, 0);
     lfg.approve(poolConfig.pool, amount);
     ICorePool(poolConfig.pool).stakeAfterMint(_msgSender(), amount, uint64(lockedUntil));
+    emit MintAndStakeRequested(orderId, amount, _msgSender(), lockedUntil);
   }
 
   function cancelApplicationToMintLfg(uint256 orderId, address account) external nonReentrant {
