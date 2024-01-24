@@ -166,8 +166,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     if (_mintRequests[_msgSender()].lockedUntil > 0) {
       if (_mintRequests[_msgSender()].lockedUntil > block.timestamp) revert WrongRequest();
       else {
-        delete _mintRequests[_msgSender()];
         lfg.unlock(_msgSender(), _mintRequests[_msgSender()].amount, _mintRequests[_msgSender()].lockedUntil);
+        delete _mintRequests[_msgSender()];
       }
     }
     if (
