@@ -317,7 +317,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
   error InvalidMinLockTime();
 
-  function setMinLockTime(uint256 _minLockTime) public override {
+  function setMinLockTime(uint256 _minLockTime) public override onlyOwner {
     if (_minLockTime > 364 days) revert InvalidMinLockTime();
     minLockTime = _minLockTime;
   }
