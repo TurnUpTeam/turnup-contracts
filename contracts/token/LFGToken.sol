@@ -114,6 +114,10 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
     _burn(account, amount);
   }
 
+  function reduceAmountReservedToGame(uint256 amount) external onlyFactory {
+    amountReservedToGame -= amount;
+  }
+
   function mintAndLock(address to, uint256 amount, uint256 lockedUntil) external onlyFactory {
     _mint(to, amount);
     if (lockedUntil != 0) {
