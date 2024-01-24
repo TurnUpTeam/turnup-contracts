@@ -26,6 +26,8 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
   address public sharesPool;
   uint256 public amountMintedBySharesPool;
 
+  uint256 public amountMintedByFactory;
+
   modifier onlyFactory() {
     if (factory == address(0) || factory != _msgSender()) revert NotAuthorized();
     _;
@@ -112,9 +114,7 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
 
   function burnTo(address account, uint256 amount) external onlyFactory {
     _burn(account, amount);
-  }
-
-  function reduceAmountReservedToGame(uint256 amount) external onlyFactory {
+    // we reduce it making it deflationary
     amountReservedToGame -= amount;
   }
 
@@ -123,6 +123,8 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
     if (lockedUntil != 0) {
       _lock(to, amount, factory, lockedUntil);
     }
+    amountMintedByFactory += amount;
+    if (amountMintedByFactory > amountReservedToGame) revert OverReservedAmount();
   }
 
   function mintFromPool(address to, uint256 amount) external onlyPool {

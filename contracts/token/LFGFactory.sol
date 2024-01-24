@@ -224,7 +224,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     _saveSignatureAsUsed(signature);
     _updateDailyMinted(amount);
     lfg.mintAndLock(address(this), amount, 0);
-    lfg.burn(amount);
+    lfg.burnTo(address(this), amount);
     emit MintAndBurn(orderId, amount, _msgSender());
   }
 
