@@ -3133,7 +3133,7 @@
           },
           {
             "internalType": "uint256",
-            "name": "_minLockTime",
+            "name": "_minLockTime_",
             "type": "uint256"
           },
           {
@@ -3325,7 +3325,7 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "_minLockTime",
+            "name": "_minLockTime_",
             "type": "uint256"
           }
         ],
@@ -3633,37 +3633,12 @@
       },
       {
         "inputs": [],
-        "name": "InsufficientAllowance",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "InvalidAmountReservedToPool",
         "type": "error"
       },
       {
         "inputs": [],
         "name": "InvalidInitialSupply",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "LockExpired",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "LockNotFound",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "LockTooLong",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "MaxLockTimeCannotBeZero",
         "type": "error"
       },
       {
@@ -3678,17 +3653,7 @@
       },
       {
         "inputs": [],
-        "name": "NotEnoughLockedAmount",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "OverReservedAmount",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "TooManyLocks",
         "type": "error"
       },
       {
@@ -3735,37 +3700,6 @@
           {
             "indexed": true,
             "internalType": "address",
-            "name": "account",
-            "type": "address"
-          },
-          {
-            "indexed": true,
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "indexed": true,
-            "internalType": "address",
-            "name": "_locker",
-            "type": "address"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "Lock",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": true,
-            "internalType": "address",
             "name": "previousOwner",
             "type": "address"
           },
@@ -3803,54 +3737,6 @@
         ],
         "name": "Transfer",
         "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": true,
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          },
-          {
-            "indexed": true,
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "indexed": true,
-            "internalType": "address",
-            "name": "_locker",
-            "type": "address"
-          }
-        ],
-        "name": "Unlock",
-        "type": "event"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "symbol",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxLockTime_",
-            "type": "uint256"
-          }
-        ],
-        "name": "__ERC20Lockable_init",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
       },
       {
         "inputs": [
@@ -3917,7 +3803,7 @@
       },
       {
         "inputs": [],
-        "name": "amountReservedToGame",
+        "name": "amountReservedToFactory",
         "outputs": [
           {
             "internalType": "uint256",
@@ -3986,25 +3872,6 @@
             "type": "address"
           }
         ],
-        "name": "availableBalanceOf",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
         "name": "balanceOf",
         "outputs": [
           {
@@ -4060,28 +3927,9 @@
             "type": "uint256"
           }
         ],
-        "name": "burnTo",
+        "name": "burnFromFactory",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
-        "name": "countLocksOf",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -4197,83 +4045,11 @@
             "internalType": "uint256",
             "name": "amountReservedToSharesPool_",
             "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxLockTime_",
-            "type": "uint256"
           }
         ],
         "name": "initialize",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "lock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
-        "name": "locksOf",
-        "outputs": [
-          {
-            "components": [
-              {
-                "internalType": "uint224",
-                "name": "amount",
-                "type": "uint224"
-              },
-              {
-                "internalType": "uint32",
-                "name": "lockedUntil",
-                "type": "uint32"
-              }
-            ],
-            "internalType": "struct ERC20Lockable.LockedAmount[]",
-            "name": "",
-            "type": "tuple[]"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "maxLockTime",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -4302,30 +4078,7 @@
             "type": "uint256"
           }
         ],
-        "name": "mint",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "to",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "mintAndLock",
+        "name": "mintFromFactory",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -4408,29 +4161,6 @@
       {
         "inputs": [],
         "name": "renounceOwnership",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "revertMint",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -4541,29 +4271,6 @@
         "inputs": [
           {
             "internalType": "address",
-            "name": "to",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "transferAndLock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
             "name": "from",
             "type": "address"
           },
@@ -4593,113 +4300,11 @@
         "inputs": [
           {
             "internalType": "address",
-            "name": "from",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "to",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "transferFromAndLock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
             "name": "newOwner",
             "type": "address"
           }
         ],
         "name": "transferOwnership",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "unlock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "to",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "unlockAndTransfer",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "from",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "to",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenUntil",
-            "type": "uint256"
-          }
-        ],
-        "name": "unlockAndTransferFrom",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -4764,6 +4369,11 @@
       {
         "inputs": [],
         "name": "OperatorNotSet",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "PendingRequest",
         "type": "error"
       },
       {
@@ -4886,7 +4496,75 @@
             "type": "uint256"
           }
         ],
+        "name": "CancelBurnRequest",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
+          }
+        ],
         "name": "CancelRequest",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "stakeLockedUntil",
+            "type": "uint256"
+          }
+        ],
+        "name": "CancelStakeRequest",
         "type": "event"
       },
       {
@@ -4935,9 +4613,15 @@
             "internalType": "address",
             "name": "to",
             "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
           }
         ],
-        "name": "MintAndBurn",
+        "name": "MintAndBurnRequested",
         "type": "event"
       },
       {
@@ -4965,6 +4649,12 @@
             "indexed": false,
             "internalType": "uint256",
             "name": "lockedUntil",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "stakeLockedUntil",
             "type": "uint256"
           }
         ],
@@ -5038,6 +4728,25 @@
           }
         ],
         "name": "OwnershipTransferred",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "stakeLockedUntil",
+            "type": "uint256"
+          }
+        ],
+        "name": "UpdateStakeLockedUntil",
         "type": "event"
       },
       {
@@ -5154,6 +4863,11 @@
           },
           {
             "internalType": "uint256",
+            "name": "stakeLockedUntil",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
             "name": "timestamp",
             "type": "uint256"
           },
@@ -5233,6 +4947,77 @@
         "inputs": [
           {
             "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "cancelApplicationToMintLfgAndBurn",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "cancelApplicationToMintLfgAndStake",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "claimAllPending",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "config",
+        "outputs": [
+          {
+            "internalType": "uint128",
+            "name": "supplyReservedToPool",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint128",
+            "name": "poolSupply",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint128",
+            "name": "minted",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint128",
+            "name": "maxDailyMinted",
+            "type": "uint128"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
             "name": "day",
             "type": "uint256"
           }
@@ -5256,6 +5041,88 @@
             "internalType": "uint256",
             "name": "",
             "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "getMintAndBurnRequest",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "orderId",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint160",
+                "name": "amount",
+                "type": "uint160"
+              },
+              {
+                "internalType": "uint32",
+                "name": "lockedUntil",
+                "type": "uint32"
+              }
+            ],
+            "internalType": "struct LFGFactory.MintAndBurnRequest",
+            "name": "",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "getMintAndStakeRequest",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "orderId",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint160",
+                "name": "amount",
+                "type": "uint160"
+              },
+              {
+                "internalType": "uint32",
+                "name": "lockedUntil",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint32",
+                "name": "requestedAt",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint32",
+                "name": "stakeLockedUntil",
+                "type": "uint32"
+              }
+            ],
+            "internalType": "struct LFGFactory.MintAndStakeRequest",
+            "name": "",
+            "type": "tuple"
           }
         ],
         "stateMutability": "view",
@@ -5359,14 +5226,14 @@
             "type": "uint256"
           },
           {
+            "internalType": "bool",
+            "name": "forBurn",
+            "type": "bool"
+          },
+          {
             "internalType": "address",
             "name": "to",
             "type": "address"
-          },
-          {
-            "internalType": "uint8",
-            "name": "mintType",
-            "type": "uint8"
           },
           {
             "internalType": "uint256",
@@ -5379,7 +5246,56 @@
             "type": "uint256"
           }
         ],
-        "name": "hashLfgApply",
+        "name": "hashForApplyToMintLfg",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "stakeLockedUntil",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
+          }
+        ],
+        "name": "hashForApplyToMintLfgAndStake",
         "outputs": [
           {
             "internalType": "bytes32",
@@ -5529,31 +5445,11 @@
       },
       {
         "inputs": [],
-        "name": "poolConfig",
+        "name": "pool",
         "outputs": [
           {
-            "internalType": "uint128",
-            "name": "supplyReservedToPool",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "poolSupply",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "minted",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "maxDailyMinted",
-            "type": "uint128"
-          },
-          {
             "internalType": "address",
-            "name": "pool",
+            "name": "",
             "type": "address"
           }
         ],

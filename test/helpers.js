@@ -1,5 +1,7 @@
 const {assert} = require("chai");
 
+let count = 1000;
+
 const Helpers = {
   initEthers(ethers) {
     this.ethers = ethers;
@@ -23,6 +25,10 @@ const Helpers = {
       }
       assert.isTrue(shouldBeTrue);
     }
+  },
+
+  cl(...args) {
+    console.log("\n >>>", count++, ...args, "\n");
   },
 
   async deployContractBy(contractName, owner, ...args) {

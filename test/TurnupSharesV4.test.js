@@ -1255,8 +1255,7 @@ describe("TurnupSharesV4", function () {
       maxSupply,
       initialSupply,
       amountReservedToPool,
-      amountReservedToSharesPool,
-      maxLockTime
+      amountReservedToSharesPool
     );
 
     const sharesPool = await deployUtils.deploy("SharesPool", turnupShares.address, lfgToken.address);

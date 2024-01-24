@@ -38,8 +38,7 @@ describe("CorePool", function () {
       maxSupply,
       initialSupply,
       amountReservedToPool,
-      amountReservedToSharesPool,
-      maxLockTime
+      amountReservedToSharesPool
     );
 
     const maxDaily = (await lfg.amountReservedToPool()).div(365);

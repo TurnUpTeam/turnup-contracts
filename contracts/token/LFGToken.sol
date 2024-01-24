@@ -5,9 +5,7 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {ERC20Lockable} from "../erc20Lockable/ERC20Lockable.sol";
-
-contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable {
+contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradeable {
   error NotAuthorized();
   error InvalidInitialSupply();
   error InvalidAmountReservedToPool();
@@ -16,7 +14,7 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
 
   address public factory;
   uint256 public maxSupply;
-  uint256 public amountReservedToGame;
+  uint256 public amountReservedToFactory;
 
   uint256 public amountReservedToPool;
   address public pool;
@@ -53,16 +51,15 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
     uint256 maxSupply_,
     uint256 initialSupply,
     uint256 amountReservedToPool_,
-    uint256 amountReservedToSharesPool_,
-    uint256 maxLockTime_
+    uint256 amountReservedToSharesPool_
   ) public initializer {
-    __ERC20Lockable_init("TurnUp $LFG", "LFG", maxLockTime_);
+    __ERC20_init("TurnUp $LFG", "LFG");
     __ERC20Burnable_init();
     __Ownable_init();
     maxSupply = maxSupply_;
     amountReservedToPool = amountReservedToPool_;
     amountReservedToSharesPool = amountReservedToSharesPool_;
-    amountReservedToGame = maxSupply_ - (initialSupply + amountReservedToPool_ + amountReservedToSharesPool_);
+    amountReservedToFactory = maxSupply_ - (initialSupply + amountReservedToPool_ + amountReservedToSharesPool_);
     _mint(tokenHolder, initialSupply);
   }
 
@@ -70,19 +67,7 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
     maxSupply = maxSupply + amount;
   }
 
-  function countLocksOf(address account) public view returns (uint256) {
-    return _lockers[account].length;
-  }
-
-  function locksOf(address account) public view returns (LockedAmount[] memory) {
-    return _locks[factory][account];
-  }
-
-  function _beforeTokenTransfer(
-    address from,
-    address to,
-    uint256 amount
-  ) internal virtual override(ERC20Lockable, ERC20Upgradeable) {
+  function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
   }
 
@@ -101,30 +86,16 @@ contract LFGToken is ERC20Lockable, OwnableUpgradeable, ERC20BurnableUpgradeable
     sharesPool = sharesPool_;
   }
 
-  function mint(address to, uint256 amount) external onlyFactory {
+  function mintFromFactory(address to, uint256 amount) external onlyFactory {
     _mint(to, amount);
+    amountMintedByFactory += amount;
+    if (amountMintedByFactory > amountReservedToFactory) revert OverReservedAmount();
   }
 
-  function revertMint(address account, uint256 amount, uint256 lockedUntil) external onlyFactory {
-    (bool found, uint256 i) = _lockIndex(account, _msgSender(), lockedUntil);
-    if (!found || _locks[_msgSender()][account][i].lockedUntil < block.timestamp) revert LockNotFound();
-    else _unlock(account, amount, i);
-    _burn(account, amount);
-  }
-
-  function burnTo(address account, uint256 amount) external onlyFactory {
+  function burnFromFactory(address account, uint256 amount) external onlyFactory {
     _burn(account, amount);
     // we reduce it making it deflationary
-    amountReservedToGame -= amount;
-  }
-
-  function mintAndLock(address to, uint256 amount, uint256 lockedUntil) external onlyFactory {
-    _mint(to, amount);
-    if (lockedUntil != 0) {
-      _lock(to, amount, factory, lockedUntil);
-    }
-    amountMintedByFactory += amount;
-    if (amountMintedByFactory > amountReservedToGame) revert OverReservedAmount();
+    amountReservedToFactory -= amount;
   }
 
   function mintFromPool(address to, uint256 amount) external onlyPool {

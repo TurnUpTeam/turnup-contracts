@@ -249,7 +249,7 @@
             "src": "contracts/token/LFGToken.sol:18"
           },
           {
-            "label": "amountReservedToGame",
+            "label": "amountReservedToFactory",
             "offset": 0,
             "slot": "256",
             "type": "t_uint256",
@@ -1417,7 +1417,7 @@
             "src": "contracts/token/LFGToken.sol:18"
           },
           {
-            "label": "amountReservedToGame",
+            "label": "amountReservedToFactory",
             "offset": 0,
             "slot": "256",
             "type": "t_uint256",

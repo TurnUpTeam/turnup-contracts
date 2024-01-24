@@ -97,6 +97,8 @@ interface ICorePool {
 
   function pendingYieldRewards(address _staker) external view returns (uint256);
 
+  function minLockTime() external view returns (uint256);
+
   function balanceOf(address _user) external view returns (uint256);
 
   function getDeposit(address _user, uint256 _depositId) external view returns (Deposit memory);
