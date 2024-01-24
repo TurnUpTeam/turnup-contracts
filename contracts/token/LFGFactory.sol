@@ -82,6 +82,10 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     _;
   }
 
+  function getMintRequest(address account) external view returns (MintRequest memory) {
+    return _mintRequests[account];
+  }
+
   function getMaxDailyMinted() public view returns (uint256) {
     return poolConfig.maxDailyMinted;
   }
