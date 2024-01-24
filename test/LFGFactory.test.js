@@ -13,7 +13,7 @@ const {
 } = require("./helpers");
 const {ethers} = require("hardhat");
 
-describe.only("LFGFactory", function () {
+describe("LFGFactory", function () {
   let factory;
   let lfg;
   let pool;
