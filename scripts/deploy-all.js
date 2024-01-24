@@ -102,6 +102,7 @@ async function main() {
   );
 
   await lfg.setPool(pool.address);
+  await factory.setPool(pool.address);
 }
 
 main()
