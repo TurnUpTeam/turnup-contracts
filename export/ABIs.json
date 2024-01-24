@@ -4922,6 +4922,31 @@
             "internalType": "address",
             "name": "to",
             "type": "address"
+          }
+        ],
+        "name": "MintAndBurn",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
           },
           {
             "indexed": false,
@@ -5055,6 +5080,44 @@
           }
         ],
         "name": "applyToMintLfg",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          }
+        ],
+        "name": "applyToMintLfgAndBurn",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -5252,9 +5315,9 @@
             "type": "address"
           },
           {
-            "internalType": "bool",
-            "name": "isForStake",
-            "type": "bool"
+            "internalType": "uint8",
+            "name": "mintType",
+            "type": "uint8"
           },
           {
             "internalType": "uint256",

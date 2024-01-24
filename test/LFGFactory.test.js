@@ -13,12 +13,18 @@ const {
 } = require("./helpers");
 const {ethers} = require("hardhat");
 
-describe("LFGFactory", function () {
+describe.only("LFGFactory", function () {
   let factory;
   let lfg;
   let pool;
 
   let owner, bob, alice, fred, operator, validator, tokenHolder;
+
+  let MintType = {
+    Mint: 0,
+    MintAndStake: 1,
+    MintAndBurn: 2,
+  };
 
   const blocksPerWeek = 42000 * 7;
   const threeYearsBlocks = 42000 * 365 * 3;
@@ -123,7 +129,7 @@ describe("LFGFactory", function () {
       const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       const validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, false, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, MintType.Mint, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
@@ -155,7 +161,7 @@ describe("LFGFactory", function () {
       const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       const validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, false, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, MintType.Mint, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
@@ -187,7 +193,7 @@ describe("LFGFactory", function () {
       let lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       let validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, false, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, MintType.Mint, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
@@ -226,14 +232,16 @@ describe("LFGFactory", function () {
       // staking until 90 days from now
       const lockedUntil = ts + t90days;
 
-      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, true, ts, validFor);
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, MintType.MintAndStake, ts, validFor);
       let signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfgAndStake(orderId, amount, lockedUntil, ts, validFor, signature))
         .to.emit(lfg, "Transfer")
         .withArgs(addr0, pool.address, amount)
         .to.emit(pool, "Staked")
-        .withArgs(bob.address, amount);
+        .withArgs(bob.address, amount)
+        .to.emit(factory, "MintAndStakeRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil);
 
       await increaseBlockTimestampBy(lockedUntil - ts + t90days + 1);
       let bobBalanceBefore = await lfg.balanceOf(bob.address);
@@ -241,6 +249,29 @@ describe("LFGFactory", function () {
       expect(pendingYieldingRewards).to.be.equal("31898238747553809749");
 
       await expect(pool.connect(bob).unstake(0, amount)).to.emit(pool, "Unstaked").withArgs(bob.address, amount);
+    });
+  });
+
+  describe("applyToMintLfgAndBurn", function () {
+    it("should apply LFG correctly", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const ts = await getTimestamp();
+      const validFor = 60 * 60 * 2;
+      const t90days = 3600 * 24 * 90;
+      // staking until 90 days from now
+      const lockedUntil = ts + t90days;
+
+      let hash = await factory.hashLfgApply(orderId, amount, lockedUntil, bob.address, MintType.MintAndBurn, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfgAndBurn(orderId, amount, lockedUntil, ts, validFor, signature))
+        .to.emit(lfg, "Transfer")
+        .withArgs(addr0, pool.address, amount)
+        .to.emit(lfg, "Transfer")
+        .withArgs(pool.address, addr0, amount)
+        .to.emit(factory, "MintAndBurn")
+        .withArgs(orderId, amount, bob.address);
     });
   });
 });
