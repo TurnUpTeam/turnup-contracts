@@ -59,8 +59,7 @@ async function main() {
     maxSupply,
     initialSupply,
     amountReservedToPool,
-    amountReservedToSharesPool,
-    maxLockTime
+    amountReservedToSharesPool
   );
 
   // deploy factory
