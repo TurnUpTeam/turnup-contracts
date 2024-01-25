@@ -11,6 +11,7 @@ contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradea
   error InvalidAmountReservedToPool();
   error NoZeroAddress();
   error OverReservedAmount();
+  error AlreadySet();
 
   address public factory;
   uint256 public maxSupply;
@@ -61,6 +62,8 @@ contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradea
     amountReservedToSharesPool = amountReservedToSharesPool_;
     amountReservedToFactory = maxSupply_ - (initialSupply + amountReservedToPool_ + amountReservedToSharesPool_);
     _mint(tokenHolder, initialSupply);
+    // it mints the tokens to itself to distribute them later to the pools
+    _mint(address(this), maxSupply - initialSupply);
   }
 
   function expandMaxSupply(uint256 amount) external onlyFactory {
@@ -73,40 +76,28 @@ contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradea
 
   function setFactory(address _factory) external onlyOwner {
     if (_factory == address(0)) revert NoZeroAddress();
+    if (factory != address(0)) revert AlreadySet();
     factory = _factory;
+    _transfer(address(this), factory, amountReservedToFactory);
   }
 
   function setPool(address pool_) external onlyOwner {
     if (pool_ == address(0)) revert NoZeroAddress();
+    if (pool != address(0)) revert AlreadySet();
     pool = pool_;
+    _transfer(address(this), pool, amountReservedToPool);
   }
 
   function setSharesPool(address sharesPool_) external onlyOwner {
     if (sharesPool_ == address(0)) revert NoZeroAddress();
+    if (sharesPool != address(0)) revert AlreadySet();
     sharesPool = sharesPool_;
-  }
-
-  function mintFromFactory(address to, uint256 amount) external onlyFactory {
-    _mint(to, amount);
-    amountMintedByFactory += amount;
-    if (amountMintedByFactory > amountReservedToFactory) revert OverReservedAmount();
+    _transfer(address(this), sharesPool, amountReservedToSharesPool);
   }
 
   function burnFromFactory(address account, uint256 amount) external onlyFactory {
     _burn(account, amount);
     // we reduce it making it deflationary
     amountReservedToFactory -= amount;
-  }
-
-  function mintFromPool(address to, uint256 amount) external onlyPool {
-    _mint(to, amount);
-    amountMintedByPool += amount;
-    if (amountMintedByPool > amountReservedToPool) revert OverReservedAmount();
-  }
-
-  function mintFromSharesPool(address to, uint256 amount) external onlySharesPool {
-    _mint(to, amount);
-    amountMintedBySharesPool += amount;
-    if (amountMintedBySharesPool > amountReservedToSharesPool) revert OverReservedAmount();
   }
 }

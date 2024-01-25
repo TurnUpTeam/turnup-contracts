@@ -22,6 +22,6 @@ contract SharesPool {
     uint256 divider = 10000;
     uint256 multiplier = getMultiplier(sharesSubject);
     uint256 rewards = turnupShares.claimRewards(sharesSubject);
-    lfgToken.mintFromSharesPool(sharesSubject, (rewards * 10 ** 15 * multiplier) / divider);
+    lfgToken.transfer(sharesSubject, (rewards * 10 ** 15 * multiplier) / divider);
   }
 }
