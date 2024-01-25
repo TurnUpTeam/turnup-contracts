@@ -4825,44 +4825,6 @@
           },
           {
             "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "signature",
-            "type": "bytes"
-          }
-        ],
-        "name": "applyToMintLfgAndBurn",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "orderId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lockedUntil",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
             "name": "stakeLockedUntil",
             "type": "uint256"
           },
@@ -4898,6 +4860,11 @@
             "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "mintNow",
+            "type": "bool"
           },
           {
             "internalType": "enum LFGFactory.BurnReason",
@@ -4939,24 +4906,6 @@
           }
         ],
         "name": "cancelApplicationToMintLfg",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "orderId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
-        "name": "cancelApplicationToMintLfgAndBurn",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -5185,6 +5134,11 @@
             "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "mintNow",
+            "type": "bool"
           },
           {
             "internalType": "uint256",

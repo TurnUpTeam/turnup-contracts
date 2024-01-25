@@ -215,7 +215,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
       signature
     );
     // if there are previous completed requests, we mint the tokens before continuing
-    (bool pending, , ) = _claimAllPending(_msgSender());
+    (bool pending, ) = _claimAllPending(_msgSender());
     // it reverts only if there is a pending MintRequest
     if (pending) revert PendingRequest();
     // create a new request
@@ -264,7 +264,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
       signature
     );
     // we process previous request to mint and stake
-    (, bool pending, ) = _claimAllPending(_msgSender());
+    (, bool pending) = _claimAllPending(_msgSender());
     // it reverts only if there is a pending MintAndStakeRequest
     if (pending) revert PendingRequest();
     _mintAndStakeRequests[_msgSender()] = MintAndStakeRequest(
@@ -316,40 +316,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     return pending;
   }
 
-  function applyToMintLfgAndBurn(
-    uint256 orderId,
-    uint256 amount,
-    uint256 lockedUntil, // the end of the lock time for the stake
-    uint256 timestamp,
-    uint256 validFor, // Usually fixed to 2 hours for apply
-    bytes calldata signature
-  ) external nonReentrant {
-    _validateSignature(
-      timestamp,
-      validFor,
-      hashForApplyToMintLfg(orderId, amount, lockedUntil, true, _msgSender(), timestamp, validFor),
-      signature
-    );
-    (, , bool pending) = _claimAllPending(_msgSender());
-    // it reverts only if there is a pending MintAndBurnRequest
-    if (pending) revert PendingRequest();
-    _mintAndBurnRequests[_msgSender()] = MintAndBurnRequest(uint64(orderId), uint160(amount), uint32(lockedUntil));
-    emit MintAndBurnRequested(orderId, amount, _msgSender(), lockedUntil);
-  }
-
-  function _claimMintLfgAndBurn(address account) internal returns (bool) {
-    bool pending;
-    if (_mintAndBurnRequests[account].lockedUntil > 0) {
-      pending = _mintAndBurnRequests[account].lockedUntil > block.timestamp;
-      lfg.mintFromFactory(_msgSender(), _mintAndBurnRequests[account].amount);
-      lfg.burnFromFactory(account, _mintAndBurnRequests[account].amount);
-      delete _mintAndBurnRequests[account];
-    }
-    return pending;
-  }
-
-  function _claimAllPending(address account) internal returns (bool, bool, bool) {
-    return (_claimMintLfg(account), _claimMintLfgAndStake(account), _claimMintLfgAndBurn(account));
+  function _claimAllPending(address account) internal returns (bool, bool) {
+    return (_claimMintLfg(account), _claimMintLfgAndStake(account));
   }
 
   function claimAllPending() external nonReentrant {
@@ -376,16 +344,10 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     delete _mintAndStakeRequests[account];
   }
 
-  function cancelApplicationToMintLfgAndBurn(uint256 orderId, address account) external nonReentrant {
-    if (!config.operators[_msgSender()]) revert NotAuthorized();
-    if (_mintAndBurnRequests[account].orderId != orderId) revert WrongRequest();
-    emit CancelBurnRequest(orderId, _mintAndBurnRequests[account].amount, account, _mintAndBurnRequests[account].lockedUntil);
-    delete _mintAndBurnRequests[account];
-  }
-
   function burnLfg(
     uint256 orderId,
     uint256 amount,
+    bool mintNow,
     BurnReason reason,
     uint256 timestamp,
     uint256 validFor,
@@ -394,9 +356,13 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     _validateSignature(
       timestamp,
       validFor,
-      hashBurnLfg(orderId, _msgSender(), uint8(reason), amount, timestamp, validFor),
+      hashBurnLfg(orderId, _msgSender(), uint8(reason), amount, mintNow, timestamp, validFor),
       signature
     );
+    if (mintNow) {
+      _updateDailyMinted(amount);
+      lfg.mintFromFactory(_msgSender(), amount);
+    }
     lfg.burnFromFactory(_msgSender(), amount);
     if (reason == BurnReason.UnlockMission) {
       emit BurnToUnlockMission(_msgSender(), orderId, amount);
@@ -410,11 +376,13 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     address account,
     uint8 reason,
     uint256 amount,
+    bool mintNow,
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
     if (validFor > 1 weeks) revert InvalidDeadline();
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, account, orderId, reason, amount, timestamp, validFor));
+    return
+      keccak256(abi.encodePacked("\x19\x01", block.chainid, account, orderId, reason, amount, mintNow, timestamp, validFor));
   }
 
   //  function
