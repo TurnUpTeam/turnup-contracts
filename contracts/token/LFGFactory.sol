@@ -28,7 +28,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     uint256 lockedUntil,
     uint256 stakeLockedUntil
   );
-  event MintAndBurnRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
   event CancelRequest(uint256 indexed orderId, uint256 amount, address indexed account, uint256 lockedUntil);
   event CancelStakeRequest(
     uint256 indexed orderId,
@@ -37,7 +36,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     uint256 lockedUntil,
     uint256 stakeLockedUntil
   );
-  event CancelBurnRequest(uint256 indexed orderId, uint256 amount, address indexed account, uint256 lockedUntil);
   event OperatorSet(address indexed operator, bool active);
   event DailyMintedAmountsUpdated(uint256 maxDailyMinted);
   event BurnToUnlockMission(address indexed burner, uint256 unlockId, uint256 burnedAmount);
@@ -110,6 +108,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   mapping(address => MintAndStakeRequest) private _mintAndStakeRequests;
   mapping(address => MintAndBurnRequest) private _mintAndBurnRequests;
 
+  uint256 private _reservedSupply;
+
   modifier onlyOperator() {
     if (!config.operators[_msgSender()]) revert NotAuthorized();
     _;
@@ -149,12 +149,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     updateDailyMintedAmounts(maxDailyMinted_);
   }
 
-  function initForPool(uint256 amount) public onlyOwner {
-    config.supplyReservedToPool = uint128(amount);
-  }
-
   function setPool(address pool_) public onlyOwner {
     if (pool_ == address(0)) revert NoZeroAddress();
+    config.supplyReservedToPool = uint128(lfg.amountReservedToPool());
     pool = pool_;
   }
 
@@ -185,7 +182,10 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     _dailyMinted[today] += amount;
     if (_dailyMinted[today] > config.maxDailyMinted) revert InvalidDailyMintedAmounts();
     config.minted += uint128(amount);
-    if (config.minted > lfg.amountReservedToFactory()) revert CapReachedForTurnUp();
+    if (_reservedSupply == 0) {
+      _reservedSupply = config.supplyReservedToPool;
+    }
+    if (config.minted > _reservedSupply) revert CapReachedForTurnUp();
   }
 
   function _validateSignature(
@@ -242,7 +242,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     if (_mintRequests[account].lockedUntil > 0) {
       pending = _mintRequests[account].lockedUntil > block.timestamp;
       _updateDailyMinted(_mintRequests[account].amount);
-      lfg.mintFromFactory(account, _mintRequests[account].amount);
+      lfg.transfer(account, _mintRequests[account].amount);
       delete _mintRequests[account];
     }
     return pending;
@@ -304,7 +304,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
       }
       pending = _mintAndStakeRequests[account].lockedUntil > block.timestamp;
       _updateDailyMinted(_mintAndStakeRequests[account].amount);
-      lfg.mintFromFactory(address(this), _mintAndStakeRequests[account].amount);
       lfg.approve(pool, _mintAndStakeRequests[account].amount);
       ICorePool(pool).stakeAfterMint(
         _msgSender(),
@@ -361,9 +360,10 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     );
     if (mintNow) {
       _updateDailyMinted(amount);
-      lfg.mintFromFactory(_msgSender(), amount);
+      lfg.burnFromFactory(address(this), amount);
+    } else {
+      lfg.burnFromFactory(_msgSender(), amount);
     }
-    lfg.burnFromFactory(_msgSender(), amount);
     if (reason == BurnReason.UnlockMission) {
       emit BurnToUnlockMission(_msgSender(), orderId, amount);
     } else if (reason == BurnReason.LootFee) {
@@ -396,11 +396,5 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   function isSignatureUsed(bytes memory _signature) public view returns (bool) {
     bytes32 key = bytes32(keccak256(abi.encodePacked(_signature)));
     return _usedSignatures[key];
-  }
-
-  function mintByPool(address to, uint256 amount) external onlyPool nonReentrant {
-    if (config.poolSupply + amount > config.supplyReservedToPool) revert CapReachedForPool();
-    config.poolSupply += uint128(amount);
-    lfg.mintFromFactory(to, amount);
   }
 }
