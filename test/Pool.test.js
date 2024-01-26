@@ -10,6 +10,7 @@ const {
   addr0,
   increaseBlockTimestampBy,
   getBlockNumber,
+  cl,
 } = require("./helpers");
 const {ethers} = require("hardhat");
 
@@ -116,7 +117,7 @@ describe("CorePool", function () {
     let ts = await getTimestamp();
 
     await pool.connect(bob).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 20);
-    await increaseBlockTimestampBy(3600 * 24 * 10);
+    await increaseBlockTimestampBy(3600 * 24 * 7);
 
     let bobBalanceBefore = await lfg.balanceOf(bob.address);
     let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
@@ -127,14 +128,17 @@ describe("CorePool", function () {
     let bobBalanceAfter = await lfg.balanceOf(bob.address);
     expect(bobBalanceAfter.sub(bobBalanceBefore).sub(pendingYieldingRewards).gt(0)).to.be.true;
 
-    await increaseBlockTimestampBy(3600 * 24 * 11);
+    const deposit = await pool.getDeposit(bob.address, 0);
+    const unstakeAmount = deposit.tokenAmount.div(2);
+
+    await expect(pool.connect(bob).unstake(0, unstakeAmount)).revertedWith("TooEarlyToUnstake()");
+
+    await increaseBlockTimestampBy(3600 * 24 * 7 * 20);
 
     bobBalanceBefore = await lfg.balanceOf(bob.address);
     pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
     const depositLength = await pool.getDepositsLength(bob.address);
     expect(depositLength).to.be.equal(1);
-    const deposit = await pool.getDeposit(bob.address, 0);
-    const unstakeAmount = deposit.tokenAmount.div(2);
     await expect(pool.connect(bob).unstake(0, unstakeAmount)).to.emit(pool, "Unstaked").withArgs(bob.address, unstakeAmount);
     bobBalanceAfter = await lfg.balanceOf(bob.address);
     expect(bobBalanceAfter.sub(bobBalanceBefore).sub(pendingYieldingRewards).gt(0)).to.be.true;
