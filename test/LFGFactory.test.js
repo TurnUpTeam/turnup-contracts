@@ -145,7 +145,9 @@ describe("LFGFactory", function () {
 
       await increaseBlockTimestampBy(lockedUntil - ts + 1);
 
-      await expect(factory.connect(bob).claimAllPending()).to.emit(lfg, "Transfer").withArgs(addr0, bob.address, amount);
+      await expect(factory.connect(bob).claimAllPending())
+        .to.emit(lfg, "Transfer")
+        .withArgs(factory.address, bob.address, amount);
 
       await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
         .to.emit(lfg, "Transfer")
@@ -186,7 +188,7 @@ describe("LFGFactory", function () {
         .to.emit(factory, "MintRequested")
         .withArgs(orderId, amount, bob.address, lockedUntil)
         .to.emit(lfg, "Transfer")
-        .withArgs(addr0, bob.address, amount);
+        .withArgs(factory.address, bob.address, amount);
 
       await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
         .to.emit(lfg, "Transfer")
@@ -279,9 +281,7 @@ describe("LFGFactory", function () {
 
       await expect(factory.connect(bob).burnLfg(orderId, burnedAmount, true, reason, ts, validFor, signature))
         .to.emit(lfg, "Transfer")
-        .withArgs(addr0, bob.address, burnedAmount)
-        .to.emit(lfg, "Transfer")
-        .withArgs(bob.address, addr0, burnedAmount);
+        .withArgs(factory.address, addr0, burnedAmount);
 
       const balanceAfterBurn = await lfg.balanceOf(bob.address);
       expect(balanceAfterBurn).to.equal(0);

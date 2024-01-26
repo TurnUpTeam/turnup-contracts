@@ -623,7 +623,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     // get link to a user data structure, we will write into it later
     User storage user = users[_staker];
 
-    lfg.mintFromPool(_staker, pendingYield);
+    lfg.transfer(_staker, pendingYield);
 
     user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
 
