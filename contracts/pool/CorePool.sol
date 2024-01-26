@@ -103,6 +103,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
   error InvalidEndBlock();
   error PoolWeightNotSet();
   error NotAuthorized();
+  error TooEarlyToUnstake();
 
   function initialize(
     address _lfg,
@@ -478,6 +479,8 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     // get a link to the corresponding deposit, we may write to it later
     Deposit storage stakeDeposit = user.deposits[_depositId];
     // deposit structure may get deleted, so we save isYield flag to be able to use it
+
+    if (stakeDeposit.lockedUntil > now256()) revert TooEarlyToUnstake();
 
     // verify available balance
     // if staker address ot deposit doesn't exist this check will fail as well

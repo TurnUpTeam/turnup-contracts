@@ -2699,6 +2699,11 @@
       },
       {
         "inputs": [],
+        "name": "TooEarlyToUnstake",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "TooFrequent",
         "type": "error"
       },
