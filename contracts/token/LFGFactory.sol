@@ -21,13 +21,28 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   using SafeMathUpgradeable for uint256;
 
   event MintRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
-  event MintAndStakeRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
+  event MintAndStakeRequested(
+    uint256 indexed orderId,
+    uint256 amount,
+    address indexed to,
+    uint256 lockedUntil,
+    uint256 stakeLockedUntil
+  );
+  event MintAndBurnRequested(uint256 indexed orderId, uint256 amount, address indexed to, uint256 lockedUntil);
   event CancelRequest(uint256 indexed orderId, uint256 amount, address indexed account, uint256 lockedUntil);
+  event CancelStakeRequest(
+    uint256 indexed orderId,
+    uint256 amount,
+    address indexed account,
+    uint256 lockedUntil,
+    uint256 stakeLockedUntil
+  );
+  event CancelBurnRequest(uint256 indexed orderId, uint256 amount, address indexed account, uint256 lockedUntil);
   event OperatorSet(address indexed operator, bool active);
   event DailyMintedAmountsUpdated(uint256 maxDailyMinted);
   event BurnToUnlockMission(address indexed burner, uint256 unlockId, uint256 burnedAmount);
   event BurnByLootFee(address indexed burner, uint256 orderId, uint256 burnedAmount);
-  event MintAndBurn(uint256 indexed orderId, uint256 amount, address indexed to);
+  event UpdateStakeLockedUntil(uint256 indexed orderId, uint256 stakeLockedUntil);
 
   error SignatureExpired();
   error SignatureAlreadyUsed();
@@ -41,11 +56,26 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   error OperatorNotSet();
   error NotAuthorized();
   error WrongRequest();
+  error PendingRequest();
 
   // this error should never happen. If it happens, we are in trouble
   error CapReachedForPool();
 
   struct MintRequest {
+    uint64 orderId;
+    uint160 amount;
+    uint32 lockedUntil;
+  }
+
+  struct MintAndStakeRequest {
+    uint64 orderId;
+    uint160 amount;
+    uint32 lockedUntil;
+    uint32 requestedAt;
+    uint32 stakeLockedUntil;
+  }
+
+  struct MintAndBurnRequest {
     uint64 orderId;
     uint160 amount;
     uint32 lockedUntil;
@@ -62,30 +92,31 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     MintAndBurn
   }
 
-  struct PoolConfig {
+  struct Config {
     uint128 supplyReservedToPool;
     uint128 poolSupply;
     uint128 minted;
     uint128 maxDailyMinted;
-    address pool;
     mapping(address operator => bool) operators;
   }
 
+  address public pool;
+  Config public config;
   LFGToken public lfg;
 
   mapping(bytes32 => bool) private _usedSignatures;
   mapping(uint256 => uint256) private _dailyMinted;
   mapping(address => MintRequest) private _mintRequests;
-
-  PoolConfig public poolConfig;
+  mapping(address => MintAndStakeRequest) private _mintAndStakeRequests;
+  mapping(address => MintAndBurnRequest) private _mintAndBurnRequests;
 
   modifier onlyOperator() {
-    if (!poolConfig.operators[_msgSender()]) revert NotAuthorized();
+    if (!config.operators[_msgSender()]) revert NotAuthorized();
     _;
   }
 
   modifier onlyPool() {
-    if (poolConfig.pool == address(0) || poolConfig.pool != _msgSender()) revert NotAuthorized();
+    if (pool == address(0) || pool != _msgSender()) revert NotAuthorized();
     _;
   }
 
@@ -93,8 +124,16 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     return _mintRequests[account];
   }
 
+  function getMintAndStakeRequest(address account) external view returns (MintAndStakeRequest memory) {
+    return _mintAndStakeRequests[account];
+  }
+
+  function getMintAndBurnRequest(address account) external view returns (MintAndBurnRequest memory) {
+    return _mintAndBurnRequests[account];
+  }
+
   function getMaxDailyMinted() public view returns (uint256) {
-    return poolConfig.maxDailyMinted;
+    return config.maxDailyMinted;
   }
 
   function getDailyMinted(uint256 day) public view returns (uint256) {
@@ -104,167 +143,227 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   function initialize(address lfg_, address[] memory validators_, uint256 maxDailyMinted_) public initializer {
     __Validatable_init();
     lfg = LFGToken(lfg_);
-    _addInitialValidators(validators_);
+    for (uint256 i = 0; i < validators_.length; i++) {
+      updateValidator(validators_[i], true);
+    }
     updateDailyMintedAmounts(maxDailyMinted_);
   }
 
   function initForPool(uint256 amount) public onlyOwner {
-    poolConfig.supplyReservedToPool = uint128(amount);
+    config.supplyReservedToPool = uint128(amount);
   }
 
   function setPool(address pool_) public onlyOwner {
     if (pool_ == address(0)) revert NoZeroAddress();
-    poolConfig.pool = pool_;
+    pool = pool_;
   }
 
   function setOperator(address operator, bool active) public onlyOwner {
     if (active) {
-      if (poolConfig.operators[operator]) revert OperatorAlreadySet();
-      poolConfig.operators[operator] = true;
+      if (config.operators[operator]) revert OperatorAlreadySet();
+      config.operators[operator] = true;
     } else {
-      if (!poolConfig.operators[operator]) revert OperatorNotSet();
-      delete poolConfig.operators[operator];
+      if (!config.operators[operator]) revert OperatorNotSet();
+      delete config.operators[operator];
     }
     emit OperatorSet(operator, active);
   }
 
   function isOperator(address operator) public view returns (bool) {
-    return poolConfig.operators[operator];
-  }
-
-  function _addInitialValidators(address[] memory validators_) internal {
-    for (uint256 i = 0; i < validators_.length; i++) {
-      updateValidator(validators_[i], true);
-    }
+    return config.operators[operator];
   }
 
   function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner {
     uint256 _lfgMaxSupply = 2 * 10 ** 27;
     if (maxDailyMinted_ > _lfgMaxSupply / 365) revert InvalidDailyMintedAmounts();
-    poolConfig.maxDailyMinted = uint128(maxDailyMinted_);
+    config.maxDailyMinted = uint128(maxDailyMinted_);
     emit DailyMintedAmountsUpdated(maxDailyMinted_);
   }
 
   function _updateDailyMinted(uint256 amount) internal {
     uint256 today = block.timestamp / 1 days;
     _dailyMinted[today] += amount;
-    if (_dailyMinted[today] > poolConfig.maxDailyMinted) revert InvalidDailyMintedAmounts();
-    poolConfig.minted += uint128(amount);
-    if (poolConfig.minted > lfg.maxSupply() / 2) revert CapReachedForTurnUp();
+    if (_dailyMinted[today] > config.maxDailyMinted) revert InvalidDailyMintedAmounts();
+    config.minted += uint128(amount);
+    if (config.minted > lfg.amountReservedToFactory()) revert CapReachedForTurnUp();
+  }
+
+  function _validateSignature(
+    uint256 timestamp,
+    uint256 validFor, // Usually fixed to 2 hours for apply
+    bytes32 hash,
+    bytes calldata signature
+  ) internal {
+    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
+    if (!signedByValidator(hash, signature)) revert InvalidSignature();
+    _saveSignatureAsUsed(signature);
   }
 
   // this is called by any user, via TurnUp, to apply for minting LFG
   function applyToMintLfg(
     uint256 orderId,
     uint256 amount,
-    uint256 lockedUntil, //  after the lock-up period expired, the tokens are unlocked
+    uint256 lockedUntil, // after the lock-up period expired, tokens can be minted
     uint256 timestamp,
     uint256 validFor, // Usually fixed to 2 hours for apply
     bytes calldata signature
   ) external nonReentrant {
-    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
-    if (_mintRequests[_msgSender()].lockedUntil > 0) {
-      if (_mintRequests[_msgSender()].lockedUntil > block.timestamp) revert WrongRequest();
-      else {
-        lfg.unlock(_msgSender(), _mintRequests[_msgSender()].amount, _mintRequests[_msgSender()].lockedUntil);
-        delete _mintRequests[_msgSender()];
-      }
-    }
-    if (
-      !signedByValidator(
-        hashLfgApply(orderId, amount, lockedUntil, _msgSender(), uint8(MintType.Mint), timestamp, validFor),
-        signature
-      )
-    ) revert InvalidSignature();
-    _saveSignatureAsUsed(signature);
-    _updateDailyMinted(amount);
-    lfg.mintAndLock(_msgSender(), amount, lockedUntil);
+    _validateSignature(
+      timestamp,
+      validFor,
+      hashForApplyToMintLfg(orderId, amount, lockedUntil, false, _msgSender(), timestamp, validFor),
+      signature
+    );
+    // if there are previous completed requests, we mint the tokens before continuing
+    (bool pending, ) = _claimAllPending(_msgSender());
+    // it reverts only if there is a pending MintRequest
+    if (pending) revert PendingRequest();
+    // create a new request
     _mintRequests[_msgSender()] = MintRequest(uint64(orderId), uint160(amount), uint32(lockedUntil));
     emit MintRequested(orderId, amount, _msgSender(), lockedUntil);
   }
 
-  function applyToMintLfgAndStake(
-    uint256 orderId,
-    uint256 amount,
-    uint256 lockedUntil, // the end of the lock time for the stake
-    uint256 timestamp,
-    uint256 validFor, // Usually fixed to 2 hours for apply
-    bytes calldata signature
-  ) external nonReentrant {
-    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
-    if (
-      !signedByValidator(
-        hashLfgApply(orderId, amount, lockedUntil, _msgSender(), uint8(MintType.MintAndStake), timestamp, validFor),
-        signature
-      )
-    ) revert InvalidSignature();
-    _saveSignatureAsUsed(signature);
-    _updateDailyMinted(amount);
-    lfg.mintAndLock(address(this), amount, 0);
-    lfg.approve(poolConfig.pool, amount);
-    ICorePool(poolConfig.pool).stakeAfterMint(_msgSender(), amount, uint64(lockedUntil));
-    emit MintAndStakeRequested(orderId, amount, _msgSender(), lockedUntil);
-  }
-
-  function applyToMintLfgAndBurn(
-    uint256 orderId,
-    uint256 amount,
-    uint256 lockedUntil, // the end of the lock time for the stake
-    uint256 timestamp,
-    uint256 validFor, // Usually fixed to 2 hours for apply
-    bytes calldata signature
-  ) external nonReentrant {
-    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
-    if (
-      !signedByValidator(
-        hashLfgApply(orderId, amount, lockedUntil, _msgSender(), uint8(MintType.MintAndBurn), timestamp, validFor),
-        signature
-      )
-    ) revert InvalidSignature();
-    _saveSignatureAsUsed(signature);
-    _updateDailyMinted(amount);
-    lfg.mintAndLock(address(this), amount, 0);
-    lfg.burnTo(address(this), amount);
-    emit MintAndBurn(orderId, amount, _msgSender());
-  }
-
-  function cancelApplicationToMintLfg(uint256 orderId, address account) external nonReentrant {
-    if (!poolConfig.operators[_msgSender()]) revert NotAuthorized();
-    MintRequest memory request = _mintRequests[account];
-    if (request.orderId != orderId) revert WrongRequest();
-    poolConfig.minted -= uint128(request.amount);
-    lfg.revertMint(account, request.amount, request.lockedUntil);
-    emit CancelRequest(orderId, request.amount, account, request.lockedUntil);
-    delete _mintRequests[account];
-  }
-
-  function hashLfgApply(
+  function hashForApplyToMintLfg(
     uint256 orderId,
     uint256 amount,
     uint256 lockedUntil,
+    bool forBurn,
     address to,
-    uint8 mintType,
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
     if (validFor > 1 weeks) revert InvalidDeadline();
     return
-      keccak256(abi.encodePacked("\x19\x01", block.chainid, orderId, amount, lockedUntil, to, mintType, timestamp, validFor));
+      keccak256(abi.encodePacked("\x19\x01", block.chainid, orderId, amount, lockedUntil, forBurn, to, timestamp, validFor));
+  }
+
+  function _claimMintLfg(address account) internal returns (bool) {
+    bool pending;
+    if (_mintRequests[account].lockedUntil > 0) {
+      pending = _mintRequests[account].lockedUntil > block.timestamp;
+      _updateDailyMinted(_mintRequests[account].amount);
+      lfg.mintFromFactory(account, _mintRequests[account].amount);
+      delete _mintRequests[account];
+    }
+    return pending;
+  }
+
+  function applyToMintLfgAndStake(
+    uint256 orderId,
+    uint256 amount,
+    uint256 lockedUntil, // after the lock-up period expired, tokens can be staked
+    uint256 stakeLockedUntil, // the end of the lock time for the stake
+    uint256 timestamp,
+    uint256 validFor, // Usually fixed to 2 hours for apply
+    bytes calldata signature
+  ) external nonReentrant {
+    _validateSignature(
+      timestamp,
+      validFor,
+      hashForApplyToMintLfgAndStake(orderId, amount, lockedUntil, stakeLockedUntil, _msgSender(), timestamp, validFor),
+      signature
+    );
+    // we process previous request to mint and stake
+    (, bool pending) = _claimAllPending(_msgSender());
+    // it reverts only if there is a pending MintAndStakeRequest
+    if (pending) revert PendingRequest();
+    _mintAndStakeRequests[_msgSender()] = MintAndStakeRequest(
+      uint64(orderId),
+      uint160(amount),
+      uint32(block.timestamp),
+      uint32(lockedUntil),
+      uint32(stakeLockedUntil)
+    );
+    emit MintAndStakeRequested(orderId, amount, _msgSender(), lockedUntil, stakeLockedUntil);
+  }
+
+  function hashForApplyToMintLfgAndStake(
+    uint256 orderId,
+    uint256 amount,
+    uint256 lockedUntil,
+    uint256 stakeLockedUntil,
+    address to,
+    uint256 timestamp,
+    uint256 validFor
+  ) public view returns (bytes32) {
+    if (validFor > 1 weeks) revert InvalidDeadline();
+    return
+      keccak256(
+        abi.encodePacked("\x19\x01", block.chainid, orderId, amount, lockedUntil, stakeLockedUntil, to, timestamp, validFor)
+      );
+  }
+
+  function _claimMintLfgAndStake(address account) internal returns (bool) {
+    bool pending;
+    if (_mintAndStakeRequests[account].lockedUntil > 0) {
+      uint256 poolMinLockTime = ICorePool(pool).minLockTime();
+      if (_mintAndStakeRequests[account].stakeLockedUntil < block.timestamp + poolMinLockTime) {
+        // the claim came too late and the stake would revert
+        _mintAndStakeRequests[account].stakeLockedUntil = uint32(block.timestamp) + uint32(poolMinLockTime) + 1;
+        emit UpdateStakeLockedUntil(_mintAndStakeRequests[account].orderId, _mintAndStakeRequests[account].stakeLockedUntil);
+      }
+      pending = _mintAndStakeRequests[account].lockedUntil > block.timestamp;
+      _updateDailyMinted(_mintAndStakeRequests[account].amount);
+      lfg.mintFromFactory(address(this), _mintAndStakeRequests[account].amount);
+      lfg.approve(pool, _mintAndStakeRequests[account].amount);
+      ICorePool(pool).stakeAfterMint(
+        _msgSender(),
+        _mintAndStakeRequests[account].amount,
+        uint64(_mintAndStakeRequests[account].stakeLockedUntil)
+      );
+      delete _mintAndStakeRequests[account];
+    }
+    return pending;
+  }
+
+  function _claimAllPending(address account) internal returns (bool, bool) {
+    return (_claimMintLfg(account), _claimMintLfgAndStake(account));
+  }
+
+  function claimAllPending() external nonReentrant {
+    _claimAllPending(_msgSender());
+  }
+
+  function cancelApplicationToMintLfg(uint256 orderId, address account) external nonReentrant {
+    if (!config.operators[_msgSender()]) revert NotAuthorized();
+    if (_mintRequests[account].orderId != orderId) revert WrongRequest();
+    emit CancelRequest(orderId, _mintRequests[account].amount, account, _mintRequests[account].lockedUntil);
+    delete _mintRequests[account];
+  }
+
+  function cancelApplicationToMintLfgAndStake(uint256 orderId, address account) external nonReentrant {
+    if (!config.operators[_msgSender()]) revert NotAuthorized();
+    if (_mintAndStakeRequests[account].orderId != orderId) revert WrongRequest();
+    emit CancelStakeRequest(
+      orderId,
+      _mintAndStakeRequests[account].amount,
+      account,
+      _mintAndStakeRequests[account].lockedUntil,
+      _mintAndStakeRequests[account].stakeLockedUntil
+    );
+    delete _mintAndStakeRequests[account];
   }
 
   function burnLfg(
     uint256 orderId,
     uint256 amount,
+    bool mintNow,
     BurnReason reason,
     uint256 timestamp,
     uint256 validFor,
     bytes calldata signature
   ) external nonReentrant {
-    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
-    if (!signedByValidator(hashBurnLfg(orderId, _msgSender(), uint8(reason), amount, timestamp, validFor), signature))
-      revert InvalidSignature();
-    _saveSignatureAsUsed(signature);
-    lfg.burnTo(_msgSender(), amount);
+    _validateSignature(
+      timestamp,
+      validFor,
+      hashBurnLfg(orderId, _msgSender(), uint8(reason), amount, mintNow, timestamp, validFor),
+      signature
+    );
+    if (mintNow) {
+      _updateDailyMinted(amount);
+      lfg.mintFromFactory(_msgSender(), amount);
+    }
+    lfg.burnFromFactory(_msgSender(), amount);
     if (reason == BurnReason.UnlockMission) {
       emit BurnToUnlockMission(_msgSender(), orderId, amount);
     } else if (reason == BurnReason.LootFee) {
@@ -277,11 +376,13 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     address account,
     uint8 reason,
     uint256 amount,
+    bool mintNow,
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
     if (validFor > 1 weeks) revert InvalidDeadline();
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, account, orderId, reason, amount, timestamp, validFor));
+    return
+      keccak256(abi.encodePacked("\x19\x01", block.chainid, account, orderId, reason, amount, mintNow, timestamp, validFor));
   }
 
   //  function
@@ -298,8 +399,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
   }
 
   function mintByPool(address to, uint256 amount) external onlyPool nonReentrant {
-    if (poolConfig.poolSupply + amount > poolConfig.supplyReservedToPool) revert CapReachedForPool();
-    poolConfig.poolSupply += uint128(amount);
-    lfg.mintAndLock(to, amount, 0);
+    if (config.poolSupply + amount > config.supplyReservedToPool) revert CapReachedForPool();
+    config.poolSupply += uint128(amount);
+    lfg.mintFromFactory(to, amount);
   }
 }

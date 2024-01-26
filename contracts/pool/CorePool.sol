@@ -16,7 +16,7 @@ import {ICorePool} from "./ICorePool.sol";
 contract CorePool is ICorePool, Ownable2StepUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
-  uint256 public minLockTime;
+  uint256 private _minLockTime;
 
   /// @dev Token holder storage, maps token holder address to their data record
   mapping(address => User) public users;
@@ -111,7 +111,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     uint32 _initBlock,
     uint32 _endBlock,
     uint32 _weight,
-    uint256 _minLockTime,
+    uint256 _minLockTime_,
     address _factory
   ) public initializer {
     __Ownable_init();
@@ -134,9 +134,13 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     config.totalWeight = _weight;
     config.lastYieldDistribution = _initBlock;
 
-    setMinLockTime(_minLockTime);
+    setMinLockTime(_minLockTime_);
     config.decayFactor = 97;
     factory = _factory;
+  }
+
+  function minLockTime() external view override returns (uint256) {
+    return _minLockTime;
   }
 
   /**
@@ -317,9 +321,9 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
   error InvalidMinLockTime();
 
-  function setMinLockTime(uint256 _minLockTime) public override onlyOwner {
-    if (_minLockTime > 364 days) revert InvalidMinLockTime();
-    minLockTime = _minLockTime;
+  function setMinLockTime(uint256 _minLockTime_) public override onlyOwner {
+    if (_minLockTime_ > 364 days) revert InvalidMinLockTime();
+    _minLockTime = _minLockTime_;
   }
 
   error ZeroAmount();
@@ -351,7 +355,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     // validate the inputs
     if (_amount == 0) revert ZeroAmount();
     // we need to the limit of max locking time to limit the yield bonus
-    if (_lockUntil < now256() + minLockTime || _lockUntil - now256() > 365 days) revert InvalidLockInternal();
+    if (_lockUntil < now256() + _minLockTime || _lockUntil - now256() > 365 days) revert InvalidLockInternal();
     // update smart contract state
     _sync();
 
