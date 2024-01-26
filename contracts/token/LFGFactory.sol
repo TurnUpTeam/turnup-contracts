@@ -10,13 +10,15 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "./LFGToken.sol";
 import {ICorePool} from "../pool/ICorePool.sol";
 
 //import {console} from "hardhat/console.sol";
 
-contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpgradeable {
+contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using AddressUpgradeable for address;
   using SafeMathUpgradeable for uint256;
 
@@ -142,6 +144,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
 
   function initialize(address lfg_, address[] memory validators_, uint256 maxDailyMinted_) public initializer {
     __Validatable_init();
+    __Pausable_init();
     lfg = LFGToken(lfg_);
     for (uint256 i = 0; i < validators_.length; i++) {
       updateValidator(validators_[i], true);
@@ -155,7 +158,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     pool = pool_;
   }
 
-  function setOperator(address operator, bool active) public onlyOwner {
+  function setOperator(address operator, bool active) public onlyOwner whenNotPaused {
     if (active) {
       if (config.operators[operator]) revert OperatorAlreadySet();
       config.operators[operator] = true;
@@ -170,7 +173,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     return config.operators[operator];
   }
 
-  function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner {
+  function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner whenNotPaused {
     uint256 _lfgMaxSupply = 2 * 10 ** 27;
     if (maxDailyMinted_ > _lfgMaxSupply / 365) revert InvalidDailyMintedAmounts();
     config.maxDailyMinted = uint128(maxDailyMinted_);
@@ -207,7 +210,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     uint256 timestamp,
     uint256 validFor, // Usually fixed to 2 hours for apply
     bytes calldata signature
-  ) external nonReentrant {
+  ) external nonReentrant whenNotPaused {
     _validateSignature(
       timestamp,
       validFor,
@@ -256,7 +259,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     uint256 timestamp,
     uint256 validFor, // Usually fixed to 2 hours for apply
     bytes calldata signature
-  ) external nonReentrant {
+  ) external nonReentrant whenNotPaused {
     _validateSignature(
       timestamp,
       validFor,
@@ -319,18 +322,18 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     return (_claimMintLfg(account), _claimMintLfgAndStake(account));
   }
 
-  function claimAllPending() external nonReentrant {
+  function claimAllPending() external whenNotPaused nonReentrant {
     _claimAllPending(_msgSender());
   }
 
-  function cancelApplicationToMintLfg(uint256 orderId, address account) external nonReentrant {
+  function cancelApplicationToMintLfg(uint256 orderId, address account) external whenNotPaused nonReentrant {
     if (!config.operators[_msgSender()]) revert NotAuthorized();
     if (_mintRequests[account].orderId != orderId) revert WrongRequest();
     emit CancelRequest(orderId, _mintRequests[account].amount, account, _mintRequests[account].lockedUntil);
     delete _mintRequests[account];
   }
 
-  function cancelApplicationToMintLfgAndStake(uint256 orderId, address account) external nonReentrant {
+  function cancelApplicationToMintLfgAndStake(uint256 orderId, address account) external whenNotPaused nonReentrant {
     if (!config.operators[_msgSender()]) revert NotAuthorized();
     if (_mintAndStakeRequests[account].orderId != orderId) revert WrongRequest();
     emit CancelStakeRequest(
@@ -351,7 +354,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     uint256 timestamp,
     uint256 validFor,
     bytes calldata signature
-  ) external nonReentrant {
+  ) external whenNotPaused nonReentrant {
     _validateSignature(
       timestamp,
       validFor,
@@ -397,4 +400,14 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, ReentrancyGuardUpg
     bytes32 key = bytes32(keccak256(abi.encodePacked(_signature)));
     return _usedSignatures[key];
   }
+
+  function pause() external onlyOwner {
+    _pause();
+  }
+
+  function unpause() external onlyOwner {
+    _unpause();
+  }
+
+  uint256[50] private __gap;
 }

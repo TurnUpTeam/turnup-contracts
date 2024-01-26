@@ -1258,7 +1258,7 @@ describe("TurnupSharesV4", function () {
       amountReservedToSharesPool
     );
 
-    const sharesPool = await deployUtils.deploy("SharesPool", turnupShares.address, lfgToken.address);
+    const sharesPool = await deployUtils.deployProxy("SharesPool", turnupShares.address, lfgToken.address);
     await lfgToken.setSharesPool(sharesPool.address);
     await turnupShares.setRewardsPool(sharesPool.address);
     const amount = 10;
@@ -1296,7 +1296,7 @@ describe("TurnupSharesV4", function () {
 
     const balanceBefore = await lfgToken.balanceOf(subject.address);
     expect(balanceBefore).to.equal(0);
-    await sharesPool.claimRewards(subject.address);
+    await sharesPool.connect(subject).claimRewards(subject.address);
     const balanceAfter = await lfgToken.balanceOf(subject.address);
     expect(balanceAfter).to.equal("6912000000000000000000");
 
