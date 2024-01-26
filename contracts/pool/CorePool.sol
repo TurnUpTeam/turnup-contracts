@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 // Import Ownable2Step from OpenZeppelin
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 // Import SafeERC20
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -13,7 +13,7 @@ import {ICorePool} from "./ICorePool.sol";
 
 //import { console} from "hardhat/console.sol";
 
-contract CorePool is ICorePool, Ownable2StepUpgradeable {
+contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
   uint256 private _minLockTime;
@@ -116,6 +116,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     address _factory
   ) public initializer {
     __Ownable_init();
+    __Pausable_init();
     if (_lfg == address(0)) revert PoolTokenAddressNotSet();
     lfg = LFGToken(_lfg);
 
@@ -222,7 +223,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    * @param _amount amount of tokens to stake
    * @param _lockUntil stake period as unix timestamp; zero means no locking
    */
-  function stake(uint256 _amount, uint64 _lockUntil) external override {
+  function stake(uint256 _amount, uint64 _lockUntil) external override whenNotPaused {
     // delegate call to an internal function
     _stake(_msgSender(), _amount, _lockUntil, _msgSender());
   }
@@ -235,7 +236,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    * @param _depositId deposit ID to unstake from, zero-indexed
    * @param _amount amount of tokens to unstake
    */
-  function unstake(uint256 _depositId, uint256 _amount) external override {
+  function unstake(uint256 _depositId, uint256 _amount) external override whenNotPaused {
     // delegate call to an internal function
     _unstake(_msgSender(), _depositId, _amount);
   }
@@ -251,7 +252,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    * @param depositId updated deposit ID
    * @param lockedUntil updated deposit locked until value
    */
-  function updateStakeLock(uint256 depositId, uint64 lockedUntil) external override {
+  function updateStakeLock(uint256 depositId, uint64 lockedUntil) external override whenNotPaused {
     // delegate call to an internal function
     _updateStakeLock(_msgSender(), depositId, lockedUntil);
   }
@@ -266,7 +267,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    * @dev When timing conditions are not met (executed too frequently, or after factory
    *      end block), function doesn't throw and exits silently
    */
-  function sync() external override {
+  function sync() external override whenNotPaused {
     // delegate call to an internal function
     _sync();
   }
@@ -283,7 +284,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    *      end block), function doesn't throw and exits silently
    *
    */
-  function processRewards() external override {
+  function processRewards() external override whenNotPaused {
     // delegate call to an internal function
     _processRewards(_msgSender());
   }
@@ -322,7 +323,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
   error InvalidMinLockTime();
 
-  function setMinLockTime(uint256 _minLockTime_) public override onlyOwner {
+  function setMinLockTime(uint256 _minLockTime_) public override whenNotPaused onlyOwner {
     if (_minLockTime_ > 364 days) revert InvalidMinLockTime();
     _minLockTime = _minLockTime_;
   }
@@ -339,7 +340,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
    * @param _amount amount of tokens to stake
    * @param _lockUntil stake period as unix timestamp; zero means no locking
    */
-  function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external override {
+  function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external override whenNotPaused {
     if (_msgSender() != factory) revert NotAuthorized();
     // delegate call to an internal function
     _stake(_staker, _amount, _lockUntil, factory);
@@ -573,7 +574,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
   error TooFrequent();
 
-  function updateLFGPerBlock() public override {
+  function updateLFGPerBlock() public override whenNotPaused {
     // checks if ratio can be updated i.e. if blocks/update (91252 blocks) have passed
     if (!shouldUpdateRatio()) revert TooFrequent();
 
@@ -587,21 +588,21 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
     emit TokenRatioUpdated(config.tokenPerBlock);
   }
 
-  function overrideLFGPerBlock(uint192 _tokenPerBlock) public override onlyOwner {
+  function overrideLFGPerBlock(uint192 _tokenPerBlock) public override whenNotPaused onlyOwner {
     config.tokenPerBlock = _tokenPerBlock;
     // emit an event
     emit TokenRatioUpdated(config.tokenPerBlock);
   }
 
-  function overrideBlocksPerUpdate(uint32 _blocksPerUpdate) public override onlyOwner {
+  function overrideBlocksPerUpdate(uint32 _blocksPerUpdate) public override whenNotPaused onlyOwner {
     config.blocksPerUpdate = _blocksPerUpdate;
   }
 
-  function overrideEndblock(uint32 _endBlock) public override onlyOwner {
+  function overrideEndblock(uint32 _endBlock) public override whenNotPaused onlyOwner {
     config.endBlock = _endBlock;
   }
 
-  function overrideDecayFactor(uint32 _decayFactor) public override onlyOwner {
+  function overrideDecayFactor(uint32 _decayFactor) public override whenNotPaused onlyOwner {
     config.decayFactor = _decayFactor;
   }
 
@@ -684,6 +685,14 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable {
 
     // emit an event
     emit StakeLockUpdated(_staker, _depositId, stakeDeposit.lockedFrom, _lockedUntil);
+  }
+
+  function pause() external onlyOwner {
+    _pause();
+  }
+
+  function unpause() external onlyOwner {
+    _unpause();
   }
 
   uint256[50] private __gap;
