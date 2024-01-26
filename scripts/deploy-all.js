@@ -37,6 +37,7 @@ async function main() {
     AMOUNT_RESERVED_TO_POLL,
     AMOUNT_RESERVED_TO_SHARES_POLL,
     MAX_DAILY,
+    MIN_FACTORY_LOCK_TIME,
   } = process.env;
 
   if (!/^0x[0-9a-fA-F]{40}$/.test(FIRST_VALIDATOR)) {
@@ -65,7 +66,7 @@ async function main() {
   // deploy factory
 
   let maxDaily = ethers.utils.parseEther(MAX_DAILY);
-  const factory = await deployProxy("LFGFactory", lfg.address, [FIRST_VALIDATOR], maxDaily);
+  const factory = await deployProxy("LFGFactory", lfg.address, [FIRST_VALIDATOR], maxDaily, MIN_FACTORY_LOCK_TIME);
 
   await factory.setOperator(FIRST_OPERATOR, true);
 

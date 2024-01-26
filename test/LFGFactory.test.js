@@ -56,7 +56,14 @@ describe("LFGFactory", function () {
 
     const maxDaily = (await lfg.amountReservedToPool()).div(365);
 
-    factory = await deployUtils.deployProxy("LFGFactory", lfg.address, [validator.address], maxDaily);
+    factory = await deployUtils.deployProxy(
+      "LFGFactory",
+      lfg.address,
+      [validator.address],
+      maxDaily,
+      // 12 hours
+      3600 * 12
+    );
 
     await factory.setOperator(operator.address, true);
 
@@ -129,8 +136,15 @@ describe("LFGFactory", function () {
       const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       const validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, ts + 3600, false, bob.address, ts, validFor);
       let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, ts + 3600, ts, validFor, signature)).revertedWith(
+        "InvalidLockTime()"
+      );
+
+      hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
         .to.emit(factory, "MintRequested")
