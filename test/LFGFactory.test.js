@@ -106,7 +106,7 @@ describe("LFGFactory", function () {
       blocksPerWeek,
       blockNumber + 2,
       blockNumber + threeYearsBlocks,
-      weight,
+      // weight,
       minLockTime,
       factory.address
     );

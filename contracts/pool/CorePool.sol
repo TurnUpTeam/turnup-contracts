@@ -11,7 +11,7 @@ import {LFGToken} from "../token/LFGToken.sol";
 
 import {ICorePool} from "./ICorePool.sol";
 
-//import { console} from "hardhat/console.sol";
+import { console} from "hardhat/console.sol";
 
 contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
@@ -64,15 +64,8 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
      *      used by the yield pools controlled by the factory
      */
     uint192 tokenPerBlock;
-    /// @dev CorePool.sol weight, 100 for TOKEN pool or 900 for TOKEN/ETH
-    uint32 weight;
     /// @dev Block number of the last yield distribution event
     uint64 lastYieldDistribution;
-    /**
-     * @dev The yield is distributed proportionally to pool weights;
-     *      total weight is here to help in determining the proportion
-     */
-    uint32 totalWeight;
     /**
      * @dev TOKEN/block decreases by 3% every blocks/update (set to 91252 blocks during deployment);
      */
@@ -111,7 +104,6 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     uint32 _blocksPerUpdate,
     uint32 _initBlock,
     uint32 _endBlock,
-    uint32 _weight,
     uint256 _minLockTime_,
     address _factory
   ) public initializer {
@@ -124,7 +116,6 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     if (_blocksPerUpdate == 0) revert BlocksPerUpdateNotSet();
     if (_initBlock == 0) revert InitBlockNotSet();
     if (_endBlock <= _initBlock) revert InvalidEndBlock();
-    if (_weight == 0) revert PoolWeightNotSet();
     // save the inputs into internal state variables
 
     overrideLFGPerBlock(_tokenPerBlock);
@@ -132,8 +123,6 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     config.lastRatioUpdate = _initBlock;
     config.endBlock = _endBlock;
 
-    config.weight = _weight;
-    config.totalWeight = _weight;
     config.lastYieldDistribution = _initBlock;
 
     setMinLockTime(_minLockTime_);
@@ -161,7 +150,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
       uint256 multiplier = blockNumber() > config.endBlock
         ? config.endBlock - config.lastYieldDistribution
         : blockNumber() - config.lastYieldDistribution;
-      uint256 rewards = (multiplier * config.weight * config.tokenPerBlock) / config.totalWeight;
+      uint256 rewards = multiplier * config.tokenPerBlock;
 
       // recalculated value for `yieldRewardsPerWeight`
       newYieldRewardsPerWeight = rewardToWeight(rewards, usersLockingWeight) + yieldRewardsPerWeight;
@@ -289,21 +278,21 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     _processRewards(_msgSender());
   }
 
-  /**
-   * @dev Executed by the factory to modify pool weight; the factory is expected
-   *      to keep track of the total pools weight when updating
-   *
-   * @dev Set weight to zero to disable the pool
-   *
-   * @param _weight new weight to set for the pool
-   */
-  function _setWeight(uint32 _weight) internal {
-    // emit an event logging old and new weight values
-    emit PoolWeightUpdated(config.weight, _weight);
-
-    // set the new weight value
-    config.weight = _weight;
-  }
+//  /**
+//   * @dev Executed by the factory to modify pool weight; the factory is expected
+//   *      to keep track of the total pools weight when updating
+//   *
+//   * @dev Set weight to zero to disable the pool
+//   *
+//   * @param _weight new weight to set for the pool
+//   */
+//  function _setWeight(uint32 _weight) internal {
+//    // emit an event logging old and new weight values
+//    emit PoolWeightUpdated(config.weight, _weight);
+//
+//    // set the new weight value
+//    config.weight = _weight;
+//  }
 
   /**
    * @dev Similar to public pendingYieldRewards, but performs calculations based on
@@ -317,6 +306,10 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // read user data structure into memory
     User storage user = users[_staker];
 
+    console.log("user.totalWeight", uint(user.totalWeight));
+    console.log("yieldRewardsPerWeight", uint(yieldRewardsPerWeight));
+    console.log("user.subYieldRewards", uint(user.subYieldRewards));
+    console.log(weightToReward(user.totalWeight, yieldRewardsPerWeight));
     // and perform the calculation using the values read
     return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
   }
@@ -549,7 +542,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     uint256 blocksPassed = currentBlock - config.lastYieldDistribution;
 
     // calculate the reward
-    uint256 rewards = (blocksPassed * config.tokenPerBlock * config.weight) / config.totalWeight;
+    uint256 rewards = blocksPassed * config.tokenPerBlock;
 
     totalYieldReward += rewards;
 
@@ -588,6 +581,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     emit TokenRatioUpdated(config.tokenPerBlock);
   }
 
+  // this is an emergency function, in theory it should never be called
   function overrideLFGPerBlock(uint192 _tokenPerBlock) public override whenNotPaused onlyOwner {
     config.tokenPerBlock = _tokenPerBlock;
     // emit an event

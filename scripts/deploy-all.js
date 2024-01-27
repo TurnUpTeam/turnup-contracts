@@ -96,7 +96,7 @@ async function main() {
     blocksPerWeek,
     blockNumber + 2,
     blockNumber + threeYearsBlocks,
-    weight,
+    // weight,
     minLockTime,
     factory.address
   );
