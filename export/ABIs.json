@@ -4511,6 +4511,11 @@
       },
       {
         "inputs": [],
+        "name": "InvalidLockTime",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "InvalidSignature",
         "type": "error"
       },
@@ -5432,6 +5437,11 @@
             "internalType": "uint256",
             "name": "maxDailyMinted_",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minLockTime_",
+            "type": "uint256"
           }
         ],
         "name": "initialize",
@@ -5492,6 +5502,19 @@
       },
       {
         "inputs": [],
+        "name": "minLockTime",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
         "name": "owner",
         "outputs": [
           {
@@ -5539,6 +5562,19 @@
       {
         "inputs": [],
         "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "minLockTime_",
+            "type": "uint256"
+          }
+        ],
+        "name": "setMinLockTime",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"

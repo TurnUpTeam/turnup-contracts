@@ -57,6 +57,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   error NotAuthorized();
   error WrongRequest();
   error PendingRequest();
+  error InvalidLockTime();
 
   // this error should never happen. If it happens, we are in trouble
   error CapReachedForPool();
@@ -111,6 +112,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   mapping(address => MintAndBurnRequest) private _mintAndBurnRequests;
 
   uint256 private _reservedSupply;
+  uint256 private _minLockTime;
 
   modifier onlyOperator() {
     if (!config.operators[_msgSender()]) revert NotAuthorized();
@@ -142,7 +144,12 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     return _dailyMinted[day];
   }
 
-  function initialize(address lfg_, address[] memory validators_, uint256 maxDailyMinted_) public initializer {
+  function initialize(
+    address lfg_,
+    address[] memory validators_,
+    uint256 maxDailyMinted_,
+    uint256 minLockTime_
+  ) public initializer {
     __Validatable_init();
     __Pausable_init();
     lfg = LFGToken(lfg_);
@@ -150,12 +157,21 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
       updateValidator(validators_[i], true);
     }
     updateDailyMintedAmounts(maxDailyMinted_);
+    setMinLockTime(minLockTime_);
   }
 
   function setPool(address pool_) public onlyOwner {
     if (pool_ == address(0)) revert NoZeroAddress();
     config.supplyReservedToPool = uint128(lfg.amountReservedToPool());
     pool = pool_;
+  }
+
+  function minLockTime() external view returns (uint256) {
+    return _minLockTime;
+  }
+
+  function setMinLockTime(uint256 minLockTime_) public onlyOwner {
+    _minLockTime = minLockTime_;
   }
 
   function setOperator(address operator, bool active) public onlyOwner whenNotPaused {
@@ -217,6 +233,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
       hashForApplyToMintLfg(orderId, amount, lockedUntil, false, _msgSender(), timestamp, validFor),
       signature
     );
+    if (lockedUntil < timestamp + _minLockTime) revert InvalidLockTime();
     // if there are previous completed requests, we mint the tokens before continuing
     (bool pending, ) = _claimAllPending(_msgSender());
     // it reverts only if there is a pending MintRequest
@@ -266,6 +283,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
       hashForApplyToMintLfgAndStake(orderId, amount, lockedUntil, stakeLockedUntil, _msgSender(), timestamp, validFor),
       signature
     );
+    if (lockedUntil < timestamp + _minLockTime) revert InvalidLockTime();
     // we process previous request to mint and stake
     (, bool pending) = _claimAllPending(_msgSender());
     // it reverts only if there is a pending MintAndStakeRequest

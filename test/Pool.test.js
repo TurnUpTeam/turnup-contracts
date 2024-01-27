@@ -44,7 +44,7 @@ describe("CorePool", function () {
 
     const maxDaily = (await lfg.amountReservedToPool()).div(365);
 
-    factory = await deployUtils.deployProxy("LFGFactory", lfg.address, [validator.address], maxDaily);
+    factory = await deployUtils.deployProxy("LFGFactory", lfg.address, [validator.address], maxDaily, 3600 * 12);
 
     await factory.setOperator(operator.address, true);
 
