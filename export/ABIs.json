@@ -5145,42 +5145,6 @@
             "type": "address"
           }
         ],
-        "name": "getMintAndBurnRequest",
-        "outputs": [
-          {
-            "components": [
-              {
-                "internalType": "uint64",
-                "name": "orderId",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint160",
-                "name": "amount",
-                "type": "uint160"
-              },
-              {
-                "internalType": "uint32",
-                "name": "lockedUntil",
-                "type": "uint32"
-              }
-            ],
-            "internalType": "struct LFGFactory.MintAndBurnRequest",
-            "name": "",
-            "type": "tuple"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
         "name": "getMintAndStakeRequest",
         "outputs": [
           {
