@@ -76,12 +76,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     uint32 stakeLockedUntil;
   }
 
-  struct MintAndBurnRequest {
-    uint64 orderId;
-    uint160 amount;
-    uint32 lockedUntil;
-  }
-
   enum BurnReason {
     UnlockMission,
     LootFee
@@ -109,7 +103,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   mapping(uint256 => uint256) private _dailyMinted;
   mapping(address => MintRequest) private _mintRequests;
   mapping(address => MintAndStakeRequest) private _mintAndStakeRequests;
-  mapping(address => MintAndBurnRequest) private _mintAndBurnRequests;
 
   uint256 private _reservedSupply;
   uint256 private _minLockTime;
@@ -130,10 +123,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
 
   function getMintAndStakeRequest(address account) external view returns (MintAndStakeRequest memory) {
     return _mintAndStakeRequests[account];
-  }
-
-  function getMintAndBurnRequest(address account) external view returns (MintAndBurnRequest memory) {
-    return _mintAndBurnRequests[account];
   }
 
   function getMaxDailyMinted() public view returns (uint256) {
