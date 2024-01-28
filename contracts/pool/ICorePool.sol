@@ -102,5 +102,4 @@ interface ICorePool {
   function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external;
 
   function getConfig() external view returns (RewardsConfig memory);
-
 }

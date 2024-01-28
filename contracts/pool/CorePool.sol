@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-// Import Ownable2Step from OpenZeppelin
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 // Import SafeERC20
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {LFGToken} from "../token/LFGToken.sol";
 
-import {Rewards}  from "./Rewards.sol";
+import {Rewards} from "./Rewards.sol";
 
-import {console} from "hardhat/console.sol";
+//import {console} from "hardhat/console.sol";
 
 contract CorePool is Rewards {
-
   using SafeERC20Upgradeable for LFGToken;
 
   /// @dev Token holder storage, maps token holder address to their data record
@@ -25,7 +21,7 @@ contract CorePool is Rewards {
    *      we use simplified calculation and use the following constant instead previos one
    */
   // solhint-disable-next-line
-  uint256 internal constant YEAR_STAKE_WEIGHT_MULTIPLIER = 2 * WEIGHT_MULTIPLIER;
+  //  uint256 internal _yearStakeWeightMultiplier;
 
   LFGToken public lfg;
 
@@ -41,7 +37,9 @@ contract CorePool is Rewards {
 
   function initialize(
     address _lfg,
-    uint256 _initBlock, uint256 _minLockTime, uint256 _totalReserved,
+    uint256 _initBlock,
+    uint256 _minLockTime,
+    uint256 _totalReserved,
     address _factory
   ) public initializer {
     __Ownable_init();
@@ -58,7 +56,7 @@ contract CorePool is Rewards {
    * @param _staker an address to calculate yield rewards value for
    * @return calculated yield reward value for the given address
    */
-  function pendingYieldRewards(address _staker) external view  returns (uint256) {
+  function pendingYieldRewards(address _staker) external view returns (uint256) {
     // `newYieldRewardsPerWeight` will store stored or recalculated value for `yieldRewardsPerWeight`
     uint256 newYieldRewardsPerWeight;
 
@@ -89,7 +87,7 @@ contract CorePool is Rewards {
    * @param _user an address to query balance for
    * @return total staked token balance
    */
-  function balanceOf(address _user) external view  returns (uint256) {
+  function balanceOf(address _user) external view returns (uint256) {
     // read specified user token amount and return
     return users[_user].tokenAmount;
   }
@@ -103,7 +101,7 @@ contract CorePool is Rewards {
    * @param _depositId zero-indexed deposit ID for the address specified
    * @return deposit info as Deposit structure
    */
-  function getDeposit(address _user, uint256 _depositId) external view  returns (Deposit memory) {
+  function getDeposit(address _user, uint256 _depositId) external view returns (Deposit memory) {
     // read deposit at specified index and return
     return users[_user].deposits[_depositId];
   }
@@ -212,32 +210,32 @@ contract CorePool is Rewards {
   //    config.weight = _weight;
   //  }
 
-//  /**
-//   * @dev Similar to public pendingYieldRewards, but performs calculations based on
-//   *      current smart contract state only, not taking into account any additional
-//   *      time/blocks which might have passed
-//   *
-//   * @param _staker an address to calculate yield rewards value for
-//   * @return pending calculated yield reward value for the given address
-//   */
-//  function _pendingYieldRewards(address _staker) internal view returns (uint256 pending) {
-//    // read user data structure into memory
-//    User storage user = users[_staker];
-//
-//    //    console.log("user.totalWeight", uint(user.totalWeight));
-//    //    console.log("yieldRewardsPerWeight", uint(yieldRewardsPerWeight));
-//    //    console.log("user.subYieldRewards", uint(user.subYieldRewards));
-//    //    console.log(weightToReward(user.totalWeight, yieldRewardsPerWeight));
-//    // and perform the calculation using the values read
-//    return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
-//  }
+  //  /**
+  //   * @dev Similar to public pendingYieldRewards, but performs calculations based on
+  //   *      current smart contract state only, not taking into account any additional
+  //   *      time/blocks which might have passed
+  //   *
+  //   * @param _staker an address to calculate yield rewards value for
+  //   * @return pending calculated yield reward value for the given address
+  //   */
+  //  function _pendingYieldRewards(address _staker) internal view returns (uint256 pending) {
+  //    // read user data structure into memory
+  //    User storage user = users[_staker];
+  //
+  //    //    console.log("user.totalWeight", uint(user.totalWeight));
+  //    //    console.log("yieldRewardsPerWeight", uint(yieldRewardsPerWeight));
+  //    //    console.log("user.subYieldRewards", uint(user.subYieldRewards));
+  //    //    console.log(weightToReward(user.totalWeight, yieldRewardsPerWeight));
+  //    // and perform the calculation using the values read
+  //    return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
+  //  }
 
   error InvalidMinLockTime();
 
-//  function setMinLockTime(uint256 _minLockTime_) public whenNotPaused onlyOwner {
-//    if (_minLockTime_ > 364 days) revert InvalidMinLockTime();
-//    config.minLockTime = _minLockTime_;
-//  }
+  //  function setMinLockTime(uint256 _minLockTime_) public whenNotPaused onlyOwner {
+  //    if (_minLockTime_ > 364 days) revert InvalidMinLockTime();
+  //    config.minLockTime = _minLockTime_;
+  //  }
 
   error ZeroAmount();
   error InvalidLockInternal();
@@ -347,9 +345,9 @@ contract CorePool is Rewards {
 
     // recalculate deposit weight
     uint256 previousWeight = stakeDeposit.weight;
-    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * WEIGHT_MULTIPLIER) /
+    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * _weightMultiplier) /
       365 days +
-      WEIGHT_MULTIPLIER) * (stakeDeposit.tokenAmount - _amount);
+      _weightMultiplier) * (stakeDeposit.tokenAmount - _amount);
 
     // update the deposit, or delete it if its depleted
     if (stakeDeposit.tokenAmount - _amount == 0) {
@@ -392,8 +390,8 @@ contract CorePool is Rewards {
 
     // get link to a user data structure, we will write into it later
 
-    console.log("pendingYield %s", pendingYield);
-    console.log("Balance %s", lfg.balanceOf(address(this)));
+    //    console.log("pendingYield %s", pendingYield);
+    //    console.log("Balance %s", lfg.balanceOf(address(this)));
 
     lfg.transfer(_staker, pendingYield);
     if (withUpdate) {
@@ -440,9 +438,9 @@ contract CorePool is Rewards {
 
     // update locked until value, calculate new weight
     stakeDeposit.lockedUntil = _lockedUntil;
-    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * WEIGHT_MULTIPLIER) /
+    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * _weightMultiplier) /
       365 days +
-      WEIGHT_MULTIPLIER) * stakeDeposit.tokenAmount;
+      _weightMultiplier) * stakeDeposit.tokenAmount;
 
     // save previous weight
     uint256 previousWeight = stakeDeposit.weight;
