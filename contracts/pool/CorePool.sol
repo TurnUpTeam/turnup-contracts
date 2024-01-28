@@ -194,42 +194,6 @@ contract CorePool is Rewards {
     _processRewards(_msgSender(), true);
   }
 
-  //  /**
-  //   * @dev Executed by the factory to modify pool weight; the factory is expected
-  //   *      to keep track of the total pools weight when updating
-  //   *
-  //   * @dev Set weight to zero to disable the pool
-  //   *
-  //   * @param _weight new weight to set for the pool
-  //   */
-  //  function _setWeight(uint32 _weight) internal {
-  //    // emit an event logging old and new weight values
-  //    emit PoolWeightUpdated(config.weight, _weight);
-  //
-  //    // set the new weight value
-  //    config.weight = _weight;
-  //  }
-
-  //  /**
-  //   * @dev Similar to public pendingYieldRewards, but performs calculations based on
-  //   *      current smart contract state only, not taking into account any additional
-  //   *      time/blocks which might have passed
-  //   *
-  //   * @param _staker an address to calculate yield rewards value for
-  //   * @return pending calculated yield reward value for the given address
-  //   */
-  //  function _pendingYieldRewards(address _staker) internal view returns (uint256 pending) {
-  //    // read user data structure into memory
-  //    User storage user = users[_staker];
-  //
-  //    //    console.log("user.totalWeight", uint(user.totalWeight));
-  //    //    console.log("yieldRewardsPerWeight", uint(yieldRewardsPerWeight));
-  //    //    console.log("user.subYieldRewards", uint(user.subYieldRewards));
-  //    //    console.log(weightToReward(user.totalWeight, yieldRewardsPerWeight));
-  //    // and perform the calculation using the values read
-  //    return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
-  //  }
-
   error InvalidMinLockTime();
 
   //  function setMinLockTime(uint256 _minLockTime_) public whenNotPaused onlyOwner {
@@ -389,9 +353,6 @@ contract CorePool is Rewards {
     if (pendingYield == 0) return 0;
 
     // get link to a user data structure, we will write into it later
-
-    //    console.log("pendingYield %s", pendingYield);
-    //    console.log("Balance %s", lfg.balanceOf(address(this)));
 
     lfg.transfer(_staker, pendingYield);
     if (withUpdate) {

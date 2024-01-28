@@ -125,10 +125,6 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
 
   function rewardToWeight(uint256 reward, uint256 rewardPerWeight) public view returns (uint256) {
     // apply the reverse formula and return
-    //console.log("reards");
-    //    console.log(reward);
-    //    console.log(rewardPerWeight);
-    //    console.log(reward * _rewardPerWeightMultiplier);
     return (reward * _rewardPerWeightMultiplier) / rewardPerWeight;
   }
 
