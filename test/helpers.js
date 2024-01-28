@@ -84,8 +84,7 @@ const Helpers = {
       }
       await this.ethers.provider.send("evm_mine");
     }
-  }
-
+  },
 };
 
 // hardhat dev accounts

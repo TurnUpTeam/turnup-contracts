@@ -29,14 +29,6 @@ interface ICorePool {
   event Unstaked(address indexed _to, uint256 amount);
 
   /**
-   * @dev Fired in _sync(), sync() and dependent functions (stake, unstake, etc.)
-   *
-   * @param yieldRewardsPerWeight updated yield rewards per weight value
-   * @param lastYieldDistribution usually, current block number
-   */
-  event Synchronized(uint256 yieldRewardsPerWeight, uint64 lastYieldDistribution);
-
-  /**
    * @dev Fired in _processRewards(), processRewards() and dependent functions (stake, unstake, etc.)
    *
    * @param _to an address which claimed the yield reward
@@ -59,11 +51,7 @@ interface ICorePool {
    */
   event WeightUpdated(uint32 weight);
 
-  /**
-   * @dev Fired in updateSYNPerBlock()
-   *
-   * @param newTokenPerBlock new TOKEN/block value
-   */
+  event Synchronized(uint256 yieldRewardsPerWeight, uint256 lastYieldDistribution);
   event TokenRatioUpdated(uint256 newTokenPerBlock);
 
   /**
@@ -95,49 +83,24 @@ interface ICorePool {
     Deposit[] deposits;
   }
 
-  function pendingYieldRewards(address _staker) external view returns (uint256);
+  struct RewardsConfig {
+    uint256 tokensPerBlock;
+    uint256 blocksPerUpdate;
+    uint256 initBlock;
+    uint256 endBlock;
+    uint256 minLockTime;
+    uint256 totalReserved;
+    uint256 distributedRewards;
+    uint256 totalYieldRewards;
+    uint256 yieldRewardsPerWeight;
+    uint256 decayFactor;
+    uint256 lastRatioUpdate;
+    uint256 usersLockingWeight;
+    uint256 lastYieldDistribution;
+  }
 
-  function minLockTime() external view returns (uint256);
+  function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external;
 
-  function balanceOf(address _user) external view returns (uint256);
+  function getConfig() external view returns (RewardsConfig memory);
 
-  function getDeposit(address _user, uint256 _depositId) external view returns (Deposit memory);
-
-  function getDepositsLength(address _user) external view returns (uint256);
-
-  function blockNumber() external view returns (uint256);
-
-  function now256() external view returns (uint256);
-
-  function stake(uint256 _amount, uint64 _lockUntil) external;
-
-  function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockedUntil) external;
-
-  function unstake(uint256 _depositId, uint256 _amount) external;
-
-  function updateStakeLock(uint256 depositId, uint64 lockedUntil) external;
-
-  function sync() external;
-
-  function processRewards() external;
-
-  function getStakeWeight(uint256 lockedTime, uint256 addedAmount) external pure returns (uint256);
-
-  function weightToReward(uint256 _weight, uint256 rewardPerWeight) external returns (uint256);
-
-  function rewardToWeight(uint256 reward, uint256 rewardPerWeight) external returns (uint256);
-
-  function shouldUpdateRatio() external view returns (bool);
-
-  function updateLFGPerBlock() external;
-
-  function overrideLFGPerBlock(uint192 _tokenPerBlock) external;
-
-  function overrideBlocksPerUpdate(uint32 _blocksPerUpdate) external;
-
-  function overrideEndblock(uint32 _endBlock) external;
-
-  function overrideDecayFactor(uint32 _decayFactor) external;
-
-  function setMinLockTime(uint256 _minLockTime) external;
 }

@@ -317,7 +317,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   function _claimMintLfgAndStake(address account) internal returns (bool) {
     bool pending;
     if (_mintAndStakeRequests[account].lockedUntil > 0) {
-      uint256 poolMinLockTime = ICorePool(pool).minLockTime();
+      ICorePool.RewardsConfig memory rewardsConfig = ICorePool(pool).getConfig();
+      uint256 poolMinLockTime = rewardsConfig.minLockTime;
       if (_mintAndStakeRequests[account].stakeLockedUntil < block.timestamp + poolMinLockTime) {
         // the claim came too late and the stake would revert
         _mintAndStakeRequests[account].stakeLockedUntil = uint32(block.timestamp) + uint32(poolMinLockTime) + 1;

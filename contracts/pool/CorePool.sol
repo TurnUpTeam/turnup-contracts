@@ -9,39 +9,16 @@ import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ER
 
 import {LFGToken} from "../token/LFGToken.sol";
 
-import {ICorePool} from "./ICorePool.sol";
+import {Rewards}  from "./Rewards.sol";
 
-import { console} from "hardhat/console.sol";
+import {console} from "hardhat/console.sol";
 
-contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
+contract CorePool is Rewards {
+
   using SafeERC20Upgradeable for LFGToken;
-
-  uint256 private _minLockTime;
 
   /// @dev Token holder storage, maps token holder address to their data record
   mapping(address => User) public users;
-
-  /// @dev Used to calculate yield rewards
-  /// @dev This value is different from "reward per token" used in locked pool
-  /// @dev Note: stakes are different in duration and "weight" reflects that
-  uint256 public yieldRewardsPerWeight;
-
-  /// @dev Used to calculate yield rewards, keeps track of the tokens weight locked in staking
-  uint256 public usersLockingWeight;
-
-  uint256 public totalYieldReward;
-
-  /**
-   * @dev Stake weight is proportional to deposit amount and time locked, precisely
-   *      "deposit amount wei multiplied by (fraction of the year locked plus one)"
-   * @dev To avoid significant precision loss due to multiplication by "fraction of the year" [0, 1],
-   *      weight is stored multiplied by 1e6 constant, as an integer
-   * @dev Corner case 1: if time locked is zero, weight is deposit amount multiplied by 1e6
-   * @dev Corner case 2: if time locked is one year, fraction of the year locked is one, and
-   *      weight is a deposit amount multiplied by 2 * 1e6
-   */
-  // solhint-disable-next-line
-  uint256 internal constant WEIGHT_MULTIPLIER = 1e6;
 
   /**
    * @dev When we know beforehand that staking is done for a year, and fraction of the year locked is one,
@@ -50,49 +27,13 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
   // solhint-disable-next-line
   uint256 internal constant YEAR_STAKE_WEIGHT_MULTIPLIER = 2 * WEIGHT_MULTIPLIER;
 
-  /**
-   * @dev Rewards per weight are stored multiplied by 1e20, as integers.
-   */
-  // solhint-disable-next-line
-  uint256 internal constant REWARD_PER_WEIGHT_MULTIPLIER = 1e20;
-
   LFGToken public lfg;
-
-  struct Config {
-    /**
-     * @dev TOKEN/block determines yield farming reward base
-     *      used by the yield pools controlled by the factory
-     */
-    uint192 tokenPerBlock;
-    /// @dev Block number of the last yield distribution event
-    uint64 lastYieldDistribution;
-    /**
-     * @dev TOKEN/block decreases by 3% every blocks/update (set to 91252 blocks during deployment);
-     */
-    uint32 blocksPerUpdate;
-    /**
-     * @dev End block is the last block when TOKEN/block can be decreased;
-     *      it is implied that yield farming stops after that block
-     */
-    uint32 endBlock;
-    uint32 decayFactor;
-    /**
-     * @dev Each time the TOKEN/block ratio gets updated, the block number
-     *      when the operation has occurred gets recorded into `lastRatioUpdate`
-     * @dev This block number is then used to check if blocks/update `blocksPerUpdate`
-     *      has passed when decreasing yield reward by 3%
-     */
-    uint32 lastRatioUpdate;
-  }
-
-  Config public config;
 
   address public factory;
 
   error PoolTokenAddressNotSet();
   error TokenBlockNotSet();
   error BlocksPerUpdateNotSet();
-  error InitBlockNotSet();
   error InvalidEndBlock();
   error PoolWeightNotSet();
   error NotAuthorized();
@@ -100,38 +41,15 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
 
   function initialize(
     address _lfg,
-    uint192 _tokenPerBlock,
-    uint32 _blocksPerUpdate,
-    uint32 _initBlock,
-    uint32 _endBlock,
-    uint256 _minLockTime_,
+    uint256 _initBlock, uint256 _minLockTime, uint256 _totalReserved,
     address _factory
   ) public initializer {
     __Ownable_init();
     __Pausable_init();
+    __Rewards_init(_initBlock, _minLockTime, _totalReserved);
     if (_lfg == address(0)) revert PoolTokenAddressNotSet();
     lfg = LFGToken(_lfg);
-
-    if (_tokenPerBlock == 0) revert TokenBlockNotSet();
-    if (_blocksPerUpdate == 0) revert BlocksPerUpdateNotSet();
-    if (_initBlock == 0) revert InitBlockNotSet();
-    if (_endBlock <= _initBlock) revert InvalidEndBlock();
-    // save the inputs into internal state variables
-
-    overrideLFGPerBlock(_tokenPerBlock);
-    overrideBlocksPerUpdate(_blocksPerUpdate);
-    config.lastRatioUpdate = _initBlock;
-    config.endBlock = _endBlock;
-
-    config.lastYieldDistribution = _initBlock;
-
-    setMinLockTime(_minLockTime_);
-    config.decayFactor = 97;
     factory = _factory;
-  }
-
-  function minLockTime() external view override returns (uint256) {
-    return _minLockTime;
   }
 
   /**
@@ -140,23 +58,23 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param _staker an address to calculate yield rewards value for
    * @return calculated yield reward value for the given address
    */
-  function pendingYieldRewards(address _staker) external view override returns (uint256) {
+  function pendingYieldRewards(address _staker) external view  returns (uint256) {
     // `newYieldRewardsPerWeight` will store stored or recalculated value for `yieldRewardsPerWeight`
     uint256 newYieldRewardsPerWeight;
 
     // if smart contract state was not updated recently, `yieldRewardsPerWeight` value
     // is outdated and we need to recalculate it in order to calculate pending rewards correctly
-    if (blockNumber() > config.lastYieldDistribution && usersLockingWeight != 0) {
-      uint256 multiplier = blockNumber() > config.endBlock
-        ? config.endBlock - config.lastYieldDistribution
-        : blockNumber() - config.lastYieldDistribution;
-      uint256 rewards = multiplier * config.tokenPerBlock;
+    if (blockNumber() > _config.lastYieldDistribution && _config.usersLockingWeight != 0) {
+      uint256 multiplier = blockNumber() > _config.endBlock
+        ? _config.endBlock - _config.lastYieldDistribution
+        : blockNumber() - _config.lastYieldDistribution;
+      uint256 rewards = multiplier * _config.tokensPerBlock;
 
       // recalculated value for `yieldRewardsPerWeight`
-      newYieldRewardsPerWeight = rewardToWeight(rewards, usersLockingWeight) + yieldRewardsPerWeight;
+      newYieldRewardsPerWeight = rewardToWeight(rewards, _config.usersLockingWeight) + _config.yieldRewardsPerWeight;
     } else {
       // if smart contract state is up to date, we don't recalculate
-      newYieldRewardsPerWeight = yieldRewardsPerWeight;
+      newYieldRewardsPerWeight = _config.yieldRewardsPerWeight;
     }
 
     // based on the rewards per weight value, calculate pending rewards;
@@ -171,7 +89,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param _user an address to query balance for
    * @return total staked token balance
    */
-  function balanceOf(address _user) external view override returns (uint256) {
+  function balanceOf(address _user) external view  returns (uint256) {
     // read specified user token amount and return
     return users[_user].tokenAmount;
   }
@@ -185,7 +103,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param _depositId zero-indexed deposit ID for the address specified
    * @return deposit info as Deposit structure
    */
-  function getDeposit(address _user, uint256 _depositId) external view override returns (Deposit memory) {
+  function getDeposit(address _user, uint256 _depositId) external view  returns (Deposit memory) {
     // read deposit at specified index and return
     return users[_user].deposits[_depositId];
   }
@@ -198,7 +116,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param _user an address to query deposit length for
    * @return number of deposits for the given address
    */
-  function getDepositsLength(address _user) external view override returns (uint256) {
+  function getDepositsLength(address _user) external view returns (uint256) {
     // read deposits array length and return
     return users[_user].deposits.length;
   }
@@ -212,7 +130,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param _amount amount of tokens to stake
    * @param _lockUntil stake period as unix timestamp; zero means no locking
    */
-  function stake(uint256 _amount, uint64 _lockUntil) external override whenNotPaused {
+  function stake(uint256 _amount, uint64 _lockUntil) external whenNotPaused {
     // delegate call to an internal function
     _stake(_msgSender(), _amount, _lockUntil, _msgSender());
   }
@@ -225,7 +143,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param _depositId deposit ID to unstake from, zero-indexed
    * @param _amount amount of tokens to unstake
    */
-  function unstake(uint256 _depositId, uint256 _amount) external override whenNotPaused {
+  function unstake(uint256 _depositId, uint256 _amount) external whenNotPaused {
     // delegate call to an internal function
     _unstake(_msgSender(), _depositId, _amount);
   }
@@ -241,7 +159,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @param depositId updated deposit ID
    * @param lockedUntil updated deposit locked until value
    */
-  function updateStakeLock(uint256 depositId, uint64 lockedUntil) external override whenNotPaused {
+  function updateStakeLock(uint256 depositId, uint64 lockedUntil) external whenNotPaused {
     // delegate call to an internal function
     _updateStakeLock(_msgSender(), depositId, lockedUntil);
   }
@@ -256,7 +174,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    * @dev When timing conditions are not met (executed too frequently, or after factory
    *      end block), function doesn't throw and exits silently
    */
-  function sync() external override whenNotPaused {
+  function sync() external whenNotPaused {
     // delegate call to an internal function
     _sync();
   }
@@ -273,53 +191,53 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
    *      end block), function doesn't throw and exits silently
    *
    */
-  function processRewards() external override whenNotPaused {
+  function processRewards() external whenNotPaused {
     // delegate call to an internal function
-    _processRewards(_msgSender());
+    _processRewards(_msgSender(), true);
   }
+
+  //  /**
+  //   * @dev Executed by the factory to modify pool weight; the factory is expected
+  //   *      to keep track of the total pools weight when updating
+  //   *
+  //   * @dev Set weight to zero to disable the pool
+  //   *
+  //   * @param _weight new weight to set for the pool
+  //   */
+  //  function _setWeight(uint32 _weight) internal {
+  //    // emit an event logging old and new weight values
+  //    emit PoolWeightUpdated(config.weight, _weight);
+  //
+  //    // set the new weight value
+  //    config.weight = _weight;
+  //  }
 
 //  /**
-//   * @dev Executed by the factory to modify pool weight; the factory is expected
-//   *      to keep track of the total pools weight when updating
+//   * @dev Similar to public pendingYieldRewards, but performs calculations based on
+//   *      current smart contract state only, not taking into account any additional
+//   *      time/blocks which might have passed
 //   *
-//   * @dev Set weight to zero to disable the pool
-//   *
-//   * @param _weight new weight to set for the pool
+//   * @param _staker an address to calculate yield rewards value for
+//   * @return pending calculated yield reward value for the given address
 //   */
-//  function _setWeight(uint32 _weight) internal {
-//    // emit an event logging old and new weight values
-//    emit PoolWeightUpdated(config.weight, _weight);
+//  function _pendingYieldRewards(address _staker) internal view returns (uint256 pending) {
+//    // read user data structure into memory
+//    User storage user = users[_staker];
 //
-//    // set the new weight value
-//    config.weight = _weight;
+//    //    console.log("user.totalWeight", uint(user.totalWeight));
+//    //    console.log("yieldRewardsPerWeight", uint(yieldRewardsPerWeight));
+//    //    console.log("user.subYieldRewards", uint(user.subYieldRewards));
+//    //    console.log(weightToReward(user.totalWeight, yieldRewardsPerWeight));
+//    // and perform the calculation using the values read
+//    return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
 //  }
-
-  /**
-   * @dev Similar to public pendingYieldRewards, but performs calculations based on
-   *      current smart contract state only, not taking into account any additional
-   *      time/blocks which might have passed
-   *
-   * @param _staker an address to calculate yield rewards value for
-   * @return pending calculated yield reward value for the given address
-   */
-  function _pendingYieldRewards(address _staker) internal view returns (uint256 pending) {
-    // read user data structure into memory
-    User storage user = users[_staker];
-
-    console.log("user.totalWeight", uint(user.totalWeight));
-    console.log("yieldRewardsPerWeight", uint(yieldRewardsPerWeight));
-    console.log("user.subYieldRewards", uint(user.subYieldRewards));
-    console.log(weightToReward(user.totalWeight, yieldRewardsPerWeight));
-    // and perform the calculation using the values read
-    return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
-  }
 
   error InvalidMinLockTime();
 
-  function setMinLockTime(uint256 _minLockTime_) public override whenNotPaused onlyOwner {
-    if (_minLockTime_ > 364 days) revert InvalidMinLockTime();
-    _minLockTime = _minLockTime_;
-  }
+//  function setMinLockTime(uint256 _minLockTime_) public whenNotPaused onlyOwner {
+//    if (_minLockTime_ > 364 days) revert InvalidMinLockTime();
+//    config.minLockTime = _minLockTime_;
+//  }
 
   error ZeroAmount();
   error InvalidLockInternal();
@@ -350,7 +268,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // validate the inputs
     if (_amount == 0) revert ZeroAmount();
     // we need to the limit of max locking time to limit the yield bonus
-    if (_lockUntil < now256() + _minLockTime || _lockUntil - now256() > 365 days) revert InvalidLockInternal();
+    if (_lockUntil < now256() + _config.minLockTime || _lockUntil - now256() > 365 days) revert InvalidLockInternal();
     // update smart contract state
     _sync();
 
@@ -358,7 +276,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     User storage user = users[_staker];
     // process current pending rewards if any
     if (user.tokenAmount > 0) {
-      _processRewards(_staker);
+      _processRewards(_staker, false);
     }
 
     // in most of the cases added amount `addedAmount` is simply `_amount`
@@ -373,9 +291,6 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // calculate real amount taking into account deflation
     uint256 addedAmount = newBalance - previousBalance;
 
-    // set the `lockFrom` and `lockUntil` taking into account that
-    // zero value for `_lockUntil` means "no locking" and leads to zero values
-    // for both `lockFrom` and `lockUntil`
     uint64 lockFrom = _lockUntil > 0 ? uint64(now256()) : 0;
     uint64 lockUntil = _lockUntil;
 
@@ -398,68 +313,13 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // update user record
     user.tokenAmount += addedAmount;
     user.totalWeight += stakeWeight;
-    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
+    user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
 
     // update global variable
-    usersLockingWeight += stakeWeight;
+    _config.usersLockingWeight += stakeWeight;
 
     // emit an event
     emit Staked(_staker, _amount);
-  }
-
-  function getStakeWeight(uint256 lockedTime, uint256 addedAmount) public pure override returns (uint256) {
-    return ((lockedTime * WEIGHT_MULTIPLIER) / 365 days + WEIGHT_MULTIPLIER) * addedAmount;
-  }
-
-  /**
-   * @dev Converts stake weight (not to be mixed with the pool weight) to
-   *      TOKEN reward value, applying the 10^12 division on weight
-   *
-   * @param _weight stake weight
-   * @param rewardPerWeight TOKEN reward per weight
-   * @return reward value normalized to 10^12
-   */
-  function weightToReward(uint256 _weight, uint256 rewardPerWeight) public pure override returns (uint256) {
-    // apply the formula and return
-    return (_weight * rewardPerWeight) / REWARD_PER_WEIGHT_MULTIPLIER;
-  }
-
-  /**
-   * @dev Converts reward TOKEN value to stake weight (not to be mixed with the pool weight),
-   *      applying the 10^12 multiplication on the reward
-   *      - OR -
-   * @dev Converts reward TOKEN value to reward/weight if stake weight is supplied as second
-   *      function parameter instead of reward/weight
-   *
-   * @param reward yield reward
-   * @param rewardPerWeight reward/weight (or stake weight)
-   * @return stake weight (or reward/weight)
-   */
-  function rewardToWeight(uint256 reward, uint256 rewardPerWeight) public pure override returns (uint256) {
-    // apply the reverse formula and return
-    return (reward * REWARD_PER_WEIGHT_MULTIPLIER) / rewardPerWeight;
-  }
-
-  /**
-   * @dev Testing time-dependent functionality is difficult and the best way of
-   *      doing it is to override block number in helper test smart contracts
-   *
-   * @return `block.number` in mainnet, custom values in testnets (if overridden)
-   */
-  function blockNumber() public view virtual override returns (uint256) {
-    // return current block number
-    return block.number;
-  }
-
-  /**
-   * @dev Testing time-dependent functionality is difficult and the best way of
-   *      doing it is to override time in helper test smart contracts
-   *
-   * @return `block.timestamp` in mainnet, custom values in testnets (if overridden)
-   */
-  function now256() public view virtual override returns (uint256) {
-    // return current block timestamp
-    return block.timestamp;
   }
 
   error AmountExceedsStake();
@@ -483,7 +343,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // update smart contract state
     _sync();
     // and process current pending rewards if any
-    _processRewards(_staker);
+    _processRewards(_staker, false);
 
     // recalculate deposit weight
     uint256 previousWeight = stakeDeposit.weight;
@@ -502,10 +362,10 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // update user record
     user.tokenAmount -= _amount;
     user.totalWeight = user.totalWeight - previousWeight + newWeight;
-    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
+    user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
 
     // update global variable
-    usersLockingWeight = usersLockingWeight - previousWeight + newWeight;
+    _config.usersLockingWeight = _config.usersLockingWeight - previousWeight + newWeight;
 
     lfg.safeTransfer(_msgSender(), _amount);
 
@@ -514,114 +374,31 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
   }
 
   /**
-   * @dev Used internally, mostly by children implementations, see sync()
-   *
-   * @dev Updates smart contract state (`yieldRewardsPerWeight`, `lastYieldDistribution`),
-   *      updates factory state via `updateLFGPerBlock`
-   */
-  function _sync() internal virtual {
-    // update TOKEN per block value in factory if required
-    if (shouldUpdateRatio()) {
-      updateLFGPerBlock();
-    }
-    // check bound conditions and if these are not met -
-    // exit silently, without emitting an event
-    if (config.lastYieldDistribution >= config.endBlock) {
-      return;
-    }
-    if (blockNumber() <= config.lastYieldDistribution) {
-      return;
-    }
-    // if locking weight is zero - update only `lastYieldDistribution` and exit
-    if (usersLockingWeight == 0) {
-      config.lastYieldDistribution = uint64(blockNumber());
-      return;
-    }
-    // to calculate the reward we need to know how many blocks passed, and reward per block
-    uint256 currentBlock = blockNumber() > config.endBlock ? config.endBlock : blockNumber();
-    uint256 blocksPassed = currentBlock - config.lastYieldDistribution;
-
-    // calculate the reward
-    uint256 rewards = blocksPassed * config.tokenPerBlock;
-
-    totalYieldReward += rewards;
-
-    // update rewards per weight and `lastYieldDistribution`
-    yieldRewardsPerWeight += rewardToWeight(rewards, usersLockingWeight);
-    config.lastYieldDistribution = uint64(currentBlock);
-
-    // emit an event
-    emit Synchronized(yieldRewardsPerWeight, config.lastYieldDistribution);
-  }
-
-  function shouldUpdateRatio() public view override returns (bool) {
-    // if yield farming period has ended
-    if (blockNumber() > config.endBlock) {
-      // TOKEN/block reward cannot be updated anymore
-      return false;
-    }
-
-    // check if blocks/update (91252 blocks) have passed since last update
-    return blockNumber() >= config.lastRatioUpdate + config.blocksPerUpdate;
-  }
-
-  error TooFrequent();
-
-  function updateLFGPerBlock() public override whenNotPaused {
-    // checks if ratio can be updated i.e. if blocks/update (91252 blocks) have passed
-    if (!shouldUpdateRatio()) revert TooFrequent();
-
-    // decreases TOKEN/block reward by 3%
-    config.tokenPerBlock = (config.tokenPerBlock * config.decayFactor) / 100;
-
-    // set current block as the last ratio update block
-    config.lastRatioUpdate = uint32(blockNumber());
-
-    // emit an event
-    emit TokenRatioUpdated(config.tokenPerBlock);
-  }
-
-  // this is an emergency function, in theory it should never be called
-  function overrideLFGPerBlock(uint192 _tokenPerBlock) public override whenNotPaused onlyOwner {
-    config.tokenPerBlock = _tokenPerBlock;
-    // emit an event
-    emit TokenRatioUpdated(config.tokenPerBlock);
-  }
-
-  function overrideBlocksPerUpdate(uint32 _blocksPerUpdate) public override whenNotPaused onlyOwner {
-    config.blocksPerUpdate = _blocksPerUpdate;
-  }
-
-  function overrideEndblock(uint32 _endBlock) public override whenNotPaused onlyOwner {
-    config.endBlock = _endBlock;
-  }
-
-  function overrideDecayFactor(uint32 _decayFactor) public override whenNotPaused onlyOwner {
-    config.decayFactor = _decayFactor;
-  }
-
-  /**
    * @dev Used internally, mostly by children implementations, see processRewards()
    *
    * @param _staker an address which receives the reward (which has staked some tokens earlier)
    * @return pendingYield the rewards calculated and optionally re-staked
    */
-  function _processRewards(address _staker) internal virtual returns (uint256 pendingYield) {
-    _sync();
-
+  function _processRewards(address _staker, bool withUpdate) internal virtual returns (uint256 pendingYield) {
+    if (withUpdate) {
+      _sync();
+    }
+    User storage user = users[_staker];
     // calculate pending yield rewards, this value will be returned
-    pendingYield = _pendingYieldRewards(_staker);
+    pendingYield = _pendingYieldRewards(user.totalWeight);
 
     // if pending yield is zero - just return silently
     if (pendingYield == 0) return 0;
 
     // get link to a user data structure, we will write into it later
-    User storage user = users[_staker];
+
+    console.log("pendingYield %s", pendingYield);
+    console.log("Balance %s", lfg.balanceOf(address(this)));
 
     lfg.transfer(_staker, pendingYield);
-
-    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
-
+    if (withUpdate) {
+      user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
+    }
     // emit an event
     emit YieldClaimed(_staker, pendingYield);
   }
@@ -645,7 +422,7 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
     // get a link to user data struct, we will write to it later
     User storage user = users[_staker];
     if (user.tokenAmount > 0) {
-      _processRewards(_staker);
+      _processRewards(_staker, false);
     }
     // get a link to the corresponding deposit, we may write to it later
     Deposit storage stakeDeposit = user.deposits[_depositId];
@@ -674,19 +451,11 @@ contract CorePool is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
 
     // update user total weight, sub yield rewards and global locking weight
     user.totalWeight = user.totalWeight - previousWeight + newWeight;
-    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
-    usersLockingWeight = usersLockingWeight - previousWeight + newWeight;
+    user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
+    _config.usersLockingWeight = _config.usersLockingWeight - previousWeight + newWeight;
 
     // emit an event
     emit StakeLockUpdated(_staker, _depositId, stakeDeposit.lockedFrom, _lockedUntil);
-  }
-
-  function pause() external onlyOwner {
-    _pause();
-  }
-
-  function unpause() external onlyOwner {
-    _unpause();
   }
 
   uint256[50] private __gap;

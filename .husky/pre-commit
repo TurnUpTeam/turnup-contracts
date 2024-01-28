@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npx pretty-quick --staged && npm run lint && bin/get-coverage.sh && bin/export.sh && git add -A
+if [[ "$HUSKY" != "0" ]]; then
+  npx pretty-quick --staged && npm run lint && bin/get-coverage.sh && bin/export.sh && git add -A
+fi
