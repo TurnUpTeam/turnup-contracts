@@ -92,12 +92,11 @@ async function main() {
   const pool = await deployProxy(
     "CorePool",
     lfg.address,
-    tokenPerBlock,
-    blocksPerWeek,
-    blockNumber + 2,
-    blockNumber + threeYearsBlocks,
-    weight,
+    blockNumber + 150,
+    // ^ we let the pool start in 150 blocks (~5 minutes) to have time to announce it
+    // Feel free to change this parameter.
     minLockTime,
+    amountReservedToPool,
     factory.address
   );
 

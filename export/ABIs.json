@@ -2856,9 +2856,9 @@
           },
           {
             "indexed": false,
-            "internalType": "uint64",
+            "internalType": "uint256",
             "name": "lastYieldDistribution",
-            "type": "uint64"
+            "type": "uint256"
           }
         ],
         "name": "Synchronized",
@@ -2982,47 +2982,12 @@
       },
       {
         "inputs": [],
-        "name": "config",
+        "name": "factory",
         "outputs": [
           {
-            "internalType": "uint192",
-            "name": "tokenPerBlock",
-            "type": "uint192"
-          },
-          {
-            "internalType": "uint32",
-            "name": "weight",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint64",
-            "name": "lastYieldDistribution",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint32",
-            "name": "totalWeight",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "blocksPerUpdate",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "endBlock",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "decayFactor",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "lastRatioUpdate",
-            "type": "uint32"
+            "internalType": "address",
+            "name": "",
+            "type": "address"
           }
         ],
         "stateMutability": "view",
@@ -3030,12 +2995,79 @@
       },
       {
         "inputs": [],
-        "name": "factory",
+        "name": "getConfig",
         "outputs": [
           {
-            "internalType": "address",
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "tokensPerBlock",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "blocksPerUpdate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "initBlock",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "endBlock",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "minLockTime",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "totalReserved",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "distributedRewards",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "totalYieldRewards",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "yieldRewardsPerWeight",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "decayFactor",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "lastRatioUpdate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "usersLockingWeight",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "lastYieldDistribution",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct ICorePool.RewardsConfig",
             "name": "",
-            "type": "address"
+            "type": "tuple"
           }
         ],
         "stateMutability": "view",
@@ -3115,7 +3147,7 @@
           },
           {
             "internalType": "uint256",
-            "name": "addedAmount",
+            "name": "stakedAmount",
             "type": "uint256"
           }
         ],
@@ -3127,7 +3159,7 @@
             "type": "uint256"
           }
         ],
-        "stateMutability": "pure",
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -3138,33 +3170,18 @@
             "type": "address"
           },
           {
-            "internalType": "uint192",
-            "name": "_tokenPerBlock",
-            "type": "uint192"
-          },
-          {
-            "internalType": "uint32",
-            "name": "_blocksPerUpdate",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
+            "internalType": "uint256",
             "name": "_initBlock",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "_endBlock",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "_weight",
-            "type": "uint32"
+            "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "_minLockTime_",
+            "name": "_minLockTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "_totalReserved",
             "type": "uint256"
           },
           {
@@ -3193,19 +3210,6 @@
       },
       {
         "inputs": [],
-        "name": "minLockTime",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
         "name": "now256",
         "outputs": [
           {
@@ -3215,58 +3219,6 @@
           }
         ],
         "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint32",
-            "name": "_blocksPerUpdate",
-            "type": "uint32"
-          }
-        ],
-        "name": "overrideBlocksPerUpdate",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint32",
-            "name": "_decayFactor",
-            "type": "uint32"
-          }
-        ],
-        "name": "overrideDecayFactor",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint32",
-            "name": "_endBlock",
-            "type": "uint32"
-          }
-        ],
-        "name": "overrideEndblock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint192",
-            "name": "_tokenPerBlock",
-            "type": "uint192"
-          }
-        ],
-        "name": "overrideLFGPerBlock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
@@ -3369,20 +3321,7 @@
             "type": "uint256"
           }
         ],
-        "stateMutability": "pure",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "_minLockTime_",
-            "type": "uint256"
-          }
-        ],
-        "name": "setMinLockTime",
-        "outputs": [],
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -3447,19 +3386,6 @@
         "type": "function"
       },
       {
-        "inputs": [],
-        "name": "totalYieldReward",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
         "inputs": [
           {
             "internalType": "address",
@@ -3498,13 +3424,6 @@
         "type": "function"
       },
       {
-        "inputs": [],
-        "name": "updateLFGPerBlock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
         "inputs": [
           {
             "internalType": "uint256",
@@ -3518,6 +3437,13 @@
           }
         ],
         "name": "updateStakeLock",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "updateTokenPerBlock",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -3583,19 +3509,6 @@
           }
         ],
         "name": "weightToReward",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "yieldRewardsPerWeight",
         "outputs": [
           {
             "internalType": "uint256",

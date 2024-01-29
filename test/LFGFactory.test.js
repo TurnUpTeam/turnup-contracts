@@ -27,8 +27,12 @@ describe("LFGFactory", function () {
     MintAndBurn: 2,
   };
 
-  const blocksPerWeek = 42000 * 7;
-  const threeYearsBlocks = 42000 * 365 * 3;
+  const blocksPerDay = 42000;
+  const blocksPerWeek = blocksPerDay * 7;
+  const twoYearsBlocks = blocksPerDay * 365 * 2;
+  const reservedToTool = 400000000;
+  const amountReservedToPool = ethers.utils.parseEther(reservedToTool.toString());
+  const minLockTime = 3600 * 24 * 7 * 16;
 
   const BurnReason = {
     UnlockMission: 0,
@@ -71,43 +75,12 @@ describe("LFGFactory", function () {
 
     const blockNumber = await getBlockNumber();
 
-    const reservedToPool = BigInt((await lfg.amountReservedToPool()).toString());
-
-    const tokenPerBlock = (reservedToPool * 489n) / (BigInt(Math.floor(threeYearsBlocks)) * 100n);
-
-    function validateInitialAmountPerBlock(reservedAmount, initialAmount, blocksPerPeriod, decayPeriods, decayFactor = 97n) {
-      let startAmount = initialAmount;
-      for (let i = 0; i < decayPeriods; i++) {
-        reservedAmount -= initialAmount * blocksPerPeriod;
-        initialAmount = (initialAmount * decayFactor) / 100n;
-      }
-      expect(reservedAmount > 0n).to.be.true;
-      expect(initialAmount < startAmount / 10n).to.be.true;
-    }
-
-    validateInitialAmountPerBlock(
-      BigInt((await lfg.amountReservedToPool()).toString()),
-      BigInt(tokenPerBlock.toString()),
-      BigInt(blocksPerWeek),
-      104n,
-      97n
-    );
-
-    // on Polygon there are ~42000 blocks per day
-
-    const weight = 200;
-    // 1 month
-    const minLockTime = 3600 * 24 * 30;
-
     pool = await deployUtils.deployProxy(
-      "CorePool",
+      "CorePoolMock",
       lfg.address,
-      tokenPerBlock,
-      blocksPerWeek,
       blockNumber + 2,
-      blockNumber + threeYearsBlocks,
-      weight,
       minLockTime,
+      amountReservedToPool,
       factory.address
     );
 
@@ -341,7 +314,7 @@ describe("LFGFactory", function () {
 
       let bobBalanceBefore = await lfg.balanceOf(bob.address);
       let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-      expect(pendingYieldingRewards).to.be.equal("31898238747553804635");
+      expect(pendingYieldingRewards).to.be.equal("31578947368421024844");
 
       await expect(pool.connect(bob).unstake(0, amount)).to.emit(pool, "Unstaked").withArgs(bob.address, amount);
     });
@@ -385,7 +358,7 @@ describe("LFGFactory", function () {
 
       let bobBalanceBefore = await lfg.balanceOf(bob.address);
       let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-      expect(pendingYieldingRewards).to.be.equal("31898238747553815521");
+      expect(pendingYieldingRewards).to.be.equal("31578947368421024844");
 
       await expect(pool.connect(bob).unstake(0, amount)).to.emit(pool, "Unstaked").withArgs(bob.address, amount);
     });

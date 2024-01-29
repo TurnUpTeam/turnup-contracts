@@ -76,6 +76,15 @@ const Helpers = {
     await this.ethers.provider.send("evm_increaseTime", [offset]);
     await this.ethers.provider.send("evm_mine");
   },
+
+  async mineBlocks(numberOfBlocks) {
+    for (let i = 0; i < numberOfBlocks; i++) {
+      if (i % 1000 === 0) {
+        console.log(i, "blocks mined");
+      }
+      await this.ethers.provider.send("evm_mine");
+    }
+  },
 };
 
 // hardhat dev accounts
