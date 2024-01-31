@@ -321,4 +321,91 @@ describe("CorePool", function () {
       _reservedToPool -= 30000000;
     }
   });
+  it("should update stake lock", async function () {
+    let _reservedToPool = 400000000;
+    await initAndDeploy(_reservedToPool);
+
+    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("1000"));
+
+    // stake for
+    await pool.connect(bob).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
+    await pool.connect(alice).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
+    await pool.connect(fred).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
+
+    let depositBefore = await pool.connect(bob).getDeposit(bob.address, 0);
+
+    await pool.connect(bob).updateStakeLock(0, (await getTimestamp()) + 3600 * 24 * 7 * 18);
+
+    let depositAfter = await pool.connect(bob).getDeposit(bob.address, 0);
+    console.log(depositBefore.lockedUntil, depositAfter.lockedUntil);
+    expect(Number(depositAfter.lockedUntil)).greaterThan(Number(depositBefore.lockedUntil));
+  });
+
+  it("should revert invaid stake lock", async function () {
+    let _reservedToPool = 400000000;
+    await initAndDeploy(_reservedToPool);
+
+    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("1000"));
+
+    // stake for
+    await pool.connect(bob).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
+    await pool.connect(alice).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
+    await pool.connect(fred).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
+
+    await expect(pool.connect(bob).updateStakeLock(0, (await getTimestamp()) + 3600 * 24 * 7 * 10)).revertedWith(
+      "InvalidNewLock()"
+    );
+  });
+
+  it("should revert Max Lock Period Is 365Days", async function () {
+    let _reservedToPool = 400000000;
+    await initAndDeploy(_reservedToPool);
+
+    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("1000"));
+
+    // stake for
+    let blockNumber = (await ethers.provider.getBlock()).number;
+    await pool.connect(bob).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
+    await pool.connect(alice).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
+    await pool.connect(fred).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
+
+    blockNumber = (await ethers.provider.getBlock()).number;
+    await increaseBlockTimestampBy(3600 * 24 * 7 * 53);
+    await pool.setFakeBlockNumber(blockNumber + blocksPerDay * 366);
+
+    await expect(pool.connect(bob).updateStakeLock(0, (await getTimestamp()) + 3600 * 24 * 7 * 10)).revertedWith(
+      "MaxLockPeriodIs365Days()"
+    );
+  });
+
+  it("should read stake succesfully", async function () {
+    let _reservedToPool = 400000000;
+    await initAndDeploy(_reservedToPool);
+
+    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("1000"));
+    await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("1000"));
+
+    await pool.connect(bob).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
+
+    expect(await pool.connect(bob).balanceOf(bob.address)).to.be.equal("500000000000000000000");
+  });
 });

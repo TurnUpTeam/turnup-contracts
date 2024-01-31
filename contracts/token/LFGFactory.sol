@@ -228,7 +228,11 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     // it reverts only if there is a pending MintRequest
     if (pending) revert PendingRequest();
     // create a new request
-    _mintRequests[_msgSender()] = MintRequest(uint64(orderId), uint160(amount), uint32(lockedUntil));
+    _mintRequests[_msgSender()] = MintRequest({
+      orderId: uint64(orderId),
+      amount: uint160(amount),
+      lockedUntil: uint32(lockedUntil)
+    });
     emit MintRequested(orderId, amount, _msgSender(), lockedUntil);
   }
 
@@ -277,13 +281,13 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     (, bool pending) = _claimAllPending(_msgSender());
     // it reverts only if there is a pending MintAndStakeRequest
     if (pending) revert PendingRequest();
-    _mintAndStakeRequests[_msgSender()] = MintAndStakeRequest(
-      uint64(orderId),
-      uint160(amount),
-      uint32(block.timestamp),
-      uint32(lockedUntil),
-      uint32(stakeLockedUntil)
-    );
+    _mintAndStakeRequests[_msgSender()] = MintAndStakeRequest({
+      orderId: uint64(orderId),
+      amount: uint160(amount),
+      requestedAt: uint32(block.timestamp),
+      lockedUntil: uint32(lockedUntil),
+      stakeLockedUntil: uint32(stakeLockedUntil)
+    });
     emit MintAndStakeRequested(orderId, amount, _msgSender(), lockedUntil, stakeLockedUntil);
   }
 
