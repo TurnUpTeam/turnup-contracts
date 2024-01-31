@@ -24,16 +24,29 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error PendingRequest();
     error InvalidRedPackId();
     error InvaildRedPackTime();
+    error NotFoundRedPack();
+    error InvalidRedPackData();
+    error WithdrawCantBePickable();
+    error WithdrawCantBeEmpty();
+    error UnableToSendFunds();
 
     event MinTokenAmountSet(uint256 amount);
     event MaxPickAmountSet(uint32 amount);
-    event DropRedPackRequest(
-        uint256 packId, 
+    event DepositRedPackRequest(
+        uint256 packId,
         RedPackType packType, 
         uint256 tokenAmount, 
         uint32 pickTotal, 
         uint256 startTime, 
         uint256 endTime
+    );
+    event WithdrawRedPackRequest(
+        uint256 packId,
+        RedPackType packType,
+        uint256 tokenAmount,  
+        uint256 tokenBack,
+        uint32 pickAmount, 
+        uint32 pickTotal
     );
 
     enum RedPackType {
@@ -46,6 +59,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         address account;
         RedPackType packType;
         uint256 tokenAmount;
+        uint256 tokenExpend;
         uint32 pickAmount;
         uint32 pickTotal;
         uint256 startTime;
@@ -99,7 +113,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         return true;
     }
 
-    function dropRedPack(
+    function depositRedPack(
         RedPackType packType_, 
         uint256 tokenAmount_, 
         uint32 pickTotal_, 
@@ -117,7 +131,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].packId = packId;
         redPacks[packId].account = _msgSender();
         redPacks[packId].packType = packType_;
-        redPacks[packId].tokenAmount = tokenAmount_;
+        redPacks[packId].tokenExpend = 0;
         redPacks[packId].pickAmount = 0;
         redPacks[packId].pickTotal = pickTotal_;
         redPacks[packId].startTime = startTime_;
@@ -126,33 +140,64 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         managers[_msgSender()] = packId;
 
         if (packType_ == RedPackType.TokenLfg) {
-            _dropLfgRedPack(packId);
-            emit DropRedPackRequest(packId, packType_, tokenAmount_, pickTotal_, startTime_, endTime_);
+            _depositLfgRedPack(packId);
+            emit DepositRedPackRequest(packId, packType_, tokenAmount_, pickTotal_, startTime_, endTime_);
         } else if (packType_ == RedPackType.TokenMatic) {
-            _dropMaticRedPack(packId);
-            emit DropRedPackRequest(packId, packType_, msg.value, pickTotal_, startTime_, endTime_);
+            _depositMaticRedPack(packId);
+            emit DepositRedPackRequest(packId, packType_, msg.value, pickTotal_, startTime_, endTime_);
         } else {
             revert InvalidRedPackType();
         }
     }
 
-    function _dropLfgRedPack(uint256 packId_) internal {
+    function _depositLfgRedPack(uint256 packId_) internal {
         uint256 lfgAmount = redPacks[packId_].tokenAmount;
         if (lfgAmount < tokenAmountMin) revert InvaildRedPackTokenAmount();
+
+        redPacks[packId_].tokenAmount = lfgAmount;
 
         lfg.approve(_msgSender(), lfgAmount);
         lfg.safeTransferFrom(_msgSender(), address(this), lfgAmount);
     }
 
-    function _dropMaticRedPack(uint256 /*packId_*/) internal {
+    function _depositMaticRedPack(uint256 packId_) internal {
         if (msg.value < tokenAmountMin) revert InvaildRedPackTokenAmount();
+
+        redPacks[packId_].tokenAmount = msg.value;
     }
 
-    function takeBackRedPack() external whenNotPaused nonReentrant {
+    function withdrawRedPack() external whenNotPaused nonReentrant {
+        uint256 packId = managers[_msgSender()];
+        if (packId == 0) revert NotFoundRedPack();
+        if (redPacks[packId].packId != packId) revert InvalidRedPackData();
+        if (isPickable(packId)) revert WithdrawCantBePickable();
+        if (redPacks[packId].tokenAmount <= redPacks[packId].tokenExpend) revert WithdrawCantBeEmpty();
 
+        delete managers[_msgSender()];
+
+        uint256 backAmount = redPacks[packId].tokenExpend - redPacks[packId].tokenAmount;
+        redPacks[packId].tokenExpend = redPacks[packId].tokenAmount;
+
+        if (redPacks[packId].packType == RedPackType.TokenLfg) {
+            lfg.safeTransferFrom(address(this), _msgSender(), backAmount);
+        } else if (redPacks[packId].packType == RedPackType.TokenMatic) {
+            (bool success, ) = _msgSender().call{value: backAmount}("");
+            if (!success) revert UnableToSendFunds();
+        } else {
+            revert InvalidRedPackData();
+        }
+
+        emit WithdrawRedPackRequest(
+            packId, 
+            redPacks[packId].packType, 
+            redPacks[packId].tokenAmount, 
+            backAmount,
+            redPacks[packId].pickAmount,
+            redPacks[packId].pickTotal
+        ); 
     }
 
-    function pickRedPack() external whenNotPaused nonReentrant {
+    function pickRedPack(address account) external whenNotPaused nonReentrant {
 
     }
 
