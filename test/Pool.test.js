@@ -20,7 +20,26 @@ describe("CorePool", function () {
   let factory;
   let lfg;
   let pool;
-  let owner, operator, validator, tokenHolder, bob, alice, fred, jim, red, lee, jane;
+  let owner,
+    operator,
+    validator,
+    tokenHolder,
+    bob,
+    alice,
+    fred,
+    jim,
+    red,
+    lee,
+    jane,
+    pippo,
+    john,
+    valery,
+    august,
+    marcel,
+    gael,
+    frankie,
+    robert,
+    will;
   let tokenPerBlock;
 
   function bn(v) {
@@ -36,7 +55,28 @@ describe("CorePool", function () {
   const minLockTime = 3600 * 24 * 7 * 16;
 
   before(async function () {
-    [owner, operator, validator, tokenHolder, bob, alice, fred, jim, red, lee, jane] = await ethers.getSigners();
+    [
+      owner,
+      operator,
+      validator,
+      tokenHolder,
+      bob,
+      alice,
+      fred,
+      jim,
+      red,
+      lee,
+      jane,
+      pippo,
+      john,
+      valery,
+      august,
+      marcel,
+      gael,
+      frankie,
+      robert,
+      will,
+    ] = await ethers.getSigners();
   });
 
   async function initAndDeploy(_reservedToPool) {
@@ -148,7 +188,7 @@ describe("CorePool", function () {
     return yieldOnAmount.mul(100).div(amount).div(10000).toNumber();
   }
 
-  it.only("should let bob stake some LFG and get rewards after 10 days", async function () {
+  it("should let bob stake some LFG and get rewards after 10 days", async function () {
     await lfg.connect(tokenHolder).transfer(bob.address, bn("100000"));
     await lfg.connect(tokenHolder).transfer(alice.address, bn("100000"));
     await lfg.connect(tokenHolder).transfer(fred.address, bn("100000"));
@@ -365,7 +405,7 @@ describe("CorePool", function () {
   it.skip("should simulate the entire history of the pool", async function () {
     this.timeout(300000);
     let deposits = {};
-    let users = [bob, alice, fred, jim, red, lee, jane];
+    let users = [bob, alice, fred, jim, red, lee, jane, pippo, john, valery, august, marcel, gael, frankie, robert, will];
     let names = {};
     names[bob.address] = "bob";
     names[alice.address] = "alice";
@@ -374,6 +414,15 @@ describe("CorePool", function () {
     names[red.address] = "red";
     names[lee.address] = "lee";
     names[jane.address] = "jane";
+    names[pippo.address] = "pippo";
+    names[john.address] = "john";
+    names[valery.address] = "valery";
+    names[august.address] = "august";
+    names[marcel.address] = "marcel";
+    names[gael.address] = "gael";
+    names[frankie.address] = "frankie";
+    names[robert.address] = "robert";
+    names[will.address] = "will";
     let maxStaked = {};
     let staked = {};
     for (let u of users) {
@@ -388,6 +437,7 @@ describe("CorePool", function () {
     let ts0 = ts;
     let failed = false;
     let count = 0;
+    let j = 0;
     async function randomAction() {
       let day = 3600 * 24;
       let week = day * 7;
@@ -438,18 +488,18 @@ describe("CorePool", function () {
         failed = true;
         break;
       }
+      // if (j++ > 1000) break;
     }
     console.log("-------- RESULTS --------");
-    let gains = {};
+    console.log("Max staked and gains:");
     let i = 0;
-    for (let k in maxStaked) {
-      gains[k] = (await formattedBalanceOf(users[i++])) - Number((maxStaked[k] /= 1000000000000000000n));
-    }
     for (let a in maxStaked) {
-      maxStaked[a] = Number(maxStaked[a] / 1000000000000000000n);
+      console.log(
+        names[a],
+        Number(maxStaked[a] / 1000000000000000000n),
+        Math.round((await formattedBalanceOf(users[i++])) - Number((maxStaked[a] /= 1000000000000000000n)))
+      );
     }
-    console.log("Max staked", maxStaked);
-    console.log("Gain", gains);
     console.log("Total transactions", count);
     console.log("Remaining", await formattedBalanceOf(pool));
     expect(BigInt((await lfg.balanceOf(pool.address)).toString()) > 0n).to.be.true;
