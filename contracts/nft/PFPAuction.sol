@@ -16,7 +16,7 @@ import {LFGToken} from "../token/LFGToken.sol";
 
 //import {console} from "hardhat/console.sol";
 
-contract PFPFactory is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Receiver {
+contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Receiver {
   using AddressUpgradeable for address;
   using SafeMathUpgradeable for uint256;
   using SafeERC20Upgradeable for LFGToken;
@@ -93,7 +93,7 @@ contract PFPFactory is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     if (collection.initialPrice == 0) revert CollectionNotListed();
     Item memory _item = _items[collection_][tokenId];
     if (PFPAsset(collection_).ownerOf(tokenId) != address(this)) {
-      // the factory must own the asset
+      // the auction must own the asset
       revert AssetNotFound();
     }
     uint256 newPrice = collection.initialPrice;

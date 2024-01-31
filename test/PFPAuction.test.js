@@ -6,8 +6,8 @@ const deployUtils = new EthDeployUtils();
 const {getTimestamp, increaseBlockTimestampBy, cl} = require("./helpers");
 const {ethers} = require("hardhat");
 
-describe("PFPFactory", function () {
-  let factory;
+describe("PFPAuction", function () {
+  let auction;
   let lfg;
   // three pfp collections
   let owls, rats, pigs;
@@ -39,27 +39,27 @@ describe("PFPFactory", function () {
     rats = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Rats", "TRATS", "https://meta.turnup.so/rats/");
     pigs = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Pigs", "TPIGS", "https://meta.turnup.so/pigs/");
 
-    factory = await deployUtils.deployProxy("PFPFactory", lfg.address);
+    auction = await deployUtils.deployProxy("PFPAuction", lfg.address);
 
-    await owls.preMint(factory.address, 20);
-    await owls.preMint(factory.address, 20);
-    await owls.preMint(factory.address, 20);
-    await owls.preMint(factory.address, 20);
-    await owls.preMint(factory.address, 20);
+    await owls.preMint(auction.address, 20);
+    await owls.preMint(auction.address, 20);
+    await owls.preMint(auction.address, 20);
+    await owls.preMint(auction.address, 20);
+    await owls.preMint(auction.address, 20);
     await owls.preMint(owner.address, 20);
 
-    await rats.preMint(factory.address, 20);
-    await rats.preMint(factory.address, 20);
-    await rats.preMint(factory.address, 10);
+    await rats.preMint(auction.address, 20);
+    await rats.preMint(auction.address, 20);
+    await rats.preMint(auction.address, 10);
 
     await pigs.preMint(owner.address, 20);
 
-    await expect(factory.setCollection(owls.address, priceLfg, false))
-      .to.emit(factory, "CollectionChange")
+    await expect(auction.setCollection(owls.address, priceLfg, false))
+      .to.emit(auction, "CollectionChange")
       .withArgs(owls.address, priceLfg, false);
 
-    await expect(factory.setCollection(rats.address, priceMatic, true))
-      .to.emit(factory, "CollectionChange")
+    await expect(auction.setCollection(rats.address, priceMatic, true))
+      .to.emit(auction, "CollectionChange")
       .withArgs(rats.address, priceMatic, true);
   }
 
@@ -79,8 +79,8 @@ describe("PFPFactory", function () {
 
   describe("auction simulation", function () {
     it("should allow to bid multiple times over LFG paid owls", async function () {
-      let owlsInitialPrice = await factory.initialPrice(owls.address);
-      let owlsCoin = (await factory.isNative(owls.address)) ? "MATIC" : "LFG";
+      let owlsInitialPrice = await auction.initialPrice(owls.address);
+      let owlsCoin = (await auction.isNative(owls.address)) ? "MATIC" : "LFG";
 
       expect(owlsInitialPrice).to.equal(priceLfg);
       expect(owlsCoin).to.equal("LFG");
@@ -89,90 +89,90 @@ describe("PFPFactory", function () {
       let id = 1;
 
       // failing bids
-      await expect(factory.connect(bob).bid(pigs.address, id)).to.be.revertedWith("CollectionNotListed()");
-      await expect(factory.connect(bob).bid(owls.address, 110)).to.be.revertedWith("AssetNotFound()");
-      await expect(factory.connect(bob).bid(owls.address, 200)).to.be.revertedWith("ERC721: invalid token ID");
+      await expect(auction.connect(bob).bid(pigs.address, id)).to.be.revertedWith("CollectionNotListed()");
+      await expect(auction.connect(bob).bid(owls.address, 110)).to.be.revertedWith("AssetNotFound()");
+      await expect(auction.connect(bob).bid(owls.address, 200)).to.be.revertedWith("ERC721: invalid token ID");
 
       // unapproved bid
-      await expect(factory.connect(bob).bid(owls.address, id)).to.be.revertedWith("ERC20: insufficient allowance");
+      await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("ERC20: insufficient allowance");
 
       // bob approves LFG
-      await expect(lfg.connect(bob).approve(factory.address, owlsInitialPrice))
+      await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
         .to.emit(lfg, "Approval")
-        .withArgs(bob.address, factory.address, owlsInitialPrice);
+        .withArgs(bob.address, auction.address, owlsInitialPrice);
 
       // successful bid
-      await expect(factory.connect(bob).bid(owls.address, id))
-        .to.emit(factory, "Bid")
+      await expect(auction.connect(bob).bid(owls.address, id))
+        .to.emit(auction, "Bid")
         .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
 
       // raising price
-      let price = await factory.getPrice(owls.address, id);
+      let price = await auction.getPrice(owls.address, id);
       expect(price).to.equal(owlsInitialPrice.add(owlsInitialPrice.mul(10).div(100)));
 
       let fee = price.mul(5).div(110);
       let totalFee = owlsInitialPrice.add(fee);
 
       // alice approves lfg
-      await lfg.connect(alice).approve(factory.address, price.mul(10));
+      await lfg.connect(alice).approve(auction.address, price.mul(10));
 
       // alice bids
-      await expect(factory.connect(alice).bid(owls.address, id))
-        .to.emit(factory, "Bid")
+      await expect(auction.connect(alice).bid(owls.address, id))
+        .to.emit(auction, "Bid")
         .withArgs(owls.address, id, price, await ts(), alice.address)
         .to.emit(lfg, "Transfer")
-        .withArgs(factory.address, bob.address, price.sub(fee));
+        .withArgs(auction.address, bob.address, price.sub(fee));
 
       // alice bids again
-      price = await factory.getPrice(owls.address, id);
+      price = await auction.getPrice(owls.address, id);
       fee = price.mul(5).div(110);
       totalFee = totalFee.add(fee);
 
-      await expect(factory.connect(alice).bid(owls.address, id))
-        .to.emit(factory, "Bid")
+      await expect(auction.connect(alice).bid(owls.address, id))
+        .to.emit(auction, "Bid")
         .withArgs(owls.address, id, price, await ts(), alice.address)
         .to.emit(lfg, "Transfer")
-        .withArgs(factory.address, alice.address, price.sub(fee));
+        .withArgs(auction.address, alice.address, price.sub(fee));
 
-      await expect(factory.connect(alice).claim(owls.address, id)).to.be.revertedWith("AuctionIsNotOver()");
+      await expect(auction.connect(alice).claim(owls.address, id)).to.be.revertedWith("AuctionIsNotOver()");
 
       // an hour passes
       await increaseBlockTimestampBy(3600);
 
       // bob tries to bid again but auction is over
-      await expect(factory.connect(bob).bid(owls.address, id)).to.be.revertedWith("AuctionIsOver()");
+      await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("AuctionIsOver()");
 
-      await expect(factory.connect(fred).claim(owls.address, id)).to.be.revertedWith("NotTheWinner()");
+      await expect(auction.connect(fred).claim(owls.address, id)).to.be.revertedWith("NotTheWinner()");
 
-      await expect(factory.connect(alice).claim(owls.address, id))
+      await expect(auction.connect(alice).claim(owls.address, id))
         .to.emit(owls, "Transfer")
-        .withArgs(factory.address, alice.address, id);
+        .withArgs(auction.address, alice.address, id);
 
-      expect(await lfg.balanceOf(factory.address)).to.equal(totalFee);
+      expect(await lfg.balanceOf(auction.address)).to.equal(totalFee);
 
       // owls # 2
       id = 2;
 
       // bob approves LFG and bids
-      await expect(lfg.connect(bob).approve(factory.address, owlsInitialPrice))
+      await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
         .to.emit(lfg, "Approval")
-        .withArgs(bob.address, factory.address, owlsInitialPrice);
-      await expect(factory.connect(bob).bid(owls.address, id))
-        .to.emit(factory, "Bid")
+        .withArgs(bob.address, auction.address, owlsInitialPrice);
+      await expect(auction.connect(bob).bid(owls.address, id))
+        .to.emit(auction, "Bid")
         .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
 
       // nobody beats the bid, an hour passes
       await increaseBlockTimestampBy(3600);
 
-      await expect(factory.connect(bob).claim(owls.address, id))
+      await expect(auction.connect(bob).claim(owls.address, id))
         .to.emit(owls, "Transfer")
-        .withArgs(factory.address, bob.address, id);
+        .withArgs(auction.address, bob.address, id);
     });
   });
 
   it("should allow to bid multiple times over MATIC paid owls", async function () {
-    let ratsInitialPrice = await factory.initialPrice(rats.address);
-    let ratsCoin = (await factory.isNative(rats.address)) ? "MATIC" : "LFG";
+    let ratsInitialPrice = await auction.initialPrice(rats.address);
+    let ratsCoin = (await auction.isNative(rats.address)) ? "MATIC" : "LFG";
     expect(ratsInitialPrice).to.equal(priceMatic);
     expect(ratsCoin).to.equal("MATIC");
 
@@ -180,38 +180,38 @@ describe("PFPFactory", function () {
     let id = 1;
 
     // bid without value
-    await expect(factory.connect(bob).bid(rats.address, id)).to.be.revertedWith("InsufficientFunds()");
+    await expect(auction.connect(bob).bid(rats.address, id)).to.be.revertedWith("InsufficientFunds()");
 
     // successful bid
-    await expect(factory.connect(bob).bid(rats.address, id, {value: ratsInitialPrice}))
-      .to.emit(factory, "Bid")
+    await expect(auction.connect(bob).bid(rats.address, id, {value: ratsInitialPrice}))
+      .to.emit(auction, "Bid")
       .withArgs(rats.address, id, ratsInitialPrice, await ts(), bob.address);
 
-    expect(await ethers.provider.getBalance(factory.address)).to.equal(ratsInitialPrice);
+    expect(await ethers.provider.getBalance(auction.address)).to.equal(ratsInitialPrice);
 
     // raising price
-    let price = await factory.getPrice(rats.address, id);
+    let price = await auction.getPrice(rats.address, id);
     expect(price).to.equal(ratsInitialPrice.add(ratsInitialPrice.mul(10).div(100)));
 
     let fee = price.mul(5).div(110);
     let totalFee = ratsInitialPrice.add(fee);
 
     // alice bids
-    await expect(factory.connect(alice).bid(rats.address, id, {value: price}))
-      .to.emit(factory, "Bid")
+    await expect(auction.connect(alice).bid(rats.address, id, {value: price}))
+      .to.emit(auction, "Bid")
       .withArgs(rats.address, id, price, await ts(), alice.address);
 
-    expect(await ethers.provider.getBalance(factory.address)).to.equal(totalFee);
+    expect(await ethers.provider.getBalance(auction.address)).to.equal(totalFee);
 
-    price = await factory.getPrice(rats.address, id);
+    price = await auction.getPrice(rats.address, id);
     fee = price.mul(5).div(110);
     totalFee = totalFee.add(fee);
 
     let fredBalanceBefore = await ethers.provider.getBalance(fred.address);
 
     // fred over bids, sending twice the price
-    await expect(factory.connect(fred).bid(rats.address, id, {value: price.mul(2)}))
-      .to.emit(factory, "Bid")
+    await expect(auction.connect(fred).bid(rats.address, id, {value: price.mul(2)}))
+      .to.emit(auction, "Bid")
       .withArgs(rats.address, id, price, await ts(), fred.address);
 
     let fredBalanceAfter = await ethers.provider.getBalance(fred.address);
@@ -222,17 +222,17 @@ describe("PFPFactory", function () {
     // an hour passes
     await increaseBlockTimestampBy(3600);
 
-    price = await factory.getPrice(rats.address, id);
+    price = await auction.getPrice(rats.address, id);
 
     // bob tries to bid again but auction is over
-    await expect(factory.connect(bob).bid(rats.address, id, {value: price})).to.be.revertedWith("AuctionIsOver()");
+    await expect(auction.connect(bob).bid(rats.address, id, {value: price})).to.be.revertedWith("AuctionIsOver()");
 
-    await expect(factory.connect(alice).claim(rats.address, id)).to.be.revertedWith("NotTheWinner()");
+    await expect(auction.connect(alice).claim(rats.address, id)).to.be.revertedWith("NotTheWinner()");
 
-    await expect(factory.connect(fred).claim(rats.address, id))
+    await expect(auction.connect(fred).claim(rats.address, id))
       .to.emit(rats, "Transfer")
-      .withArgs(factory.address, fred.address, id);
+      .withArgs(auction.address, fred.address, id);
 
-    expect(await ethers.provider.getBalance(factory.address)).to.equal(totalFee);
+    expect(await ethers.provider.getBalance(auction.address)).to.equal(totalFee);
   });
 });

@@ -103,7 +103,7 @@ async function main() {
   await lfg.setPool(pool.address);
   await factory.setPool(pool.address);
 
-  const pfpFactory = await deployProxy("PFPFactory", lfg.address);
+  const pfpFactory = await deployProxy("PFPAuction", lfg.address);
 }
 
 main()
