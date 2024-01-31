@@ -96,6 +96,7 @@ interface ICorePool {
     uint256 lastRatioUpdate;
     uint256 usersLockingWeight;
     uint256 lastYieldDistribution;
+    uint256 lastDecayReduction;
   }
 
   function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external;

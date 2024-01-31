@@ -3070,6 +3070,11 @@
                 "internalType": "uint256",
                 "name": "lastYieldDistribution",
                 "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "lastDecayReduction",
+                "type": "uint256"
               }
             ],
             "internalType": "struct ICorePool.RewardsConfig",

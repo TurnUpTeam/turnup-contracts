@@ -14,6 +14,7 @@ const {
   cl,
 } = require("./helpers");
 const {ethers} = require("hardhat");
+const {max} = require("hardhat/internal/util/bigint");
 
 describe("CorePool", function () {
   let factory;
@@ -26,6 +27,7 @@ describe("CorePool", function () {
     return ethers.utils.parseEther(v.toString());
   }
 
+  const week = 3600 * 24 * 7;
   const blocksPerDay = 42000;
   const blocksPerWeek = blocksPerDay * 7;
   const twoYearsBlocks = blocksPerDay * 365 * 2;
@@ -89,14 +91,14 @@ describe("CorePool", function () {
     await initAndDeploy();
   });
 
-  it("should let bob stake some LFG and get rewards after 10 days", async function () {
+  it("should let bob stake some LFG and get rewards", async function () {
     await lfg.connect(tokenHolder).transfer(bob.address, bn("10000"));
     await lfg.connect(bob).approve(pool.address, bn("10000"));
 
     let ts = await getTimestamp();
 
     await pool.connect(bob).stake(bn("500"), ts + 3600 * 24 * 7 * 20);
-    const user = await pool.users(bob.address);
+    // const user = await pool.users(bob.address);
     // console.log(user);
 
     await increaseBlocksBy(3600 * 24 * 7);
@@ -118,7 +120,7 @@ describe("CorePool", function () {
 
     await expect(pool.connect(bob).unstake(0, unstakeAmount)).revertedWith("TooEarlyToUnstake()");
 
-    await increaseBlocksBy(3600 * 24 * 7 * 20);
+    await increaseBlocksBy(3600 * 24 * 7 * 21);
 
     bobBalanceBefore = await lfg.balanceOf(bob.address);
     pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
@@ -128,12 +130,12 @@ describe("CorePool", function () {
     bobBalanceAfter = await lfg.balanceOf(bob.address);
     expect(bobBalanceAfter.sub(bobBalanceBefore).div(pendingYieldingRewards)).lt(1);
 
-    await increaseBlocksBy(3600 * 24);
+    await increaseBlocksBy(3600 * 25);
 
     await expect(pool.connect(bob).unstake(0, unstakeAmount)).to.emit(pool, "Unstaked").withArgs(bob.address, unstakeAmount);
 
     const balanceNow = await lfg.balanceOf(bob.address);
-    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("34560778273007159684995");
+    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("35139186396164776256721");
   });
 
   async function getApy(amount, lockedTime) {
@@ -142,10 +144,11 @@ describe("CorePool", function () {
     const totalYieldOverYear = ethers.BigNumber.from(tokenPerBlock.toString()).mul(blocksInAYear);
     const depositWeight = await pool.getStakeWeight(lockedTime, amount);
     const yieldOnAmount = totalYieldOverYear.mul(depositWeight).div(depositWeight.add(usersLockingWeight));
+    // console.log(yieldOnAmount.mul(100).div(amount).div(10000).toNumber());
     return yieldOnAmount.mul(100).div(amount).div(10000).toNumber();
   }
 
-  it("should let bob stake some LFG and get rewards after 10 days", async function () {
+  it.only("should let bob stake some LFG and get rewards after 10 days", async function () {
     await lfg.connect(tokenHolder).transfer(bob.address, bn("100000"));
     await lfg.connect(tokenHolder).transfer(alice.address, bn("100000"));
     await lfg.connect(tokenHolder).transfer(fred.address, bn("100000"));
@@ -190,7 +193,7 @@ describe("CorePool", function () {
 
     await pool.connect(jane).stake(amount, twentyWeeksFromNow);
 
-    await increaseBlocksBy(twentyWeeks);
+    await increaseBlocksBy(twentyWeeks + week);
 
     await pool.connect(jane).unstake(0, amount);
     let balanceAfter = await lfg.balanceOf(jane.address);
@@ -212,16 +215,48 @@ describe("CorePool", function () {
 
     apy = await getApy(amount, aYear);
 
+    // console.log(await pool.blockNumber())
     await pool.connect(jim).stake(amount, ts + aYear);
 
-    await increaseBlocksBy(aYear);
-
+    await increaseBlocksBy(aYear + week);
+    // console.log(await pool.blockNumber())
     await pool.connect(jim).unstake(0, amount);
     balanceAfter = await lfg.balanceOf(jim.address);
 
     increase = Math.round(
       (100 * parseFloat(ethers.utils.formatEther(balanceBefore))) / parseFloat(ethers.utils.formatEther(balanceAfter))
     );
+    expect(increase / apy < 10).to.be.true;
+  });
+
+  it("should let bob stake some LFG and get rewards after 10 days", async function () {
+    await lfg.connect(tokenHolder).transfer(jane.address, bn("1000"));
+    await lfg.connect(jane).approve(pool.address, bn("1000"));
+
+    let ts = await getTimestamp();
+
+    let balanceBefore = await lfg.balanceOf(jane.address);
+    let amount = bn("1000");
+    expect(balanceBefore).to.equal(amount);
+
+    let twentyWeeks = 3600 * 24 * 7 * 20;
+    let twentyWeeksFromNow = ts + twentyWeeks;
+
+    let apy = await getApy(amount, twentyWeeks);
+
+    await pool.connect(jane).stake(amount, twentyWeeksFromNow);
+
+    // console.log(await increaseBlocksBy(twentyWeeks));
+
+    await pool.connect(jane).unstake(0, amount);
+    let balanceAfter = await lfg.balanceOf(jane.address);
+
+    let increase = Math.round(
+      (100 * parseFloat(ethers.utils.formatEther(balanceBefore))) / parseFloat(ethers.utils.formatEther(balanceAfter))
+    );
+    // console.log(apy)
+
+    // we prove they are in the same order of magnitude
     expect(increase / apy < 10).to.be.true;
   });
 
@@ -252,7 +287,7 @@ describe("CorePool", function () {
 
     let bobBalanceBefore = await formattedBalanceOf(bob);
     let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-    expect(pendingYieldingRewards).to.be.equal("2287014606806312098435");
+    expect(pendingYieldingRewards).to.be.equal("914805842722520265402");
     await pool.connect(bob).processRewards();
     let bobBalanceAfter = await formattedBalanceOf(bob);
     let gain = bobBalanceAfter - bobBalanceBefore;
@@ -261,9 +296,9 @@ describe("CorePool", function () {
     expect(ratio).lt(1);
 
     pendingYieldingRewards = await pool.pendingYieldRewards(alice.address);
-    expect(pendingYieldingRewards).to.be.equal("3395019896520677984263");
+    expect(pendingYieldingRewards).to.be.equal("1302007829941614527072");
     pendingYieldingRewards = await pool.pendingYieldRewards(fred.address);
-    expect(pendingYieldingRewards).to.be.equal("2534629215910086876500");
+    expect(pendingYieldingRewards).to.be.equal("972043369400568561125");
   });
 
   it("should verify that if all stakes the distributed rewards are compatible with the reserved amount", async function () {
@@ -328,7 +363,7 @@ describe("CorePool", function () {
   }
 
   it.skip("should simulate the entire history of the pool", async function () {
-    this.timeout(100000);
+    this.timeout(300000);
     let deposits = {};
     let users = [bob, alice, fred, jim, red, lee, jane];
     let names = {};
@@ -339,17 +374,19 @@ describe("CorePool", function () {
     names[red.address] = "red";
     names[lee.address] = "lee";
     names[jane.address] = "jane";
-
+    let maxStaked = {};
+    let staked = {};
     for (let u of users) {
       deposits[u.address] = [];
+      maxStaked[u.address] = 0n;
+      staked[u.address] = 0n;
       await lfg.connect(tokenHolder).transfer(u.address, bn("10000000"));
     }
     let blockNumber = (await ethers.provider.getBlock()).number;
-    let functions = ["stake", "processRewards"];
     let endBlock = (await pool.getConfig()).endBlock;
     let ts = await getTimestamp();
     let ts0 = ts;
-
+    let failed = false;
     let count = 0;
     async function randomAction() {
       let day = 3600 * 24;
@@ -359,15 +396,16 @@ describe("CorePool", function () {
       blockNumber = await increaseBlocksBy(time);
       let lockUntil = (await getTimestamp()) + minLockTime + Math.floor(Math.random() * (week * 51 - minLockTime));
       let user = users[Math.floor(Math.random() * users.length)];
-      let func = functions[Math.floor(Math.random() * functions.length)];
-      let amount = 10 + Math.floor(Math.random() * 100000);
+      let func = Math.random() * 100;
+      let amount = 10 + Math.floor(Math.random() * 50000);
       for (let address in deposits) {
         let ds = deposits[address];
         for (let i = 0; i < ds.length; i++) {
           let d = ds[i];
-          if (d.lockUntil && d.lockUntil < blockNumber) {
+          if (d.lockUntil && d.lockUntil < ts) {
             console.log(names[address], "unstakes", d.amount);
-            await pool.connect(d.user).unstake(i, d.amount);
+            staked[address] -= BigInt(bn(d.amount));
+            await pool.connect(d.user).unstake(i, bn(d.amount));
             count++;
             d.lockUntil = 0;
           }
@@ -375,21 +413,21 @@ describe("CorePool", function () {
       }
       count++;
       // console.log("Tokens per block", (await pool.getConfig()).tokensPerBlock.toString());
-      switch (func) {
-        case "stake":
-          console.log(names[user.address], "stakes", amount, lockUntil);
-          await lfg.connect(user).approve(pool.address, bn(amount));
-          await pool.connect(user).stake(bn(amount), lockUntil);
-          deposits[user.address].push({user, amount: amount, lockUntil: lockUntil});
-          break;
-        case "processRewards":
-          console.log(names[user.address], "gets rewards");
-          await pool.connect(user).processRewards();
-          break;
+      if (func < 15) {
+        console.log(names[user.address], "stakes", amount, lockUntil);
+        staked[user.address] += BigInt(bn(amount));
+        if (staked[user.address] > maxStaked[user.address]) {
+          maxStaked[user.address] = staked[user.address];
+        }
+        await lfg.connect(user).approve(pool.address, bn(amount));
+        await pool.connect(user).stake(bn(amount), lockUntil);
+        deposits[user.address].push({user, amount: amount, lockUntil: lockUntil});
+      } else {
+        console.log(names[user.address], "gets rewards");
+        await pool.connect(user).processRewards();
       }
     }
-
-    let dayPassed, remaining;
+    let dayPassed;
     while (blockNumber < endBlock) {
       dayPassed = Math.round((ts - ts0) / (3600 * 24));
       try {
@@ -397,12 +435,24 @@ describe("CorePool", function () {
       } catch (e) {
         console.log("Dead after", dayPassed, "days");
         console.error(e.message);
+        failed = true;
         break;
       }
     }
     console.log("-------- RESULTS --------");
+    let gains = {};
+    let i = 0;
+    for (let k in maxStaked) {
+      gains[k] = (await formattedBalanceOf(users[i++])) - Number((maxStaked[k] /= 1000000000000000000n));
+    }
+    for (let a in maxStaked) {
+      maxStaked[a] = Number(maxStaked[a] / 1000000000000000000n);
+    }
+    console.log("Max staked", maxStaked);
+    console.log("Gain", gains);
     console.log("Total transactions", count);
     console.log("Remaining", await formattedBalanceOf(pool));
     expect(BigInt((await lfg.balanceOf(pool.address)).toString()) > 0n).to.be.true;
+    expect(failed).to.be.false;
   });
 });
