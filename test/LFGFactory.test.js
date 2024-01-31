@@ -141,6 +141,59 @@ describe("LFGFactory", function () {
         .withArgs(bob.address, alice.address, amount.div(10));
     });
 
+    it("should cancel to stake LFG correctly", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const ts = await getTimestamp();
+      let lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      let validFor = 60 * 60 * 2;
+      const t90days = 3600 * 24 * 90;
+      // staking until 90 days from now
+      const stakeLockedUntil = ts + t90days;
+
+      let hash = await factory.hashForApplyToMintLfgAndStake(
+        orderId,
+        amount,
+        lockedUntil,
+        stakeLockedUntil,
+        bob.address,
+        ts,
+        validFor
+      );
+      let signature = await getSignature(hash, validator);
+
+      await expect(
+        factory.connect(bob).applyToMintLfgAndStake(orderId, amount, lockedUntil, stakeLockedUntil, ts, validFor, signature)
+      )
+        .to.emit(factory, "MintAndStakeRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil, stakeLockedUntil);
+
+      await expect(factory.connect(owner).cancelApplicationToMintLfgAndStake(orderId, bob.address)).revertedWith(
+        "NotAuthorized"
+      );
+
+      await expect(factory.connect(operator).cancelApplicationToMintLfgAndStake(orderId, bob.address))
+        .emit(factory, "CancelStakeRequest")
+        .withArgs(orderId, amount, bob.address, lockedUntil, stakeLockedUntil);
+
+      expect(await lfg.balanceOf(bob.address)).to.equal(0);
+    });
+
+    it("should return true for signature already used", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const ts = await getTimestamp();
+      const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      const validFor = 60 * 60 * 2;
+
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature);
+
+      expect(await factory.connect(bob).isSignatureUsed(signature)).to.equal(true);
+    });
+
     it("should apply to mint LFG two times, collecting pending", async function () {
       let orderId = 1;
       let amount = ethers.utils.parseEther("1");
@@ -233,6 +286,43 @@ describe("LFGFactory", function () {
       expect(balance).to.equal(amount);
 
       const reason = BurnReason.UnlockMission; // or BurnReason.LootFee depending on the scenario
+      orderId = 2;
+      const burnedAmount = ethers.utils.parseEther("10");
+      ts = await getTimestamp();
+      validFor = 3600;
+      hash = await factory.hashBurnLfg(orderId, bob.address, reason, burnedAmount, false, ts, validFor);
+      signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).burnLfg(orderId, burnedAmount, false, reason, ts, validFor, signature))
+        .to.emit(lfg, "Transfer")
+        .withArgs(bob.address, addr0, burnedAmount);
+
+      const balanceAfterBurn = await lfg.balanceOf(bob.address);
+      expect(balanceAfterBurn).to.equal(balance.sub(burnedAmount));
+    });
+
+    it("should burn LFG correctly different burn reason", async function () {
+      let amount = ethers.utils.parseEther("100");
+      let orderId = 1;
+      let ts = await getTimestamp();
+      let lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      let validFor = 60 * 60 * 2;
+
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
+        .to.emit(factory, "MintRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil);
+
+      await increaseBlockTimestampBy(lockedUntil - ts + 1);
+
+      await factory.connect(bob).claimAllPending();
+
+      const balance = await lfg.balanceOf(bob.address);
+      expect(balance).to.equal(amount);
+
+      const reason = BurnReason.LootFee; // or BurnReason.UnlockMission depending on the scenario
       orderId = 2;
       const burnedAmount = ethers.utils.parseEther("10");
       ts = await getTimestamp();
