@@ -8,7 +8,7 @@ interface ICorePool {
    * @param _from token holder address, the tokens will be returned to that address
    * @param amount amount of tokens staked
    */
-  event Staked(address indexed _from, uint256 amount);
+  event Staked(address indexed _from, uint256 amount, uint256 lockedFrom, uint256 locketUntil);
 
   /**
    * @dev Fired in _updateStakeLock() and updateStakeLock()
@@ -90,7 +90,6 @@ interface ICorePool {
     uint256 endBlock;
     uint256 minLockTime;
     uint256 totalReserved;
-    uint256 distributedRewards;
     uint256 totalYieldRewards;
     uint256 yieldRewardsPerWeight;
     uint256 decayFactor;

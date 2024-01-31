@@ -2840,6 +2840,18 @@
             "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lockedFrom",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "locketUntil",
+            "type": "uint256"
           }
         ],
         "name": "Staked",
@@ -3027,11 +3039,6 @@
               {
                 "internalType": "uint256",
                 "name": "totalReserved",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "distributedRewards",
                 "type": "uint256"
               },
               {

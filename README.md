@@ -71,7 +71,8 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 ## Test coverage
 
 ```
-  60 passing (13s)
+  60 passing (14s)
+  1 pending
 
 -----------------------------|----------|----------|----------|----------|----------------|
 File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
@@ -80,10 +81,10 @@ File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncove
   PFPAsset.sol               |    44.44 |    15.38 |    36.36 |       40 |... 3,97,98,102 |
   PFPAuction.sol             |    72.73 |     53.7 |    72.73 |     71.7 |... 158,160,161 |
   TurnUPNFT.sol              |      100 |       50 |      100 |      100 |                |
- pool/                       |       80 |    48.94 |    76.47 |    81.21 |                |
-  CorePool.sol               |    77.46 |    48.28 |       80 |    77.42 |... 421,422,425 |
+ pool/                       |       80 |    47.87 |    76.47 |    81.21 |                |
+  CorePool.sol               |    77.46 |    46.55 |       80 |    77.42 |... 422,423,426 |
   ICorePool.sol              |      100 |      100 |      100 |      100 |                |
-  Rewards.sol                |    85.29 |    57.14 |    78.57 |    88.64 |... 142,167,171 |
+  Rewards.sol                |    85.29 |    57.14 |    78.57 |    88.64 |... 140,165,169 |
   SharesPool.sol             |       80 |       25 |       60 |    83.33 |          37,41 |
  shares/                     |    95.13 |    67.34 |    96.49 |    96.06 |                |
   TurnupSharesV4.sol         |    94.85 |     69.2 |    97.87 |    96.25 |... 249,251,665 |
@@ -95,6 +96,9 @@ File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncove
   IERC4906.sol               |      100 |      100 |      100 |      100 |                |
   ValidatableUpgradeable.sol |    83.33 |    38.89 |      100 |    72.73 |... 54,56,57,59 |
 -----------------------------|----------|----------|----------|----------|----------------|
-All files                    |    85.17 |    53.61 |    79.01 |    84.98 |                |
+All files                    |    85.17 |    53.44 |    79.01 |    84.98 |                |
 -----------------------------|----------|----------|----------|----------|----------------|
+
+> Istanbul reports written to ./coverage/ and ./coverage.json
+
 ```

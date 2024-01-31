@@ -36,7 +36,7 @@ function calculateInitialTokensPerBlock(totalRewards) {
 
 // Constants
 let totalRewards = 400000000; // Total tokens to be distributed
-
+console.log("Total rewards:", totalRewards);
 // Calculate the initial tokens per block
 let initialTokens = calculateInitialTokensPerBlock(totalRewards);
 console.log("Initial tokens per block:", initialTokens);
@@ -44,6 +44,7 @@ console.log(toBigInt(totalRewards / 95e5));
 console.log("Validate token per block", validateTokenPerBlock(toBigInt(totalRewards), toBigInt(totalRewards / 95e5)));
 
 totalRewards = 1245000000; // Total tokens to be distributed
+console.log("Total rewards:", totalRewards);
 let initialTokens2 = calculateInitialTokensPerBlock(totalRewards);
 console.log("Initial tokens per block:", initialTokens2);
 console.log(toBigInt(totalRewards / 95e5));

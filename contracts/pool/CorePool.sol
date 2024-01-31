@@ -237,6 +237,7 @@ contract CorePool is Rewards {
   function _stake(address _staker, uint256 _amount, uint64 _lockUntil, address lfgSender) internal virtual {
     // validate the inputs
     if (_amount == 0) revert ZeroAmount();
+
     // we need to the limit of max locking time to limit the yield bonus
     if (_lockUntil < now256() + _config.minLockTime || _lockUntil - now256() > 365 days) revert InvalidLockInternal();
     // update smart contract state
@@ -289,7 +290,7 @@ contract CorePool is Rewards {
     _config.usersLockingWeight += stakeWeight;
 
     // emit an event
-    emit Staked(_staker, _amount);
+    emit Staked(_staker, _amount, lockFrom, lockUntil);
   }
 
   error AmountExceedsStake();
