@@ -10,6 +10,14 @@ import {Rewards} from "./Rewards.sol";
 
 //import {console} from "hardhat/console.sol";
 
+/**
+ * @title LFG Core Pool
+ *        Original title: Illuvium Core Pool
+ *
+ * @author Pedro Bergamini, reviewed by Basil Gorin
+ * Adapted for TurnUP by the TurnUP Team
+ */
+
 contract CorePool is Rewards {
   using SafeERC20Upgradeable for LFGToken;
 

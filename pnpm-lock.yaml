@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+dependencies:
+  '@ndujalabs/erc721lockable':
+    specifier: ^0.13.0
+    version: 0.13.0
+
 devDependencies:
   '@ethersproject/contracts':
     specifier: ^5.7.0
@@ -767,6 +772,10 @@ packages:
       tweetnacl: 1.0.3
       tweetnacl-util: 0.15.1
     dev: true
+
+  /@ndujalabs/erc721lockable@0.13.0:
+    resolution: {integrity: sha512-gt14qnj6Efv9Cxu8SvldNRumljpmdplmZDV9+Kc2hgUZMrHQAwBNyjEUHo0IuVOgaBcGmWY77HlJiStYR38IXQ==}
+    dev: false
 
   /@noble/curves@1.1.0:
     resolution: {integrity: sha512-091oBExgENk/kGj3AZmtBDMpxQPDtxQABR2B9lb1JbVTs6ytdzZNwvhxQ4MWasRNEzlbEH8jCWFCwhF/Obj5AA==}
