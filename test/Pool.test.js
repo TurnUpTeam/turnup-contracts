@@ -398,112 +398,6 @@ describe("CorePool", function () {
     return newBlockNumber;
   }
 
-  it.skip("should simulate the entire history of the pool", async function () {
-    this.timeout(300000);
-    let deposits = {};
-    let users = [bob, alice, fred, jim, red, lee, jane, pippo, john, valery, august, marcel, gael, frankie, robert, will];
-    let names = {};
-    names[bob.address] = "bob";
-    names[alice.address] = "alice";
-    names[fred.address] = "fred";
-    names[jim.address] = "jim";
-    names[red.address] = "red";
-    names[lee.address] = "lee";
-    names[jane.address] = "jane";
-    names[pippo.address] = "pippo";
-    names[john.address] = "john";
-    names[valery.address] = "valery";
-    names[august.address] = "august";
-    names[marcel.address] = "marcel";
-    names[gael.address] = "gael";
-    names[frankie.address] = "frankie";
-    names[robert.address] = "robert";
-    names[will.address] = "will";
-    let maxStaked = {};
-    let staked = {};
-    for (let u of users) {
-      deposits[u.address] = [];
-      maxStaked[u.address] = 0n;
-      staked[u.address] = 0n;
-      await lfg.connect(tokenHolder).transfer(u.address, bn("10000000"));
-    }
-    let blockNumber = (await ethers.provider.getBlock()).number;
-    let endBlock = (await pool.getConfig()).endBlock;
-    let ts = await getTimestamp();
-    let ts0 = ts;
-    let failed = false;
-    let count = 0;
-    let j = 0;
-
-    async function randomAction() {
-      let day = 3600 * 24;
-      let week = day * 7;
-      let time = Math.floor((Math.random() * day) / 4);
-      ts += time;
-      blockNumber = await increaseBlocksBy(time);
-      let lockUntil = (await getTimestamp()) + minLockTime + Math.floor(Math.random() * (week * 51 - minLockTime));
-      let user = users[Math.floor(Math.random() * users.length)];
-      let func = Math.random() * 100;
-      let amount = 10 + Math.floor(Math.random() * 50000);
-      for (let address in deposits) {
-        let ds = deposits[address];
-        for (let i = 0; i < ds.length; i++) {
-          let d = ds[i];
-          if (d.lockUntil && d.lockUntil < ts) {
-            console.log(names[address], "unstakes", d.amount);
-            staked[address] -= BigInt(bn(d.amount));
-            await pool.connect(d.user).unstake(i, bn(d.amount));
-            count++;
-            d.lockUntil = 0;
-          }
-        }
-      }
-      count++;
-      // console.log("Tokens per block", (await pool.getConfig()).tokensPerBlock.toString());
-      if (func < 15) {
-        console.log(names[user.address], "stakes", amount, lockUntil);
-        staked[user.address] += BigInt(bn(amount));
-        if (staked[user.address] > maxStaked[user.address]) {
-          maxStaked[user.address] = staked[user.address];
-        }
-        await lfg.connect(user).approve(pool.address, bn(amount));
-        await pool.connect(user).stake(bn(amount), lockUntil);
-        deposits[user.address].push({user, amount: amount, lockUntil: lockUntil});
-      } else {
-        console.log(names[user.address], "gets rewards");
-        await pool.connect(user).processRewards();
-      }
-    }
-
-    let dayPassed;
-    while (blockNumber < endBlock) {
-      dayPassed = Math.round((ts - ts0) / (3600 * 24));
-      try {
-        await randomAction();
-      } catch (e) {
-        console.log("Dead after", dayPassed, "days");
-        console.error(e.message);
-        failed = true;
-        break;
-      }
-      // if (j++ > 1000) break;
-    }
-    console.log("-------- RESULTS --------");
-    console.log("Max staked and gains:");
-    let i = 0;
-    for (let a in maxStaked) {
-      console.log(
-        names[a],
-        Number(maxStaked[a] / 1000000000000000000n),
-        Math.round((await formattedBalanceOf(users[i++])) - Number((maxStaked[a] /= 1000000000000000000n)))
-      );
-    }
-    console.log("Total transactions", count);
-    console.log("Remaining", await formattedBalanceOf(pool));
-    expect(BigInt((await lfg.balanceOf(pool.address)).toString()) > 0n).to.be.true;
-    expect(failed).to.be.false;
-  });
-
   it("should update stake lock", async function () {
     let _reservedToPool = 400000000;
     await initAndDeploy(_reservedToPool);
@@ -525,7 +419,6 @@ describe("CorePool", function () {
     await pool.connect(bob).updateStakeLock(0, (await getTimestamp()) + 3600 * 24 * 7 * 18);
 
     let depositAfter = await pool.connect(bob).getDeposit(bob.address, 0);
-    console.log(depositBefore.lockedUntil, depositAfter.lockedUntil);
     expect(Number(depositAfter.lockedUntil)).greaterThan(Number(depositBefore.lockedUntil));
   });
 
