@@ -225,9 +225,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     );
     if (lockedUntil < timestamp + _minLockTime) revert InvalidLockTime();
     // if there are previous completed requests, we mint the tokens before continuing
-    (bool mintPending, bool stakePending) = _claimAllPending(_msgSender());
-    // it reverts if there is a pending MintRequest or MintAndStake 
-    if (mintPending || stakePending) revert PendingRequest();
+    (bool pending, ) = _claimAllPending(_msgSender());
+    // it reverts only if there is a pending MintRequest
+    if (pending) revert PendingRequest();
     // create a new request
     _mintRequests[_msgSender()] = MintRequest({
       orderId: uint64(orderId),
@@ -255,9 +255,11 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     bool pending;
     if (_mintRequests[account].lockedUntil > 0) {
       pending = _mintRequests[account].lockedUntil > block.timestamp;
-      _updateDailyMinted(_mintRequests[account].amount, true);
-      lfg.transfer(account, _mintRequests[account].amount);
-      delete _mintRequests[account];
+      if (!pending) {
+          _updateDailyMinted(_mintRequests[account].amount, true);
+          lfg.transfer(account, _mintRequests[account].amount);
+          delete _mintRequests[account];
+      }
     }
     return pending;
   }
@@ -279,9 +281,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     );
     if (lockedUntil < timestamp + _minLockTime) revert InvalidLockTime();
     // we process previous request to mint and stake
-    (bool mintPending, bool stakePending) = _claimAllPending(_msgSender());
-    // it reverts if there is a pending MintRequest or MintAndStake 
-    if (mintPending || stakePending) revert PendingRequest();
+    (, bool pending) = _claimAllPending(_msgSender());
+    // it reverts only if there is a pending MintAndStakeRequest
+    if (pending) revert PendingRequest();
     _mintAndStakeRequests[_msgSender()] = MintAndStakeRequest({
       orderId: uint64(orderId),
       amount: uint160(amount),
@@ -311,22 +313,25 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   function _claimMintLfgAndStake(address account) internal returns (bool) {
     bool pending;
     if (_mintAndStakeRequests[account].lockedUntil > 0) {
-      ICorePool.RewardsConfig memory rewardsConfig = ICorePool(pool).getConfig();
-      uint256 poolMinLockTime = rewardsConfig.minLockTime;
-      if (_mintAndStakeRequests[account].stakeLockedUntil < block.timestamp + poolMinLockTime) {
-        // the claim came too late and the stake would revert
-        _mintAndStakeRequests[account].stakeLockedUntil = uint32(block.timestamp) + uint32(poolMinLockTime) + 1;
-        emit UpdateStakeLockedUntil(_mintAndStakeRequests[account].orderId, _mintAndStakeRequests[account].stakeLockedUntil);
-      }
       pending = _mintAndStakeRequests[account].lockedUntil > block.timestamp;
-      _updateDailyMinted(_mintAndStakeRequests[account].amount, false);
-      lfg.approve(pool, _mintAndStakeRequests[account].amount);
-      ICorePool(pool).stakeAfterMint(
-        _msgSender(),
-        _mintAndStakeRequests[account].amount,
-        uint64(_mintAndStakeRequests[account].stakeLockedUntil)
-      );
-      delete _mintAndStakeRequests[account];
+      if (!pending) {
+        ICorePool.RewardsConfig memory rewardsConfig = ICorePool(pool).getConfig();
+        uint256 poolMinLockTime = rewardsConfig.minLockTime;
+        if (_mintAndStakeRequests[account].stakeLockedUntil < block.timestamp + poolMinLockTime) {
+          // the claim came too late and the stake would revert
+          _mintAndStakeRequests[account].stakeLockedUntil = uint32(block.timestamp) + uint32(poolMinLockTime) + 1;
+          emit UpdateStakeLockedUntil(_mintAndStakeRequests[account].orderId, _mintAndStakeRequests[account].stakeLockedUntil);
+        }
+        pending = _mintAndStakeRequests[account].lockedUntil > block.timestamp;
+        _updateDailyMinted(_mintAndStakeRequests[account].amount, false);
+        lfg.approve(pool, _mintAndStakeRequests[account].amount);
+        ICorePool(pool).stakeAfterMint(
+          _msgSender(),
+          _mintAndStakeRequests[account].amount,
+          uint64(_mintAndStakeRequests[account].stakeLockedUntil)
+        );
+        delete _mintAndStakeRequests[account];
+      }
     }
     return pending;
   }
@@ -336,8 +341,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   }
 
   function claimAllPending() external whenNotPaused nonReentrant {
-    (bool mintPending, bool stakePending) = _claimAllPending(_msgSender());
-    if (mintPending || stakePending) revert PendingRequest();
+  	_claimAllPending(_msgSender());
   }
 
   function cancelApplicationToMintLfg(uint256 orderId, address account) external whenNotPaused nonReentrant {
