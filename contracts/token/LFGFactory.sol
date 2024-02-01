@@ -178,17 +178,17 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     return config.operators[operator];
   }
 
-  function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner whenNotPaused {
-    uint256 _lfgMaxSupply = 2 * 10 ** 27;
-    if (maxDailyMinted_ > _lfgMaxSupply / 365) revert InvalidDailyMintedAmounts();
+  function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner whenNotPaused { 
     config.maxDailyMinted = uint128(maxDailyMinted_);
     emit DailyMintedAmountsUpdated(maxDailyMinted_);
   }
 
-  function _updateDailyMinted(uint256 amount) internal {
+  function _updateDailyMinted(uint256 amount, bool checkDaily) internal {
     uint256 today = block.timestamp / 1 days;
-    _dailyMinted[today] += amount;
-    if (_dailyMinted[today] > config.maxDailyMinted) revert InvalidDailyMintedAmounts();
+    if (checkDaily) {
+      _dailyMinted[today] += amount;
+      if (_dailyMinted[today] > config.maxDailyMinted) revert InvalidDailyMintedAmounts();
+    }
     config.minted += uint128(amount);
     if (_reservedSupply == 0) {
       _reservedSupply = config.supplyReservedToPool;
@@ -254,7 +254,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     bool pending;
     if (_mintRequests[account].lockedUntil > 0) {
       pending = _mintRequests[account].lockedUntil > block.timestamp;
-      _updateDailyMinted(_mintRequests[account].amount);
+      _updateDailyMinted(_mintRequests[account].amount, true);
       lfg.transfer(account, _mintRequests[account].amount);
       delete _mintRequests[account];
     }
@@ -318,7 +318,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
         emit UpdateStakeLockedUntil(_mintAndStakeRequests[account].orderId, _mintAndStakeRequests[account].stakeLockedUntil);
       }
       pending = _mintAndStakeRequests[account].lockedUntil > block.timestamp;
-      _updateDailyMinted(_mintAndStakeRequests[account].amount);
+      _updateDailyMinted(_mintAndStakeRequests[account].amount, false);
       lfg.approve(pool, _mintAndStakeRequests[account].amount);
       ICorePool(pool).stakeAfterMint(
         _msgSender(),
@@ -374,7 +374,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
       signature
     );
     if (mintNow) {
-      _updateDailyMinted(amount);
+      _updateDailyMinted(amount, false);
       lfg.burnFromFactory(address(this), amount);
     } else {
       lfg.burnFromFactory(_msgSender(), amount);
