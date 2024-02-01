@@ -189,6 +189,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
       _dailyMinted[today] += amount;
       if (_dailyMinted[today] > config.maxDailyMinted) revert InvalidDailyMintedAmounts();
     }
+
     config.minted += uint128(amount);
     if (_reservedSupply == 0) {
       _reservedSupply = config.supplyReservedToPool;
