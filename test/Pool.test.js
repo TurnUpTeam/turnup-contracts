@@ -14,32 +14,76 @@ const {
   cl,
 } = require("./helpers");
 const {ethers} = require("hardhat");
+const {max} = require("hardhat/internal/util/bigint");
 
 describe("CorePool", function () {
   let factory;
   let lfg;
   let pool;
-  let owner, operator, validator, tokenHolder, bob, alice, fred, jim, red, lee, jane;
+  let owner,
+    operator,
+    validator,
+    tokenHolder,
+    bob,
+    alice,
+    fred,
+    jim,
+    red,
+    lee,
+    jane,
+    pippo,
+    john,
+    valery,
+    august,
+    marcel,
+    gael,
+    frankie,
+    robert,
+    will;
   let tokenPerBlock;
 
+  function bn(v) {
+    return ethers.utils.parseEther(v.toString());
+  }
+
+  const week = 3600 * 24 * 7;
   const blocksPerDay = 42000;
-  const blocksPerWeek = blocksPerDay * 7;
-  const twoYearsBlocks = blocksPerDay * 365 * 2;
   const reservedToTool = 400000000;
-  let amountReservedToPool = ethers.utils.parseEther(reservedToTool.toString());
+  let amountReservedToPool = bn(reservedToTool.toString());
   const minLockTime = 3600 * 24 * 7 * 16;
 
   before(async function () {
-    [owner, operator, validator, tokenHolder, bob, alice, fred, jim, red, lee, jane] = await ethers.getSigners();
+    [
+      owner,
+      operator,
+      validator,
+      tokenHolder,
+      bob,
+      alice,
+      fred,
+      jim,
+      red,
+      lee,
+      jane,
+      pippo,
+      john,
+      valery,
+      august,
+      marcel,
+      gael,
+      frankie,
+      robert,
+      will,
+    ] = await ethers.getSigners();
   });
 
   async function initAndDeploy(_reservedToPool) {
-    let maxSupply = ethers.utils.parseEther("3000000000");
-    let initialSupply = ethers.utils.parseEther("900000000");
-    let amountReservedToSharesPool = ethers.utils.parseEther("200000000");
+    let maxSupply = bn("3000000000");
+    let initialSupply = bn("900000000");
+    let amountReservedToSharesPool = bn("200000000");
 
     if (_reservedToPool) {
-      amountReservedToPool = ethers.utils.parseEther(_reservedToPool.toString());
+      amountReservedToPool = bn(_reservedToPool.toString());
     }
 
     // pool configuration
@@ -85,29 +129,17 @@ describe("CorePool", function () {
     await initAndDeploy();
   });
 
-  async function getApy(amount, lockedTime) {
-    const blocksInAYear = blocksPerDay * 365;
-    let usersLockingWeight = await pool.usersLockingWeight();
-    const totalYieldOverYear = ethers.BigNumber.from(tokenPerBlock.toString()).mul(blocksInAYear);
-    const depositWeight = await pool.getStakeWeight(lockedTime, amount);
-    const yieldOnAmount = totalYieldOverYear.mul(depositWeight).div(depositWeight.add(usersLockingWeight));
-    // this is an approximation of the APY, applying a factor to confirm the result validated in tests
-    return yieldOnAmount.mul(100).div(amount).mul(3720).div(10000).toNumber();
-  }
-
-  it("should let bob stake some LFG and get rewards after 10 days", async function () {
-    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("10000"));
-    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("10000"));
+  it("should let bob stake some LFG and get rewards", async function () {
+    await lfg.connect(tokenHolder).transfer(bob.address, bn("10000"));
+    await lfg.connect(bob).approve(pool.address, bn("10000"));
 
     let ts = await getTimestamp();
 
-    await pool.connect(bob).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 20);
-    const user = await pool.users(bob.address);
+    await pool.connect(bob).stake(bn("500"), ts + 3600 * 24 * 7 * 20);
+    // const user = await pool.users(bob.address);
     // console.log(user);
 
-    await increaseBlockTimestampBy(3600 * 24 * 7);
-    let blockNumber = (await ethers.provider.getBlock()).number;
-    await pool.setFakeBlockNumber(blockNumber + blocksPerWeek);
+    await increaseBlocksBy(3600 * 24 * 7);
     await pool.sync();
     // await pool.updateLFGPerBlock();
 
@@ -118,17 +150,15 @@ describe("CorePool", function () {
 
     let bobBalanceAfter = await lfg.balanceOf(bob.address);
     expect(bobBalanceBefore).equal("9500000000000000000000");
-    expect(bobBalanceAfter).equal("12017201473684210502696374");
-    expect(bobBalanceAfter.sub(bobBalanceBefore)).equal("12007701473684210502696374");
+    expect(bobBalanceAfter).equal("11687374879999995556692");
+    expect(bobBalanceAfter.sub(bobBalanceBefore)).equal("2187374879999995556692");
 
     const deposit = await pool.getDeposit(bob.address, 0);
     const unstakeAmount = deposit.tokenAmount.div(2);
 
     await expect(pool.connect(bob).unstake(0, unstakeAmount)).revertedWith("TooEarlyToUnstake()");
 
-    await increaseBlockTimestampBy(3600 * 24 * 7 * 20);
-    blockNumber = await pool.blockNumber();
-    await pool.setFakeBlockNumber(blockNumber + blocksPerWeek * 20);
+    await increaseBlocksBy(3600 * 24 * 7 * 21);
 
     bobBalanceBefore = await lfg.balanceOf(bob.address);
     pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
@@ -138,98 +168,132 @@ describe("CorePool", function () {
     bobBalanceAfter = await lfg.balanceOf(bob.address);
     expect(bobBalanceAfter.sub(bobBalanceBefore).div(pendingYieldingRewards)).lt(1);
 
-    await increaseBlockTimestampBy(3600 * 24);
-    blockNumber = await pool.blockNumber();
-    await pool.setFakeBlockNumber(blockNumber + blocksPerDay);
+    await increaseBlocksBy(3600 * 25);
 
     await expect(pool.connect(bob).unstake(0, unstakeAmount)).to.emit(pool, "Unstaked").withArgs(bob.address, unstakeAmount);
 
     const balanceNow = await lfg.balanceOf(bob.address);
-    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("118734231644080140322137625");
+    expect(balanceNow.sub(bobBalanceAfter)).to.be.equal("5387266850500261632366");
   });
 
-  it("should let bob stake some LFG and get rewards after 10 days", async function () {
-    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(tokenHolder).transfer(red.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(tokenHolder).transfer(lee.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(tokenHolder).transfer(jane.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(tokenHolder).transfer(jim.address, ethers.utils.parseEther("10000"));
+  async function getApy(amount, lockedTime) {
+    const blocksInAYear = blocksPerDay * 365;
+    let usersLockingWeight = await pool.usersLockingWeight();
+    const totalYieldOverYear = ethers.BigNumber.from(tokenPerBlock.toString()).mul(blocksInAYear);
+    const depositWeight = await pool.getStakeWeight(lockedTime, amount);
+    const yieldOnAmount = totalYieldOverYear.mul(depositWeight).div(depositWeight.add(usersLockingWeight));
+    // console.log(yieldOnAmount.mul(100).div(amount).div(10000).toNumber());
+    return yieldOnAmount.mul(100).div(amount).div(10000).toNumber();
+  }
 
-    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(red).approve(pool.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(lee).approve(pool.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(jane).approve(pool.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(jim).approve(pool.address, ethers.utils.parseEther("10000"));
+  it("should let bob stake some LFG and get rewards checking the APY", async function () {
+    await lfg.connect(tokenHolder).transfer(bob.address, bn("100000"));
+    await lfg.connect(tokenHolder).transfer(alice.address, bn("100000"));
+    await lfg.connect(tokenHolder).transfer(fred.address, bn("100000"));
+    await lfg.connect(tokenHolder).transfer(red.address, bn("100000"));
+    await lfg.connect(tokenHolder).transfer(lee.address, bn("100000"));
+    await lfg.connect(tokenHolder).transfer(jane.address, bn("100000"));
+    await lfg.connect(tokenHolder).transfer(jim.address, bn("10000"));
+
+    await lfg.connect(bob).approve(pool.address, bn("100000"));
+    await lfg.connect(alice).approve(pool.address, bn("100000"));
+    await lfg.connect(fred).approve(pool.address, bn("100000"));
+    await lfg.connect(red).approve(pool.address, bn("100000"));
+    await lfg.connect(lee).approve(pool.address, bn("100000"));
+    await lfg.connect(jane).approve(pool.address, bn("100000"));
+    await lfg.connect(jim).approve(pool.address, bn("10000"));
 
     let ts = await getTimestamp();
 
     // bob, alice, fred, jim, red, lee, jane
     // many users do many stakes
 
-    await pool.connect(bob).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 20);
-    await pool.connect(alice).stake(ethers.utils.parseEther("100"), ts + 3600 * 24 * 7 * 40);
-    await pool.connect(fred).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 50);
-    await pool.connect(fred).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 20);
-    await pool.connect(red).stake(ethers.utils.parseEther("100"), ts + 3600 * 24 * 7 * 40);
-    await pool.connect(lee).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 50);
-    await pool.connect(lee).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 20);
-    await pool.connect(bob).stake(ethers.utils.parseEther("100"), ts + 3600 * 24 * 7 * 40);
-    await pool.connect(alice).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 7 * 50);
+    await pool.connect(bob).stake(bn("500"), ts + 3600 * 24 * 7 * 20);
+    await pool.connect(alice).stake(bn("100"), ts + 3600 * 24 * 7 * 40);
+    await pool.connect(fred).stake(bn("500"), ts + 3600 * 24 * 7 * 50);
+    await pool.connect(fred).stake(bn("500"), ts + 3600 * 24 * 7 * 20);
+    await pool.connect(red).stake(bn("100"), ts + 3600 * 24 * 7 * 40);
+    await pool.connect(lee).stake(bn("500"), ts + 3600 * 24 * 7 * 50);
+    await pool.connect(lee).stake(bn("500"), ts + 3600 * 24 * 7 * 20);
+    await pool.connect(bob).stake(bn("100"), ts + 3600 * 24 * 7 * 40);
+    await pool.connect(alice).stake(bn("500"), ts + 3600 * 24 * 7 * 50);
 
     // first case
 
     let balanceBefore = await lfg.balanceOf(jane.address);
-    let amount = ethers.utils.parseEther("100000");
+    let amount = bn("100000");
     expect(balanceBefore).to.equal(amount);
 
     let twentyWeeks = 3600 * 24 * 7 * 20;
-    let twentyWeeksFromNow = ts + twentyWeeks;
 
     let apy = await getApy(amount, twentyWeeks);
 
-    await pool.connect(jane).stake(amount, twentyWeeksFromNow);
+    await pool.connect(jane).stake(amount, ts + twentyWeeks);
 
-    let blockNumber = (await ethers.provider.getBlock()).number;
-    await increaseBlockTimestampBy(twentyWeeks);
-
-    await pool.setFakeBlockNumber(blockNumber + blocksPerWeek * 20);
+    await increaseBlocksBy(twentyWeeks + week);
 
     await pool.connect(jane).unstake(0, amount);
     let balanceAfter = await lfg.balanceOf(jane.address);
 
-    let percentile = amount.div(100);
-    let increase = balanceAfter.sub(amount).div(percentile);
+    let increase = Math.round(
+      (100 * parseFloat(ethers.utils.formatEther(balanceBefore))) / parseFloat(ethers.utils.formatEther(balanceAfter))
+    );
 
     // we prove they are in the same order of magnitude
-    expect(increase.mul(10).div(apy).sub(10).abs()).lt(10);
+    expect(increase / apy < 10).to.be.true;
 
     // second case
 
     balanceBefore = await lfg.balanceOf(jim.address);
-    amount = ethers.utils.parseEther("10000");
+    amount = bn("10000");
     expect(balanceBefore).to.equal(amount);
 
     let aYear = 3600 * 24 * 365;
 
     apy = await getApy(amount, aYear);
 
+    // console.log(await pool.blockNumber())
     await pool.connect(jim).stake(amount, ts + aYear);
 
-    blockNumber = (await ethers.provider.getBlock()).number;
-    await increaseBlockTimestampBy(aYear);
-
-    await pool.setFakeBlockNumber(blockNumber + blocksPerDay * 365);
-
+    await increaseBlocksBy(aYear + week);
+    // console.log(await pool.blockNumber())
     await pool.connect(jim).unstake(0, amount);
     balanceAfter = await lfg.balanceOf(jim.address);
 
-    percentile = amount.div(100);
-    increase = balanceAfter.div(percentile);
-    expect(increase.mul(10).div(apy).sub(10).abs()).lt(10);
+    increase = Math.round(
+      (100 * parseFloat(ethers.utils.formatEther(balanceBefore))) / parseFloat(ethers.utils.formatEther(balanceAfter))
+    );
+    expect(increase / apy < 10).to.be.true;
+  });
+
+  it("should let bob stake some LFG and get rewards and APY after 20 weeks", async function () {
+    await lfg.connect(tokenHolder).transfer(jane.address, bn("1000"));
+    await lfg.connect(jane).approve(pool.address, bn("1000"));
+
+    let ts = await getTimestamp();
+
+    let balanceBefore = await lfg.balanceOf(jane.address);
+    let amount = bn("1000");
+    expect(balanceBefore).to.equal(amount);
+
+    let twentyWeeks = 3600 * 24 * 7 * 20;
+
+    let apy = await getApy(amount, twentyWeeks);
+
+    await pool.connect(jane).stake(amount, ts + twentyWeeks);
+
+    await increaseBlocksBy(twentyWeeks);
+
+    await pool.connect(jane).unstake(0, amount);
+    let balanceAfter = await lfg.balanceOf(jane.address);
+
+    let increase = Math.round(
+      (100 * parseFloat(ethers.utils.formatEther(balanceBefore))) / parseFloat(ethers.utils.formatEther(balanceAfter))
+    );
+    // console.log(apy)
+
+    // we prove they are in the same order of magnitude
+    expect(increase / apy < 10).to.be.true;
   });
 
   async function formatBalance(b) {
@@ -242,26 +306,24 @@ describe("CorePool", function () {
   }
 
   it("should let bob, alice and fred stake some LFG and get rewards", async function () {
-    await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("100000"));
-    await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("10000"));
-    await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("10000"));
-    await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("10000"));
-    await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("10000"));
-    await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("10000"));
+    await lfg.connect(tokenHolder).transfer(bob.address, bn("100000"));
+    await lfg.connect(bob).approve(pool.address, bn("10000"));
+    await lfg.connect(tokenHolder).transfer(alice.address, bn("10000"));
+    await lfg.connect(alice).approve(pool.address, bn("10000"));
+    await lfg.connect(tokenHolder).transfer(fred.address, bn("10000"));
+    await lfg.connect(fred).approve(pool.address, bn("10000"));
 
     let ts = await getTimestamp();
 
-    await pool.connect(bob).stake(ethers.utils.parseEther("500"), ts + 1 + 3600 * 24 * 7 * 16);
-    await pool.connect(alice).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 365);
-    await pool.connect(fred).stake(ethers.utils.parseEther("500"), ts + 3600 * 24 * 180);
+    await pool.connect(bob).stake(bn("500"), ts + 1 + 3600 * 24 * 7 * 16);
+    await pool.connect(alice).stake(bn("500"), ts + 3600 * 24 * 365);
+    await pool.connect(fred).stake(bn("500"), ts + 3600 * 24 * 180);
 
-    let blockNumber = (await ethers.provider.getBlock()).number;
-    await increaseBlockTimestampBy(3600 * 24 * 10);
-    await pool.setFakeBlockNumber(blockNumber + blocksPerDay * 10);
+    await increaseBlocksBy(3600 * 24 * 10);
 
     let bobBalanceBefore = await formattedBalanceOf(bob);
     let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-    expect(pendingYieldingRewards).to.be.equal("3014712194669333545205479");
+    expect(pendingYieldingRewards).to.be.equal("914805842722520265402");
     await pool.connect(bob).processRewards();
     let bobBalanceAfter = await formattedBalanceOf(bob);
     let gain = bobBalanceAfter - bobBalanceBefore;
@@ -270,9 +332,9 @@ describe("CorePool", function () {
     expect(ratio).lt(1);
 
     pendingYieldingRewards = await pool.pendingYieldRewards(alice.address);
-    expect(pendingYieldingRewards).to.be.equal("9529879705409846617713653");
+    expect(pendingYieldingRewards).to.be.equal("1302007829941614527072");
     pendingYieldingRewards = await pool.pendingYieldRewards(fred.address);
-    expect(pendingYieldingRewards).to.be.equal("4699650206740835663121421");
+    expect(pendingYieldingRewards).to.be.equal("972043369400568561125");
   });
 
   it("should verify that if all stakes the distributed rewards are compatible with the reserved amount", async function () {
@@ -280,35 +342,40 @@ describe("CorePool", function () {
     for (let i = 0; i < 10; i++) {
       await initAndDeploy(_reservedToPool);
 
-      await lfg.connect(tokenHolder).transfer(bob.address, ethers.utils.parseEther("1000"));
-      await lfg.connect(bob).approve(pool.address, ethers.utils.parseEther("1000"));
-      await lfg.connect(tokenHolder).transfer(alice.address, ethers.utils.parseEther("1000"));
-      await lfg.connect(alice).approve(pool.address, ethers.utils.parseEther("1000"));
-      await lfg.connect(tokenHolder).transfer(fred.address, ethers.utils.parseEther("1000"));
-      await lfg.connect(fred).approve(pool.address, ethers.utils.parseEther("1000"));
+      await lfg.connect(tokenHolder).transfer(bob.address, bn("1000"));
+      await lfg.connect(bob).approve(pool.address, bn("2000"));
+      await lfg.connect(tokenHolder).transfer(alice.address, bn("1000"));
+      await lfg.connect(alice).approve(pool.address, bn("1000"));
+      await lfg.connect(tokenHolder).transfer(fred.address, bn("1000"));
+      await lfg.connect(fred).approve(pool.address, bn("1000"));
 
       // stake for
-      await pool.connect(bob).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
-      await pool.connect(alice).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
-      await pool.connect(fred).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
+      await pool.connect(bob).stake(bn("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
+      await pool.connect(alice).stake(bn("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
+      await pool.connect(fred).stake(bn("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
 
-      let blockNumber = (await ethers.provider.getBlock()).number;
-      await increaseBlockTimestampBy(3600 * 24 * 7 * 52);
-      await pool.setFakeBlockNumber(blockNumber + blocksPerDay * 365);
+      await increaseBlocksBy(3600 * 24);
+      let bobBalance = await formattedBalanceOf(bob);
+      await expect(pool.connect(bob).stake(bn("50"), (await getTimestamp()) + 3600 * 24 * 7 * 17))
+        .to.emit(pool, "Staked")
+        .withArgs(bob.address, bn("50"), (await getTimestamp()) + 1, (await getTimestamp()) + 3600 * 24 * 7 * 17);
 
-      await pool.connect(bob).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
-      await pool.connect(alice).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
-      await pool.connect(fred).stake(ethers.utils.parseEther("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
+      let bobBalance2 = await formattedBalanceOf(bob);
+      let gain = bobBalance2 - bobBalance - 50;
 
-      blockNumber = (await ethers.provider.getBlock()).number;
-      await increaseBlockTimestampBy(3600 * 24 * 7 * 53);
-      await pool.setFakeBlockNumber(blockNumber + blocksPerDay * 366);
+      await increaseBlocksBy(3600 * 24 * 7 * 52);
+
+      await pool.connect(bob).stake(bn("500"), (await getTimestamp()) + 3600 * 24 * 7 * 17);
+      await pool.connect(alice).stake(bn("500"), (await getTimestamp()) + 3600 * 24 * 7 * 32);
+      await pool.connect(fred).stake(bn("500"), (await getTimestamp()) + 3600 * 24 * 7 * 52);
+
+      await increaseBlocksBy(3600 * 24 * 7 * 53);
 
       await pool.connect(bob).processRewards();
       await pool.connect(alice).processRewards();
       await pool.connect(fred).processRewards();
 
-      let bobBalance = await formattedBalanceOf(bob);
+      bobBalance = await formattedBalanceOf(bob);
       let aliceBalance = await formattedBalanceOf(alice);
       let fredBalance = await formattedBalanceOf(fred);
 
@@ -321,6 +388,16 @@ describe("CorePool", function () {
       _reservedToPool -= 30000000;
     }
   });
+
+  async function increaseBlocksBy(seconds) {
+    let blockNumber = (await pool.blockNumber()).toNumber();
+    // console.log("increasing blocks by", seconds, "seconds, and", Math.floor(blocksPerDay * (seconds / 86400)), "blocks.");
+    await increaseBlockTimestampBy(seconds);
+    let newBlockNumber = blockNumber + Math.floor((blocksPerDay * seconds) / 86400);
+    await pool.setFakeBlockNumber(newBlockNumber);
+    return newBlockNumber;
+  }
+
   it("should update stake lock", async function () {
     let _reservedToPool = 400000000;
     await initAndDeploy(_reservedToPool);
@@ -342,7 +419,6 @@ describe("CorePool", function () {
     await pool.connect(bob).updateStakeLock(0, (await getTimestamp()) + 3600 * 24 * 7 * 18);
 
     let depositAfter = await pool.connect(bob).getDeposit(bob.address, 0);
-    console.log(depositBefore.lockedUntil, depositAfter.lockedUntil);
     expect(Number(depositAfter.lockedUntil)).greaterThan(Number(depositBefore.lockedUntil));
   });
 

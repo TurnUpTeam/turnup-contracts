@@ -28,11 +28,11 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
     __Pausable_init();
     if (_initBlock == 0 || _initBlock < block.number) revert InitBlockNotSet();
     _weightMultiplier = 1e6;
-    _rewardPerWeightMultiplier = _totalReserved / 1e8;
+    _rewardPerWeightMultiplier = 2e20;
+
     // preset for Polygon PoS
     _config = RewardsConfig({
-      // The factor is 9387440, but we prefer to be a bit conservative
-      tokensPerBlock: _totalReserved / 95e5,
+      tokensPerBlock: _totalReserved / 5e10,
       // one week
       blocksPerUpdate: 42000 * 7,
       initBlock: _initBlock,
@@ -40,13 +40,13 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
       endBlock: _initBlock + 42000 * 365 * 2,
       minLockTime: _minLockTime,
       totalReserved: _totalReserved,
-      distributedRewards: 0,
       totalYieldRewards: 0,
       yieldRewardsPerWeight: 0,
-      decayFactor: 97,
+      decayFactor: 93,
       lastRatioUpdate: _initBlock,
       usersLockingWeight: 0,
-      lastYieldDistribution: _initBlock
+      lastYieldDistribution: _initBlock,
+      lastDecayReduction: _initBlock
     });
   }
 
@@ -78,6 +78,11 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
     // happens and nobody triggers the function for more than a block, it still works correctly
     uint256 numberOfPeriods = (currentBlock - _config.lastRatioUpdate) / _config.blocksPerUpdate;
     uint256 newTokenPerBlock = _config.tokensPerBlock;
+    // the decay increases every 2 months by 1%
+    if (currentBlock > 8 * _config.blocksPerUpdate && _config.lastDecayReduction < currentBlock - 8 * _config.blocksPerUpdate) {
+      _config.decayFactor--;
+      _config.lastDecayReduction = currentBlock;
+    }
     for (uint256 i = 0; i < numberOfPeriods; i++) {
       newTokenPerBlock = (newTokenPerBlock * _config.decayFactor) / 100;
     }
@@ -115,7 +120,7 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
   }
 
   function getStakeWeight(uint256 lockedTime, uint256 stakedAmount) public view returns (uint256) {
-    return (stakedAmount * lockedTime * _weightMultiplier) / 365 days;
+    return ((lockedTime * _weightMultiplier) / 365 days + _weightMultiplier) * stakedAmount;
   }
 
   function weightToReward(uint256 _weight, uint256 rewardPerWeight) public view returns (uint256) {
