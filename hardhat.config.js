@@ -65,6 +65,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       polygonMumbai: process.env.POLYGON_SCAN_API,
+      polygon: process.env.POLYGON_SCAN_API,
     },
   },
   gasReporter: {
