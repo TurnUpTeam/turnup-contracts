@@ -194,6 +194,22 @@ describe("LFGFactory", function () {
       expect(await factory.connect(bob).isSignatureUsed(signature)).to.equal(true);
     });
 
+    it("testing operator function", async function () {
+      expect(await factory.connect(operator).isOperator(operator.address)).to.equal(true);
+
+      await expect(factory.setOperator(operator.address, true)).revertedWith("OperatorAlreadySet()");
+
+      await expect(factory.setOperator(operator.address, false)).emit(factory, "OperatorSet").withArgs(operator.address, false);
+
+      expect(await factory.connect(operator).isOperator(operator.address)).to.equal(false);
+
+      await expect(factory.setOperator(operator.address, false)).revertedWith("OperatorNotSet()");
+
+      await expect(factory.setOperator(operator.address, true)).emit(factory, "OperatorSet").withArgs(operator.address, true);
+
+      expect(await factory.connect(operator).isOperator(operator.address)).to.equal(true);
+    });
+
     it("should apply to mint LFG two times, collecting pending", async function () {
       let orderId = 1;
       let amount = ethers.utils.parseEther("1");

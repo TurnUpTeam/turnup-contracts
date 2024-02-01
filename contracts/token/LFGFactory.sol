@@ -178,7 +178,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     return config.operators[operator];
   }
 
-  function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner whenNotPaused { 
+  function updateDailyMintedAmounts(uint256 maxDailyMinted_) public onlyOwner whenNotPaused {
     config.maxDailyMinted = uint128(maxDailyMinted_);
     emit DailyMintedAmountsUpdated(maxDailyMinted_);
   }
@@ -256,9 +256,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     if (_mintRequests[account].lockedUntil > 0) {
       pending = _mintRequests[account].lockedUntil > block.timestamp;
       if (!pending) {
-          _updateDailyMinted(_mintRequests[account].amount, true);
-          lfg.transfer(account, _mintRequests[account].amount);
-          delete _mintRequests[account];
+        _updateDailyMinted(_mintRequests[account].amount, true);
+        lfg.transfer(account, _mintRequests[account].amount);
+        delete _mintRequests[account];
       }
     }
     return pending;
@@ -340,7 +340,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   }
 
   function claimAllPending() external whenNotPaused nonReentrant {
-  	_claimAllPending(_msgSender());
+    _claimAllPending(_msgSender());
   }
 
   function cancelApplicationToMintLfg(uint256 orderId, address account) external whenNotPaused nonReentrant {
