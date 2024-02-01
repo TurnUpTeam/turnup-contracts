@@ -225,9 +225,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     );
     if (lockedUntil < timestamp + _minLockTime) revert InvalidLockTime();
     // if there are previous completed requests, we mint the tokens before continuing
-    (bool pending, ) = _claimAllPending(_msgSender());
-    // it reverts only if there is a pending MintRequest
-    if (pending) revert PendingRequest();
+    (bool mintPending, bool stakePending) = _claimAllPending(_msgSender());
+    // it reverts if there is a pending MintRequest or MintAndStake 
+    if (mintPending || stakePending) revert PendingRequest();
     // create a new request
     _mintRequests[_msgSender()] = MintRequest({
       orderId: uint64(orderId),
@@ -279,9 +279,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     );
     if (lockedUntil < timestamp + _minLockTime) revert InvalidLockTime();
     // we process previous request to mint and stake
-    (, bool pending) = _claimAllPending(_msgSender());
-    // it reverts only if there is a pending MintAndStakeRequest
-    if (pending) revert PendingRequest();
+    (bool mintPending, bool stakePending) = _claimAllPending(_msgSender());
+    // it reverts if there is a pending MintRequest or MintAndStake 
+    if (mintPending || stakePending) revert PendingRequest();
     _mintAndStakeRequests[_msgSender()] = MintAndStakeRequest({
       orderId: uint64(orderId),
       amount: uint160(amount),
@@ -336,7 +336,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   }
 
   function claimAllPending() external whenNotPaused nonReentrant {
-    _claimAllPending(_msgSender());
+    (bool mintPending, bool stakePending) = _claimAllPending(_msgSender());
+    if (mintPending || stakePending) revert PendingRequest();
   }
 
   function cancelApplicationToMintLfg(uint256 orderId, address account) external whenNotPaused nonReentrant {
