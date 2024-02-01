@@ -322,7 +322,6 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
           _mintAndStakeRequests[account].stakeLockedUntil = uint32(block.timestamp) + uint32(poolMinLockTime) + 1;
           emit UpdateStakeLockedUntil(_mintAndStakeRequests[account].orderId, _mintAndStakeRequests[account].stakeLockedUntil);
         }
-        pending = _mintAndStakeRequests[account].lockedUntil > block.timestamp;
         _updateDailyMinted(_mintAndStakeRequests[account].amount, false);
         lfg.approve(pool, _mintAndStakeRequests[account].amount);
         ICorePool(pool).stakeAfterMint(
