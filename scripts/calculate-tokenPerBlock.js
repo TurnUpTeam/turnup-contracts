@@ -5,6 +5,9 @@ function toBigInt(number) {
   return BigInt(ethers.utils.parseEther(number.toString()).toString());
 }
 
+// This is working in theory but in practice it's not working
+// Ignore it
+
 const weeksPerYear = 52;
 const durationYears = 2; // Duration of the pool in years
 const weeklyDecay = 0.97; // 3% decay per week
