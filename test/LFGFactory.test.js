@@ -43,6 +43,15 @@ describe("LFGFactory", function () {
     [owner, bob, alice, fred, operator, validator, tokenHolder] = await ethers.getSigners();
   });
 
+  async function increaseBlocksBy(seconds) {
+    let blockNumber = (await pool.blockNumber()).toNumber();
+    // console.log("increasing blocks by", seconds, "seconds, and", Math.floor(blocksPerDay * (seconds / 86400)), "blocks.");
+    await increaseBlockTimestampBy(seconds);
+    let newBlockNumber = blockNumber + Math.floor((blocksPerDay * seconds) / 86400);
+    await pool.setFakeBlockNumber(newBlockNumber);
+    return newBlockNumber;
+  }
+
   async function initAndDeploy() {
     let maxSupply = ethers.utils.parseEther("3000000000");
     let initialSupply = ethers.utils.parseEther("900000000");
@@ -192,6 +201,51 @@ describe("LFGFactory", function () {
       await factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature);
 
       expect(await factory.connect(bob).isSignatureUsed(signature)).to.equal(true);
+    });
+
+    it("testing operator function", async function () {
+      expect(await factory.connect(operator).isOperator(operator.address)).to.equal(true);
+
+      await expect(factory.setOperator(operator.address, true)).revertedWith("OperatorAlreadySet()");
+
+      await expect(factory.setOperator(operator.address, false)).emit(factory, "OperatorSet").withArgs(operator.address, false);
+
+      expect(await factory.connect(operator).isOperator(operator.address)).to.equal(false);
+
+      await expect(factory.setOperator(operator.address, false)).revertedWith("OperatorNotSet()");
+
+      await expect(factory.setOperator(operator.address, true)).emit(factory, "OperatorSet").withArgs(operator.address, true);
+
+      expect(await factory.connect(operator).isOperator(operator.address)).to.equal(true);
+    });
+
+    it("testing setting min lock time", async function () {
+      await factory.connect(owner).setMinLockTime(43500);
+      expect(await factory.minLockTime()).to.equal("43500");
+    });
+
+    it("testing get daily minted", async function () {
+      let orderId = 1;
+      let amount = ethers.utils.parseEther("1");
+      let ts = await getTimestamp();
+      let lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      let validFor = 60 * 60 * 2;
+
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
+        .to.emit(factory, "MintRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil);
+
+      await increaseBlocksBy(lockedUntil - ts + 1);
+
+      await factory.connect(bob).claimAllPending();
+
+      let today = (await getTimestamp()) / 86400;
+      today = Math.floor(today);
+
+      expect(await factory.getDailyMinted(today)).to.equal(ethers.utils.parseEther("1"));
     });
 
     it("should apply to mint LFG two times, collecting pending", async function () {
