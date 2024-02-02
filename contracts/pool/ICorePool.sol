@@ -84,19 +84,14 @@ interface ICorePool {
   }
 
   struct RewardsConfig {
-    uint256 tokensPerBlock;
     uint256 blocksPerUpdate;
     uint256 initBlock;
     uint256 endBlock;
     uint256 minLockTime;
     uint256 totalReserved;
-    uint256 totalYieldRewards;
-    uint256 yieldRewardsPerWeight;
     uint256 decayFactor;
-    uint256 lastRatioUpdate;
-    uint256 usersLockingWeight;
-    uint256 lastYieldDistribution;
-    uint256 lastDecayReduction;
+    uint256 weightMultiplier;
+    uint256 rewardPerWeightMultiplier;
   }
 
   function stakeAfterMint(address _staker, uint256 _amount, uint64 _lockUntil) external;

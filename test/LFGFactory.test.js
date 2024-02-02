@@ -403,7 +403,7 @@ describe("LFGFactory", function () {
 
       let bobBalanceBefore = await lfg.balanceOf(bob.address);
       let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-      expect(pendingYieldingRewards).to.be.equal("5999999999999222");
+      expect(pendingYieldingRewards).to.be.equal("31578947368421048785");
 
       await expect(pool.connect(bob).unstake(0, amount)).to.emit(pool, "Unstaked").withArgs(bob.address, amount);
     });
@@ -447,7 +447,7 @@ describe("LFGFactory", function () {
 
       let bobBalanceBefore = await lfg.balanceOf(bob.address);
       let pendingYieldingRewards = await pool.pendingYieldRewards(bob.address);
-      expect(pendingYieldingRewards).to.be.equal("5999999999999222");
+      expect(pendingYieldingRewards).to.be.equal("31578947368421048785");
 
       await expect(pool.connect(bob).unstake(0, amount)).to.emit(pool, "Unstaked").withArgs(bob.address, amount);
     });
