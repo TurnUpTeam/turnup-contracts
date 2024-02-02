@@ -70,17 +70,25 @@ contract CorePool is Rewards {
 
     // if smart contract state was not updated recently, `yieldRewardsPerWeight` value
     // is outdated and we need to recalculate it in order to calculate pending rewards correctly
-    if (blockNumber() > _config.lastYieldDistribution && _config.usersLockingWeight != 0) {
+    if (blockNumber() > lastYieldDistribution && usersLockingWeight != 0) {
       uint256 multiplier = blockNumber() > _config.endBlock
-        ? _config.endBlock - _config.lastYieldDistribution
-        : blockNumber() - _config.lastYieldDistribution;
-      uint256 rewards = multiplier * _config.tokensPerBlock;
+        ? _config.endBlock - lastYieldDistribution
+        : blockNumber() - lastYieldDistribution;
 
+      uint256 _tokensPerBlock = tokensPerBlock;
+      if (blockNumber() - lastYieldDistribution > _config.blocksPerUpdate) {
+        // in production, most likely, this may never be executed
+        uint256 _passedBlocks = (blockNumber() - lastYieldDistribution) / _config.blocksPerUpdate;
+        for (uint256 i = 0; i < _passedBlocks; i++) {
+          _tokensPerBlock = (_tokensPerBlock * _config.decayFactor) / 100;
+        }
+      }
+      uint256 rewards = multiplier * _tokensPerBlock;
       // recalculated value for `yieldRewardsPerWeight`
-      newYieldRewardsPerWeight = rewardToWeight(rewards, _config.usersLockingWeight) + _config.yieldRewardsPerWeight;
+      newYieldRewardsPerWeight = rewardToWeight(rewards, usersLockingWeight) + yieldRewardsPerWeight;
     } else {
       // if smart contract state is up to date, we don't recalculate
-      newYieldRewardsPerWeight = _config.yieldRewardsPerWeight;
+      newYieldRewardsPerWeight = yieldRewardsPerWeight;
     }
 
     // based on the rewards per weight value, calculate pending rewards;
@@ -284,10 +292,10 @@ contract CorePool is Rewards {
     // update user record
     user.tokenAmount += addedAmount;
     user.totalWeight += stakeWeight;
-    user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
+    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
 
     // update global variable
-    _config.usersLockingWeight += stakeWeight;
+    usersLockingWeight += stakeWeight;
 
     // emit an event
     emit Staked(_staker, _amount, lockFrom, lockUntil);
@@ -318,9 +326,9 @@ contract CorePool is Rewards {
 
     // recalculate deposit weight
     uint256 previousWeight = stakeDeposit.weight;
-    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * _weightMultiplier) /
+    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * _config.weightMultiplier) /
       365 days +
-      _weightMultiplier) * (stakeDeposit.tokenAmount - _amount);
+      _config.weightMultiplier) * (stakeDeposit.tokenAmount - _amount);
 
     // update the deposit, or delete it if its depleted
     if (stakeDeposit.tokenAmount - _amount == 0) {
@@ -333,10 +341,10 @@ contract CorePool is Rewards {
     // update user record
     user.tokenAmount -= _amount;
     user.totalWeight = user.totalWeight - previousWeight + newWeight;
-    user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
+    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
 
     // update global variable
-    _config.usersLockingWeight = _config.usersLockingWeight - previousWeight + newWeight;
+    usersLockingWeight = usersLockingWeight - previousWeight + newWeight;
 
     lfg.safeTransfer(_msgSender(), _amount);
 
@@ -356,7 +364,7 @@ contract CorePool is Rewards {
     }
     User storage user = users[_staker];
     // calculate pending yield rewards, this value will be returned
-    pendingYield = _pendingYieldRewards(user.totalWeight);
+    pendingYield = _pendingYieldRewards(user);
 
     // if pending yield is zero - just return silently
     if (pendingYield == 0) return 0;
@@ -365,7 +373,7 @@ contract CorePool is Rewards {
 
     lfg.transfer(_staker, pendingYield);
     if (withUpdate) {
-      user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
+      user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
     }
     // emit an event
     emit YieldClaimed(_staker, pendingYield);
@@ -408,9 +416,9 @@ contract CorePool is Rewards {
 
     // update locked until value, calculate new weight
     stakeDeposit.lockedUntil = _lockedUntil;
-    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * _weightMultiplier) /
+    uint256 newWeight = (((stakeDeposit.lockedUntil - stakeDeposit.lockedFrom) * _config.weightMultiplier) /
       365 days +
-      _weightMultiplier) * stakeDeposit.tokenAmount;
+      _config.weightMultiplier) * stakeDeposit.tokenAmount;
 
     // save previous weight
     uint256 previousWeight = stakeDeposit.weight;
@@ -419,8 +427,8 @@ contract CorePool is Rewards {
 
     // update user total weight, sub yield rewards and global locking weight
     user.totalWeight = user.totalWeight - previousWeight + newWeight;
-    user.subYieldRewards = weightToReward(user.totalWeight, _config.yieldRewardsPerWeight);
-    _config.usersLockingWeight = _config.usersLockingWeight - previousWeight + newWeight;
+    user.subYieldRewards = weightToReward(user.totalWeight, yieldRewardsPerWeight);
+    usersLockingWeight = usersLockingWeight - previousWeight + newWeight;
 
     // emit an event
     emit StakeLockUpdated(_staker, _depositId, stakeDeposit.lockedFrom, _lockedUntil);

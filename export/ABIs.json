@@ -3013,11 +3013,6 @@
             "components": [
               {
                 "internalType": "uint256",
-                "name": "tokensPerBlock",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
                 "name": "blocksPerUpdate",
                 "type": "uint256"
               },
@@ -3043,43 +3038,61 @@
               },
               {
                 "internalType": "uint256",
-                "name": "totalYieldRewards",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "yieldRewardsPerWeight",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
                 "name": "decayFactor",
                 "type": "uint256"
               },
               {
                 "internalType": "uint256",
-                "name": "lastRatioUpdate",
+                "name": "weightMultiplier",
                 "type": "uint256"
               },
               {
                 "internalType": "uint256",
-                "name": "usersLockingWeight",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "lastYieldDistribution",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "lastDecayReduction",
+                "name": "rewardPerWeightMultiplier",
                 "type": "uint256"
               }
             ],
             "internalType": "struct ICorePool.RewardsConfig",
             "name": "",
             "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getCurrentValues",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -3205,6 +3218,32 @@
         "name": "initialize",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "lastRatioUpdate",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "lastYieldDistribution",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -3398,6 +3437,32 @@
         "type": "function"
       },
       {
+        "inputs": [],
+        "name": "tokensPerBlock",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "totalYieldRewards",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
         "inputs": [
           {
             "internalType": "address",
@@ -3521,6 +3586,19 @@
           }
         ],
         "name": "weightToReward",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "yieldRewardsPerWeight",
         "outputs": [
           {
             "internalType": "uint256",
