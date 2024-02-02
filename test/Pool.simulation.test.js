@@ -81,7 +81,7 @@ describe.skip("CorePool Simulation Test", function () {
 
     // pool configuration
     tokenPerBlock = 42530984996738421395n;
-    // ^ calculated using scripts/calculate-tokenPerBlock.js for a 2 years pool with 97% decay factor
+    // ^ calculated using scripts/calculate-token-per-block.js for a 2 years pool with 97% decay factor
     // and a reserved amount of 400M tokens.
 
     // console.log(tokenPerBlock / 1000000000000000000n);
@@ -124,7 +124,6 @@ describe.skip("CorePool Simulation Test", function () {
 
   async function increaseBlocksBy(seconds) {
     let blockNumber = (await pool.blockNumber()).toNumber();
-    // console.log("increasing blocks by", seconds, "seconds, and", Math.floor(blocksPerDay * (seconds / 86400)), "blocks.");
     await increaseBlockTimestampBy(seconds);
     let newBlockNumber = blockNumber + Math.floor((blocksPerDay * seconds) / 86400);
     await pool.setFakeBlockNumber(newBlockNumber);
@@ -180,7 +179,11 @@ describe.skip("CorePool Simulation Test", function () {
     async function randomAction() {
       let day = 3600 * 24;
       let week = day * 7;
+      //
       let time = Math.floor((Math.random() * day) / 4);
+      // this reduces by 4 times the duration of the test
+      // time = Math.floor((Math.random() * day));
+      //
       ts += time;
       blockNumber = await increaseBlocksBy(time);
       let lockUntil = (await getTimestamp()) + minLockTime + Math.floor(Math.random() * (week * 51 - minLockTime));
@@ -212,7 +215,16 @@ describe.skip("CorePool Simulation Test", function () {
         deposits[user.address].push({user, amount: amount, lockUntil: lockUntil});
       } else {
         console.debug(names[user.address], "gets rewards");
-        await pool.connect(user).processRewards();
+        const pending = BigInt((await pool.pendingYieldRewards(user.address)).toString());
+        if (pending > 0n) {
+          const balanceBefore = BigInt((await lfg.balanceOf(user.address)).toString());
+          await pool.connect(user).processRewards();
+          const balanceAfter = BigInt((await lfg.balanceOf(user.address)).toString());
+          const len = pending.toString().length;
+          const factor = BigInt(1 + "0".repeat(len - 3));
+          // ^ it reduces the values to 3-digit numbers
+          expect((balanceAfter - balanceBefore) / factor === pending / factor);
+        }
       }
     }
 

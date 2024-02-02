@@ -13,10 +13,14 @@ import {ICorePool} from "./ICorePool.sol";
 abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgradeable {
   error InitBlockNotSet();
 
-  uint256 internal _weightMultiplier;
-  uint256 internal _rewardPerWeightMultiplier;
-
   RewardsConfig internal _config;
+
+  uint256 public tokensPerBlock;
+  uint256 public totalYieldRewards;
+  uint256 public yieldRewardsPerWeight;
+  uint256 public lastRatioUpdate;
+  uint256 public usersLockingWeight;
+  uint256 public lastYieldDistribution;
 
   function getConfig() external view returns (RewardsConfig memory) {
     return _config;
@@ -27,12 +31,13 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
     __Ownable_init();
     __Pausable_init();
     if (_initBlock == 0 || _initBlock < block.number) revert InitBlockNotSet();
-    _weightMultiplier = 1e6;
-    _rewardPerWeightMultiplier = 2e20;
 
     // preset for Polygon PoS
+    tokensPerBlock = _totalReserved / 95e5; // conservatively, leaves around 50M tokens in the pool at the end of the farming period
+    lastRatioUpdate = _initBlock;
+    lastYieldDistribution = _initBlock;
+
     _config = RewardsConfig({
-      tokensPerBlock: _totalReserved / 5e10,
       // one week
       blocksPerUpdate: 42000 * 7,
       initBlock: _initBlock,
@@ -40,29 +45,32 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
       endBlock: _initBlock + 42000 * 365 * 2,
       minLockTime: _minLockTime,
       totalReserved: _totalReserved,
-      totalYieldRewards: 0,
-      yieldRewardsPerWeight: 0,
-      decayFactor: 93,
-      lastRatioUpdate: _initBlock,
-      usersLockingWeight: 0,
-      lastYieldDistribution: _initBlock,
-      lastDecayReduction: _initBlock
+      decayFactor: 97,
+      weightMultiplier: 1e6,
+      rewardPerWeightMultiplier: 2e20
     });
   }
 
-  function usersLockingWeight() external view returns (uint256) {
-    return _config.usersLockingWeight;
+  function getCurrentValues() external view returns (uint256, uint256, uint256, uint256, uint256, uint256) {
+    return (
+      tokensPerBlock,
+      totalYieldRewards,
+      yieldRewardsPerWeight,
+      lastRatioUpdate,
+      usersLockingWeight,
+      lastYieldDistribution
+    );
   }
 
   function shouldUpdateRatio() public view returns (bool) {
     // if yield farming period has ended
-    if (blockNumber() > _config.endBlock && _config.lastRatioUpdate == _config.endBlock) {
+    if (blockNumber() > _config.endBlock && lastRatioUpdate == _config.endBlock) {
       // TOKEN/block reward cannot be updated anymore
       return false;
     }
 
     // check if blocks/update (91252 blocks) have passed since last update
-    return blockNumber() >= _config.lastRatioUpdate + _config.blocksPerUpdate;
+    return blockNumber() >= lastRatioUpdate + _config.blocksPerUpdate;
   }
 
   error TooFrequent();
@@ -76,25 +84,25 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
     // in production it should happen many times per block, but in test, we jump to
     // new blocks, so, this make the function working also in test, and if something weird
     // happens and nobody triggers the function for more than a block, it still works correctly
-    uint256 numberOfPeriods = (currentBlock - _config.lastRatioUpdate) / _config.blocksPerUpdate;
-    uint256 newTokenPerBlock = _config.tokensPerBlock;
-    // the decay increases every 2 months by 1%
-    if (currentBlock > 8 * _config.blocksPerUpdate && _config.lastDecayReduction < currentBlock - 8 * _config.blocksPerUpdate) {
-      _config.decayFactor--;
-      _config.lastDecayReduction = currentBlock;
-    }
+    uint256 numberOfPeriods = (currentBlock - lastRatioUpdate) / _config.blocksPerUpdate;
+    uint256 newTokenPerBlock = tokensPerBlock;
     for (uint256 i = 0; i < numberOfPeriods; i++) {
       newTokenPerBlock = (newTokenPerBlock * _config.decayFactor) / 100;
     }
-    _config.tokensPerBlock = newTokenPerBlock;
-    _config.lastRatioUpdate = currentBlock;
+    tokensPerBlock = newTokenPerBlock;
+    lastRatioUpdate = currentBlock;
 
     // emit an event
-    emit TokenRatioUpdated(_config.tokensPerBlock);
+    emit TokenRatioUpdated(tokensPerBlock);
   }
 
-  function _pendingYieldRewards(uint256 _usersLockingWeight) internal view returns (uint256) {
-    return weightToReward(_usersLockingWeight, _config.yieldRewardsPerWeight);
+  //  function _pendingYieldRewards(uint256 _usersLockingWeight) internal view returns (uint256) {
+  //    return weightToReward(_usersLockingWeight, yieldRewardsPerWeight);
+  //  }
+  //
+  function _pendingYieldRewards(User memory user) internal view returns (uint256 pending) {
+    // and perform the calculation using the values read
+    return weightToReward(user.totalWeight, yieldRewardsPerWeight) - user.subYieldRewards;
   }
 
   /**
@@ -120,17 +128,17 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
   }
 
   function getStakeWeight(uint256 lockedTime, uint256 stakedAmount) public view returns (uint256) {
-    return ((lockedTime * _weightMultiplier) / 365 days + _weightMultiplier) * stakedAmount;
+    return ((lockedTime * _config.weightMultiplier) / 365 days + _config.weightMultiplier) * stakedAmount;
   }
 
   function weightToReward(uint256 _weight, uint256 rewardPerWeight) public view returns (uint256) {
     // apply the formula and return
-    return (_weight * rewardPerWeight) / _rewardPerWeightMultiplier;
+    return (_weight * rewardPerWeight) / _config.rewardPerWeightMultiplier;
   }
 
   function rewardToWeight(uint256 reward, uint256 rewardPerWeight) public view returns (uint256) {
     // apply the reverse formula and return
-    return (reward * _rewardPerWeightMultiplier) / rewardPerWeight;
+    return (reward * _config.rewardPerWeightMultiplier) / rewardPerWeight;
   }
 
   function _sync() internal virtual {
@@ -140,32 +148,32 @@ abstract contract Rewards is ICorePool, Ownable2StepUpgradeable, PausableUpgrade
     }
     // check bound conditions and if these are not met -
     // exit silently, without emitting an event
-    if (_config.endBlock < _config.lastYieldDistribution) {
+    if (_config.endBlock < lastYieldDistribution) {
       return;
     }
-    if (_config.lastYieldDistribution > blockNumber()) {
+    if (lastYieldDistribution > blockNumber()) {
       return;
     }
     // if locking weight is zero - update only `lastYieldDistribution` and exit
-    if (_config.usersLockingWeight == 0) {
-      _config.lastYieldDistribution = blockNumber();
+    if (usersLockingWeight == 0) {
+      lastYieldDistribution = blockNumber();
       return;
     }
     // to calculate the reward we need to know how many blocks passed, and reward per block
     uint256 currentBlock = blockNumber() > _config.endBlock ? _config.endBlock : blockNumber();
-    uint256 blocksPassed = currentBlock - _config.lastYieldDistribution;
+    uint256 blocksPassed = currentBlock - lastYieldDistribution;
 
     // calculate the reward
-    uint256 rewards = blocksPassed * _config.tokensPerBlock;
+    uint256 rewards = blocksPassed * tokensPerBlock;
 
-    _config.totalYieldRewards += rewards;
+    totalYieldRewards += rewards;
 
     // update rewards per weight and `lastYieldDistribution`
-    _config.yieldRewardsPerWeight += rewardToWeight(rewards, _config.usersLockingWeight);
-    _config.lastYieldDistribution = currentBlock;
+    yieldRewardsPerWeight += rewardToWeight(rewards, usersLockingWeight);
+    lastYieldDistribution = currentBlock;
 
     // emit an event
-    emit Synchronized(_config.yieldRewardsPerWeight, _config.lastYieldDistribution);
+    emit Synchronized(yieldRewardsPerWeight, lastYieldDistribution);
   }
 
   function pause() external onlyOwner {
