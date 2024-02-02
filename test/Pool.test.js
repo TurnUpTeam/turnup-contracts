@@ -68,7 +68,7 @@ describe("CorePool", function () {
     ] = await ethers.getSigners();
   });
 
-  async function initAndDeploy(_reservedToPool) {
+  async function initAndDeploy(_reservedToPool, _minLockTime = minLockTime) {
     let maxSupply = bn("3000000000");
     let initialSupply = bn("900000000");
     let amountReservedToSharesPool = bn("200000000");
@@ -108,7 +108,7 @@ describe("CorePool", function () {
       "CorePoolMock",
       lfg.address,
       blockNumber + 2,
-      minLockTime,
+      _minLockTime,
       amountReservedToPool,
       factory.address
     );
@@ -305,6 +305,78 @@ describe("CorePool", function () {
     // console.log("Increase", increase)
 
     // we prove they are in the same order of magnitude
+    expect((increase * 100) / apy < 10).to.be.true;
+  });
+
+  it("should let bob stake some LFG and get rewards and APY after 20 weeks", async function () {
+    await initAndDeploy(undefined, 600);
+    await lfg.connect(tokenHolder).transfer(jane.address, bn("1000"));
+    await lfg.connect(jane).approve(pool.address, bn("1000"));
+
+    expect((await pool.getConfig()).minLockTime).to.be.equal(600);
+
+    let ts = await getTimestamp();
+
+    let balanceBefore = await lfg.balanceOf(jane.address);
+    let amount = bn("10");
+
+    let lockedTime = 3600 * 24 * 90;
+
+    let apy = await getApy(jane.address, amount, lockedTime);
+    expect(apy).to.be.equal(1071176314);
+
+    await pool.connect(jane).stake(amount, ts + lockedTime);
+
+    await increaseBlocksBy(lockedTime);
+    await pool.connect(jane).processRewards();
+    let balanceAfter = await lfg.balanceOf(jane.address);
+
+    let balanceAfter2 = bn2n(balanceAfter);
+    let balanceBefore2 = bn2n(balanceBefore);
+
+    let increase = (balanceAfter2 - balanceBefore2) / bn2n(amount);
+    expect((increase * 100) / apy < 10).to.be.true;
+  });
+
+  it("should let bob stake some LFG and get rewards and APY after 20 weeks", async function () {
+    await initAndDeploy(undefined, 600);
+
+    let users = [bob, alice, fred, jim, red, lee];
+    let ts = await getTimestamp();
+    for (let user of users) {
+      await lfg.connect(tokenHolder).transfer(user.address, bn(1000000));
+      await lfg.connect(user).approve(pool.address, bn(1000000));
+      const amount = bn(100 + Math.round(1000 * Math.random()));
+      const lockedUntil = Math.round(ts + 3600 * 24 * 7 * (16 + (52 - 16) * Math.random()));
+      await pool.connect(user).stake(amount, lockedUntil);
+    }
+    await lfg.connect(tokenHolder).transfer(jane.address, bn("1000"));
+    await lfg.connect(jane).approve(pool.address, bn("1000"));
+
+    expect((await pool.getConfig()).minLockTime).to.be.equal(600);
+
+    await increaseBlocksBy(3600);
+
+    ts = await getTimestamp();
+
+    let balanceBefore = await lfg.balanceOf(jane.address);
+    let amount = bn("10");
+
+    let lockedTime = 3600 * 24 * 90;
+
+    let apy = await getApy(jane.address, amount, lockedTime);
+    expect(apy > 0).to.be.true;
+
+    await pool.connect(jane).stake(amount, ts + lockedTime);
+
+    await increaseBlocksBy(lockedTime);
+    await pool.connect(jane).processRewards();
+    let balanceAfter = await lfg.balanceOf(jane.address);
+
+    let balanceAfter2 = bn2n(balanceAfter);
+    let balanceBefore2 = bn2n(balanceBefore);
+
+    let increase = (balanceAfter2 - balanceBefore2) / bn2n(amount);
     expect((increase * 100) / apy < 10).to.be.true;
   });
 
