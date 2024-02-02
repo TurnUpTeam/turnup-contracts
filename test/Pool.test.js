@@ -199,7 +199,7 @@ describe("CorePool", function () {
       .mul(newYieldRewardsPerWeight)
       .div(poolConfig.rewardPerWeightMultiplier)
       .sub(userSubYieldRewards);
-    return expected.div(amount).toNumber();
+    return expected.mul(100).div(amount).toNumber();
   }
 
   function bn2n(bn) {
@@ -242,7 +242,7 @@ describe("CorePool", function () {
     let increase = (balanceAfter2 - balanceBefore2) / bn2n(amount);
     // console.log("got", balanceAfter2 - balanceBefore2);
     // console.log("Increase", increase)
-    expect(increase / apy < 10).to.be.true;
+    expect((increase * 100) / apy < 10).to.be.true;
 
     // we prove they are in the same order of magnitude
     // expect(increase / apy < 10).to.be.true;
@@ -272,7 +272,7 @@ describe("CorePool", function () {
     increase = (balanceAfter2 - balanceBefore2) / bn2n(amount);
     // console.log("got", balanceAfter2 - balanceBefore2);
     // console.log("Increase", increase)
-    // expect(increase / apy < 10).to.be.true;
+    expect((increase * 100) / apy < 10).to.be.true;
   });
 
   it("should let bob stake some LFG and get rewards and APY after 20 weeks", async function () {
@@ -305,7 +305,7 @@ describe("CorePool", function () {
     // console.log("Increase", increase)
 
     // we prove they are in the same order of magnitude
-    expect(increase / apy < 10).to.be.true;
+    expect((increase * 100) / apy < 10).to.be.true;
   });
 
   async function formatBalance(b) {
