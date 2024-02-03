@@ -3466,6 +3466,24 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "newPool",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
+          }
+        ],
+        "name": "transferBalance",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "newOwner",
             "type": "address"
           }
@@ -4223,6 +4241,19 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "pool_",
+            "type": "address"
+          }
+        ],
+        "name": "fixPool",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
@@ -5106,6 +5137,19 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "pool_",
+            "type": "address"
+          }
+        ],
+        "name": "fixPool",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
