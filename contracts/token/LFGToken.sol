@@ -88,6 +88,13 @@ contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradea
     _transfer(address(this), pool, amountReservedToPool);
   }
 
+  // we do not add variable to avoid risks with the storage schema
+  // execute this only one time
+  function fixPool(address pool_) external onlyOwner {
+    if (pool_ == address(0)) revert NoZeroAddress();
+    pool = pool_;
+  }
+
   function setSharesPool(address sharesPool_) external onlyOwner {
     if (sharesPool_ == address(0)) revert NoZeroAddress();
     if (sharesPool != address(0)) revert AlreadySet();

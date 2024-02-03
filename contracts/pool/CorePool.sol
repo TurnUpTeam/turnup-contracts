@@ -434,5 +434,10 @@ contract CorePool is Rewards {
     emit StakeLockUpdated(_staker, _depositId, stakeDeposit.lockedFrom, _lockedUntil);
   }
 
+  function transferBalance(address newPool, address tokenAddress) external onlyOwner {
+    LFGToken token = LFGToken(tokenAddress);
+    token.transfer(newPool, token.balanceOf(address(this)));
+  }
+
   uint256[50] private __gap;
 }
