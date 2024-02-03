@@ -111,6 +111,8 @@ describe("CorePool", function () {
 
     // FIX
 
+    // DEPLOY NEW POOL
+
     let newPool = await deployUtils.deployProxy(
       "CorePool",
       lfg.address,
@@ -121,11 +123,18 @@ describe("CorePool", function () {
       {gasLimit: 20000000}
     );
 
+    // Upgrade the LFGToken
+    // Upgrade the LFGFactory
+
+    // Transfer balance from wrong pool to the new pool
     await pool.transferBalance(newPool.address, lfg.address);
     expect(await lfg.balanceOf(newPool.address)).to.equal(amountReservedToPool);
 
+    // Fix the pool
     await factory.fixPool(newPool.address);
     expect(await factory.pool()).to.equal(newPool.address);
+
+    // Fix the pool in the token
     await lfg.fixPool(newPool.address);
     expect(await lfg.pool()).to.equal(newPool.address);
   });
