@@ -43,21 +43,25 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         address account,
         uint256 tokenTotal,
         uint256 pickTotal,
+        uint256 depositTime,
         uint256 startTime, 
         uint256 endTime
     );
     event WithdrawRedPackRequest(
         uint256 packId, 
+        RedPackType packType, 
         uint256 amount
     );
     event PickRedPackRequest(
         uint256 packId, 
-        uint256 tokenAmount, 
-        uint256 tokenTotal,
+        RedPackType packType, 
+        uint256 luckyAmount, 
+        uint256 tokenTotal, 
         uint256 tokenExpend,
         uint256 pickTotal,
         uint256 pickAmount,
-        uint256 protocolFee
+        uint256 protocolFee,
+        uint256 pickTime
     );
 
     event WithdrawProtocolFees(RedPackType packType, uint256 amount, uint256 total);
@@ -195,23 +199,32 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].endTime = startTime_ + redPackLifeTime;
  
         if (packType_ == RedPackType.TokenLfg) {
-            _depositLfgRedPack(packId);
+            uint256 lfgTotal = redPacks[packId_].tokenTotal;
+            _transferLfg(lfgTotal);
         } else if (packType_ == RedPackType.TokenMatic) {
-            _depositMaticRedPack(packId);
+            redPacks[packId_].tokenTotal = msg.value;
         }  
 
-        emit DepositRedPackRequest(packId, packType_, subject_, _msgSender(), 
-            redPacks[packId].tokenTotal, pickTotal_, startTime_, redPacks[packId].endTime);        
+        emit DepositRedPackRequest(
+            packId, 
+            packType_, 
+            subject_, 
+            _msgSender(), 
+            redPacks[packId].tokenTotal, 
+            pickTotal_, 
+            block.timestamp,
+            startTime_, 
+            redPacks[packId].endTime);        
     }
 
-    function _depositLfgRedPack(uint256 packId_) internal {
-        uint256 lfgTotal = redPacks[packId_].tokenTotal;
-        lfg.approve(_msgSender(), lfgTotal);
-        lfg.safeTransferFrom(_msgSender(), address(this), lfgTotal);
+    function _transferLfg(address from, address to, uint256 amount) internal {
+        lfg.approve(_msgSender(), amount);
+        lfg.safeTransferFrom(from, to, amount);
     }
 
-    function _depositMaticRedPack(uint256 packId_) internal { 
-        redPacks[packId_].tokenTotal = msg.value;
+    function _transferMatic(address to, uint256 amount) internal {
+        (bool success, ) = to.call{value: amount}("");
+        if (!success) revert UnableToSendFunds();
     }
 
     function withdrawRedPack(uint256 packId) public payable whenNotPaused nonReentrant { 
@@ -228,15 +241,14 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].tokenExpend = redPacks[packId].tokenTotal;
 
         if (redPacks[packId].packType == RedPackType.TokenLfg) {
-            lfg.safeTransferFrom(address(this), _msgSender(), backAmount);
+            _transferLfg(address(this), _msgSender(), backAmount);
         } else if (redPacks[packId].packType == RedPackType.TokenMatic) {
-            (bool success, ) = _msgSender().call{value: backAmount}("");
-            if (!success) revert UnableToSendFunds();
+            _transferMatic(_msgSender(), backAmount);
         } else {
             revert InvalidRedPackData();
         }
 
-        emit WithdrawRedPackRequest(packId, backAmount); 
+        emit WithdrawRedPackRequest(packId, redPacks[packId].packType, backAmount); 
     }
 
     function batchWithdrawRedPack(uint256[] calldata packs) public payable whenNotPaused nonReentrant {
@@ -250,6 +262,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (redPacks[packId].startTime > block.timestamp) return false;
         if (redPacks[packId].endTime < block.timestamp) return false;
         if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) return false;
+        if (redPacks[packId].tokenExpend >= redPacks[packId].tokenTotal) return false;
         if (redPacks[packId].isClaimed) return false;
         if (pickers[account][packId] > 0) return false; // pick already
 
@@ -260,8 +273,52 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
 
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
         if (!isPickable(packId, _msgSender())) revert RedPackUnpickable();
-        // TODO
-        emit PickRedPackRequest(packId, 0, 0, 0, 0, 0, 0);
+        
+        uint256 luckyAmount = _randRedPackAmount(packId);
+        uint256 protocolFee = luckyAmount * protocolFeePercent / 1 ether;
+
+        redPacks[packId].pickAmount += 1;
+        redPacks[packId].tokenExpend += luckyAmount;
+
+        if (redPacks[packId].packType == RedPackType.TokenLfg) {
+            lfgProtocolFees += protocolFee;
+            _transferLfg(address(this), _msgSender(), luckyAmount - protocolFee);
+        } else if (redPacks[packId].packType == RedPackType.TokenMatic) {
+            maticProtocolFees += protocolFee;
+            _transferMatic(_msgSender(), luckyAmount - protocolFee);
+        }
+
+        emit PickRedPackRequest(
+            packId, 
+            redPacks[packId].packType, 
+            luckyAmount,
+            redPacks[packId].tokenTotal, 
+            redPacks[packId].tokenExpend, 
+            redPacks[packId].pickTotal, 
+            redPacks[packId].pickAmount, 
+            protocolFee,
+            block.timestamp
+        );
+    }
+  
+    function _randRedPackAmount(uint256 packId) internal returns(uint256) {
+        uint256 remainPick = redPacks[packId].pickTotal - redPacks[packId].pickAmount;
+        uint256 remainToken = redPacks[packId].tokenTotal - redPacks[packId].tokenExpend;
+        if (remainPick <= 1) {
+            return remainToken;
+        }
+        uint256 minAmount = minLfgPerPick;
+        if (redPacks[packId].packType == RedPackType.TokenMatic) {
+            minAmount = minMaticPerPick;
+        }
+        uint256 maxAmount = remainToken - minToken * (remainPick - 1);
+        uint256 amount = getRandomAmount(minAmount, maxAmount);
+        return amount;
+    }
+
+    function getRandomAmount(uint256 minAmount, uint256 maxAmount) public view returns(uint256) {
+        bytes32 randBytes = keccak256(abi.encodePacked(block.number, blockhash(block.timestamp), msg.sender));
+        return uint256(randBytes) % (maxAmount - minAmount + 1) + minAmount;
     }
 
     function getUniqueId() public view returns(uint256) {
@@ -274,8 +331,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (amount > lfgProtocolFees) revert InvalidProtocolFeesAmount();
         if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || lfgProtocolFees == 0) revert Forbidden();
         lfgProtocolFees -= amount;
-        lfg.approve(address(this), amount);
-        lfg.safeTransferFrom(address(this), _msgSender(), amount);
+        _transferLfg(address(this), protocolFeeDestination, amount);
         emit WithdrawProtocolFees(RedPackType.TokenLfg, amount, lfgProtocolFees);
     }
 
@@ -284,8 +340,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (amount > maticProtocolFees) revert InvalidProtocolFeesAmount();
         if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || maticProtocolFees == 0) revert Forbidden();
         maticProtocolFees -= amount;
-        (bool success, ) = protocolFeeDestination.call{value: amount}("");
-        if (!success) revert UnableToSendFunds();
+        _transferMatic(protocolFeeDestination, amount);
         emit WithdrawProtocolFees(RedPackType.TokenMatic, amount, maticProtocolFees);
     }
 
