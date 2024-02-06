@@ -18,9 +18,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvalidZeroLfg();
     error InvalidNoZeroLfg();
     error InvalidZeroShares();
-    error InvalidNoZeroShares();
-    error InvalidMinLfgPerPick();
-    error InvalidMinMaticPerPick(); 
+    error InvalidNoZeroShares();  
     error InvaildRedPackTokenTotal();
     error InvaildRedPackPickTotal();
     error InvalidProtocolFeesAmount();
@@ -130,12 +128,11 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
   
     function updateMinLfgPerPick(uint256 minLfgPerPick_) public onlyOwner {
-        if (minLfgPerPick_ < 100 ether) revert InvalidMinLfgPerPick();
+        if (minLfgPerPick_ == 0) revert InvalidMinLfgPerPick();
         minLfgPerPick = minLfgPerPick_;
     }
 
-    function updateMinMaticPerPick(uint256 minMaticPerPick_) public onlyOwner {
-        if (minMaticPerPick_ < 1 ether / 10) revert InvalidMinMaticPerPick();
+    function updateMinMaticPerPick(uint256 minMaticPerPick_) public onlyOwner { 
         minMaticPerPick = minMaticPerPick_;
     }
 
