@@ -128,7 +128,6 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
   
     function updateMinLfgPerPick(uint256 minLfgPerPick_) public onlyOwner {
-        if (minLfgPerPick_ == 0) revert InvalidMinLfgPerPick();
         minLfgPerPick = minLfgPerPick_;
     }
 
