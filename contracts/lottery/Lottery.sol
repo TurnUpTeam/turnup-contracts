@@ -259,7 +259,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
-        if (!isPickable(pickId, _msgSender())) revert RedPackUnpickable();
+        if (!isPickable(packId, _msgSender())) revert RedPackUnpickable();
         // TODO
         emit PickRedPackRequest(packId, 0, 0, 0, 0, 0, 0);
     }
