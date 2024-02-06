@@ -28,14 +28,12 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvaildRedPackPickTotal();
     error InvalidProtocolFeesAmount();
     error Forbidden();
-    error NotSubjectHolder();
-    error PendingRequest();
+    error NotSubjectHolder(); 
+    error RedPackUnpickable();
     error InvalidRedPackId();
     error InvaildRedPackTime();
     error NotFoundRedPack();
-    error InvalidRedPackData();
-    error WithdrawCantBePickable();
-    error WithdrawCantBeEmpty();
+    error InvalidRedPackData();  
     error UnableToSendFunds();
  
     event DepositRedPackRequest(
@@ -147,19 +145,6 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     function updateProtocolFeeDestination(address feeDestination_) public onlyOwner {
         protocolFeeDestination = feeDestination_;
     }
-  
-    function isPickable(uint256 packId, address account) public view returns(bool) {
-        if (redPacks[packId].packId == 0) return false;
-        if (redPacks[packId].startTime > block.timestamp) return false;
-        if (redPacks[packId].endTime < block.timestamp) return false;
-        if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) return false;
-        if (redPacks[packId].isClaimed) return false;
-        if (pickers[account][packId] > 0) return false; // pick already
-
-        if (!isHolder(redPacks[packId].subject, account)) return false;
-
-        return true;
-    }
 
     function isHolder(address subject, address account) public view returns(bool) {
         uint256 holdNum = shares.getBalanceOf(subject, account);
@@ -260,7 +245,21 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         }
     }
 
+    function isPickable(uint256 packId, address account) public view returns(bool) {
+        if (redPacks[packId].packId == 0) return false;
+        if (redPacks[packId].startTime > block.timestamp) return false;
+        if (redPacks[packId].endTime < block.timestamp) return false;
+        if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) return false;
+        if (redPacks[packId].isClaimed) return false;
+        if (pickers[account][packId] > 0) return false; // pick already
+
+        if (!isHolder(redPacks[packId].subject, account)) return false;
+
+        return true;
+    }
+
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
+        if (!isPickable()) revert RedPackUnpickable();
         // TODO
         emit PickRedPackRequest(packId, 0, 0, 0, 0, 0, 0);
     }
