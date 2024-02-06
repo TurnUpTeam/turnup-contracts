@@ -131,11 +131,11 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         return (holdNum > 0);
     }
 
-    function _checkRedPackConfig() internal (
+    function _checkRedPackConfig(
         RedPackType packType_, 
         uint256 tokenTotal_, 
         uint32 pickTotal_, 
-        uint256 startTime_) {
+        uint256 startTime_) internal {
         if (packType_ != RedPackType.TokenLfg && packType_ != RedPackType.TokenMatic) revert InvaildRedPackPickTotal();
         if (startTime_ + redPackLifeTime < block.timestamp) revert InvaildRedPackTime();
         if (pickTotal_ <= 0) revert InvaildRedPackPickTotal();
