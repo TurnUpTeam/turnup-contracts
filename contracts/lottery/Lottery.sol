@@ -46,7 +46,19 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 startTime, 
         uint256 endTime
     );
-    event WithdrawRedPackRequest(uint256 packId);
+    event WithdrawRedPackRequest(
+        uint256 packId, 
+        uint256 amount
+    );
+    event PickRedPackRequest(
+        uint256 packId, 
+        uint256 tokenAmount, 
+        uint256 tokenTotal,
+        uint256 tokenExpend,
+        uint255 pickTotal,
+        uint256 pickAmount,
+        uint256 protocolFee
+    );
 
     enum RedPackType {
         TokenLfg,
@@ -216,7 +228,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
             revert InvalidRedPackData();
         }
 
-        emit WithdrawRedPackRequest(packId); 
+        emit WithdrawRedPackRequest(packId, backAmount); 
     }
 
     function batchWithdrawRedPack(uint256[] calldata packs) public payable whenNotPaused nonReentrant {
@@ -226,7 +238,8 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
-
+        // TODO
+        emit PickRedPackRequest(packId, 0, 0, 0, 0, 0, 0);
     }
 
     function getUniqueId() public view returns(uint256) {
