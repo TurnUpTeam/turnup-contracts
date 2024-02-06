@@ -114,14 +114,14 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
   
     function isPickable(uint256 packId, address account) public view returns(bool) {
-        if (redPacks[packId].packId == 0) return false
+        if (redPacks[packId].packId == 0) return false;
         if (redPacks[packId].startTime > block.timestamp) return false;
         if (redPacks[packId].endTime < block.timestamp) return false;
         if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) return false;
         if (redPacks[packId].isClaimed) return false;
         if (pickers[account][packId] > 0) return false; // pick already
 
-        if !isHolder() return false;
+        if (!isHolder()) return false;
 
         return true;
     }
