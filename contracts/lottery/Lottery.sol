@@ -52,6 +52,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     event PickRedPackRequest(
         uint256 packId, 
         RedPackType packType, 
+        address account,
         uint256 luckyAmount, 
         uint256 tokenTotal, 
         uint256 tokenExpend,
@@ -86,6 +87,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     uint256 public minLfgPerPick;
     uint256 public minMaticPerPick;
     uint256 public redPackLifeTime;
+    uint256 public maxStartTime;
     uint256 public protocolFeePercent;
     address public protocolFeeDestination;
     uint256 public lfgProtocolFees;
@@ -101,6 +103,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 minLfgPerPick_, 
         uint256 minMaticPerPick_, 
         uint256 redPackLifeTime_,
+        uint256 maxStartTime_,
         uint256 protocolFeePercent_,
         address protocolFeeDestination_) public initializer {
         __Ownable_init();
@@ -109,6 +112,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         updateMinLfgPerPick(minLfgPerPick_);
         updateMinMaticPerPick(minMaticPerPick_);
         updateRedPackLifeTime(redPackLifeTime_);
+        updateMaxStartTime(maxStartTime_);
         updateProtocolFeePercent(protocolFeePercent_);
         updateProtocolFeeDestination(protocolFeeDestination_);
     }
@@ -137,6 +141,10 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
 
     function updateRedPackLifeTime(uint256 redPackLifeTime_) public onlyOwner {
         redPackLifeTime = redPackLifeTime_;
+    }
+
+    function updateMaxStartTime(uint256 maxStartTime_) public onlyOwner {
+        maxStartTime = maxStartTime_;
     }
 
     function updateProtocolFeePercent(uint256 feePercent_) public onlyOwner {
@@ -177,6 +185,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint32 pickTotal_, 
         uint256 startTime_  
     ) public payable whenNotPaused nonReentrant {
+        if (startTime_ == 0) startTime_ = block.timestamp;
         _checkRedPackConfig(packType_, tokenTotal_, pickTotal_, startTime_);
         
         if (!isHolder(subject_, _msgSender())) revert NotSubjectHolder();
@@ -287,7 +296,8 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         emit PickRedPackRequest(
             packId, 
             redPacks[packId].packType, 
-            luckyAmount,
+            _msgSender(),
+            luckyAmount - protocolFee,
             redPacks[packId].tokenTotal, 
             redPacks[packId].tokenExpend, 
             redPacks[packId].pickTotal, 
