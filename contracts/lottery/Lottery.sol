@@ -103,7 +103,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 minMaticPerPick_, 
         uint256 redPackLifeTime_,
         uint256 protocolFeePercent_,
-        uint256 protocolFeeDestination_) public initializer {
+        address protocolFeeDestination_) public initializer {
         __Ownable_init();
         __Pausable_init();   
         
