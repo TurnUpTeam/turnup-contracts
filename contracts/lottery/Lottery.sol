@@ -100,7 +100,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
   
     function updateMinLfgPerPick(uint256 minLfgPerPick_) public onlyOwner {
-        if (minLfgPerPick_ < 100 ether) revert InvalidMinLfgPerTick();
+        if (minLfgPerPick_ < 100 ether) revert InvalidMinLfgPerPick();
         minLfgPerPick = minLfgPerPick_;
     }
 
@@ -158,7 +158,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     ) public payable whenNotPaused nonReentrant {
         _checkRedPackConfig(packType_, tokenTotal_, pickTotal_, startTime_);
         
-        if (!isHolder(subject, _msgSender())) revert NotSubjectHolder();
+        if (!isHolder(subject_, _msgSender())) revert NotSubjectHolder();
 
         uint256 packId = getUniqueId();
         if (redPacks[packId].packId != 0) revert InvalidRedPackId();
@@ -180,8 +180,8 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
             _depositMaticRedPack(packId);
         }  
 
-        emit DepositRedPackRequest(packId, packType_, subject, _msgSender(), 
-            redPacks[packId].tokenTotal, pickTotal, startTime, redPacks[packId].endTime);        
+        emit DepositRedPackRequest(packId, packType_, subject_, _msgSender(), 
+            redPacks[packId].tokenTotal, pickTotal_, startTime_, redPacks[packId].endTime);        
     }
 
     function _depositLfgRedPack(uint256 packId_) internal {
