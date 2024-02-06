@@ -89,13 +89,13 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
 
     function setLFGToken(address lfg_) public onlyOwner {
         if (lfg_ == address(0)) revert InvalidZeroLfg();
-        if (lfg != address(0)) revert InvalidNoZeroLfg();
+        if (address(lfg) != address(0)) revert InvalidNoZeroLfg();
         lfg = LFGToken(lfg_);
     }
 
     function setShares(address shares_) public onlyOwner {
         if (shares_ == address(0)) revert InvalidZeroShares();
-        if (shares != address(0)) revert InvalidNoZeroShares();
+        if (address(shares) != address(0)) revert InvalidNoZeroShares();
         shares = TurnupSharesV4(shares_);
     }
   
@@ -121,7 +121,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (redPacks[packId].isClaimed) return false;
         if (pickers[account][packId] > 0) return false; // pick already
 
-        if (!isHolder()) return false;
+        if (!isHolder(redPacks[packId].subject, account)) return false;
 
         return true;
     }
@@ -198,7 +198,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (packId == 0) revert NotFoundRedPack();
         if (redPacks[packId].packId != packId) revert InvalidRedPackData();
         if (redPacks[packId].endTime > block.timestamp) return;
-        if (redPacks[packId].tokenTotal <= redPacks[packId].tokenExpand) return;
+        if (redPacks[packId].tokenTotal <= redPacks[packId].tokenExpend) return;
         if (redPacks[packId].isClaimed) return;
         if (redPacks[packId].subject != _msgSender()) return;
 
