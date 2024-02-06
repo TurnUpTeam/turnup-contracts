@@ -300,7 +300,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         );
     }
   
-    function _randRedPackAmount(uint256 packId) internal returns(uint256) {
+    function _randRedPackAmount(uint256 packId) internal view returns(uint256) {
         uint256 remainPick = redPacks[packId].pickTotal - redPacks[packId].pickAmount;
         uint256 remainToken = redPacks[packId].tokenTotal - redPacks[packId].tokenExpend;
         if (remainPick <= 1) {
