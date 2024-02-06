@@ -26,6 +26,8 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvalidRedPackType(); 
     error InvaildRedPackTokenTotal();
     error InvaildRedPackPickTotal();
+    error InvalidProtocolFeesAmount();
+    error Forbidden();
     error NotSubjectHolder();
     error PendingRequest();
     error InvalidRedPackId();
@@ -60,6 +62,8 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 protocolFee
     );
 
+    event WithdrawProtocolFees(RedPackType packType, uint256 amount, uint256 total);
+
     enum RedPackType {
         TokenLfg,
         TokenMatic
@@ -83,6 +87,10 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     uint256 public minLfgPerPick;
     uint256 public minMaticPerPick;
     uint256 public redPackLifeTime;
+    uint256 public protocolFeePercent;
+    address public protocolFeeDestination;
+    uint256 public lfgProtocolFees;
+    uint256 public maticProtocolFees;
  
     LFGToken public lfg;
     TurnupSharesV4 public shares;
@@ -90,13 +98,20 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     mapping(address => mapping(uint256=>uint256)) public pickers;
     mapping(uint256 => RedPackConfig) public redPacks;
     
-    function initialize(uint256 minLfgPerPick_, uint256 minMaticPerPick_, uint256 redPackLifeTime_) public initializer {
+    function initialize(
+        uint256 minLfgPerPick_, 
+        uint256 minMaticPerPick_, 
+        uint256 redPackLifeTime_,
+        uint256 protocolFeePercent_,
+        uint256 protocolFeeDestination_) public initializer {
         __Ownable_init();
         __Pausable_init();   
         
         updateMinLfgPerPick(minLfgPerPick_);
         updateMinMaticPerPick(minMaticPerPick_);
         updateRedPackLifeTime(redPackLifeTime_);
+        updateProtocolFeePercent(protocolFeePercent_);
+        updateProtocolFeeDestination(protocolFeeDestination_);
     }
 
     function setLFGToken(address lfg_) public onlyOwner {
@@ -123,6 +138,14 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
 
     function updateRedPackLifeTime(uint256 redPackLifeTime_) public onlyOwner {
         redPackLifeTime = redPackLifeTime_;
+    }
+
+    function updateProtocolFeePercent(uint256 feePercent_) public onlyOwner {
+        protocolFeePercent = feePercent_;
+    }
+
+    function updateProtocolFeeDestination(address feeDestination_) public onlyOwner {
+        protocolFeeDestination = feeDestination_;
     }
   
     function isPickable(uint256 packId, address account) public view returns(bool) {
@@ -245,6 +268,16 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     function getUniqueId() public view returns(uint256) {
         bytes32 randBytes = keccak256(abi.encodePacked(block.number, blockhash(block.timestamp), msg.sender));
         return uint256(randBytes);
+    }
+
+    function withdrawLfgProtocolFees(uint256 amount) public external nonReentrant {
+        if (amount == 0) amount = lfgProtocolFees;
+        if (amount > lfgProtocolFees) revert InvalidProtocolFeesAmount();
+        if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || lfgProtocolFees == 0) revert Forbidden();
+        
+        lfgProtocolFees -= amount;
+        lfg.approve(address(this), lfgTotal);
+        lfg.safeTransferFrom(address(this), _msgSender(), amount);
     }
 
     function pause() external onlyOwner {
