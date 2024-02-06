@@ -13,40 +13,46 @@ async function main() {
     LOTTERY_MIN_LFG_PER_PICK,
     LOTTERY_MIN_MATIC_PER_PICK,
     LOTTERY_RED_PACK_LIFE_TIME,
+    LOTTERY_MAX_START_TIME,
     LOTTERY_PROTOCOL_FEE_PERCENT,
     LOTTERY_PROTOCOL_FEE_DESTINATION,
   } = process.env;
 
 
-  let lfgAddress = "";
-  let sharesAddress = "";
+  let lfgAddress = "0x2aA9B551929d55fa8ecf6e3b009E13bde9E79bA8";
+  let sharesAddress = "0x133E84D51a6852f9ACEB0Fef2E2D0a6a9705EBb7";
 
   let minLfgPerPick = ethers.utils.parseEther(LOTTERY_MIN_LFG_PER_PICK);
   let minMaticPerPick = ethers.utils.parseEther(LOTTERY_MIN_MATIC_PER_PICK);
   let protocolFeePercent = ethers.utils.parseEther(LOTTERY_PROTOCOL_FEE_PERCENT);
 
+  let gasPrice = ethers.utils.parseUnits("150", "gwei");
+
   const factory = await ethers.getContractFactory("Lottery");
   const lottery = await upgrades.deployProxy(
     factory, 
-    minLfgPerPick,
-    minMaticPerPick,
-    LOTTERY_RED_PACK_LIFE_TIME,
-    protocolFeePercent,
-    LOTTERY_PROTOCOL_FEE_DESTINATION,
+    [  
+      minLfgPerPick,
+      minMaticPerPick,
+      LOTTERY_RED_PACK_LIFE_TIME,
+      LOTTERY_MAX_START_TIME,
+      protocolFeePercent,
+      LOTTERY_PROTOCOL_FEE_DESTINATION,
+    ],
     {
       kind: "transparent",
       redeployImplementation: "always", 
       timeout: 180000,
     }
   );
-  await turnup.deployed();
+  await lottery.deployed();
 
-  console.log("Lottery(Proxy) address:", await turnup.address);
-  console.log("Lottery(Implementation) address:", await upgrades.erc1967.getImplementationAddress(turnup.address));
-  console.log("Lottery(Admin) address:", await upgrades.erc1967.getAdminAddress(turnup.address));
+  console.log("Lottery(Proxy) address:", await lottery.address);
+  console.log("Lottery(Implementation) address:", await upgrades.erc1967.getImplementationAddress(lottery.address));
+  console.log("Lottery(Admin) address:", await upgrades.erc1967.getAdminAddress(lottery.address));
 
-  await lottery.setLFGToken(lfgAddress);
-  await lottery.setShares(sharesAddress);
+  await lottery.setLFGToken(lfgAddress, {gasPrice: gasPrice});
+  await lottery.setShares(sharesAddress, {gasPrice: gasPrice});
     
   console.log("minLfgPerPick:", await lottery.minLfgPerPick());
   console.log("minMaticPerPick:", await lottery.minMaticPerPick());
