@@ -5,8 +5,6 @@ pragma solidity 0.8.20;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {AddressUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import {SafeMathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -22,8 +20,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvalidZeroShares();
     error InvalidNoZeroShares();
     error InvalidMinLfgPerPick();
-    error InvalidMinMaticPerPick();
-    error InvalidRedPackType(); 
+    error InvalidMinMaticPerPick(); 
     error InvaildRedPackTokenTotal();
     error InvaildRedPackPickTotal();
     error InvalidProtocolFeesAmount();
@@ -316,12 +313,12 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function getRandomAmount(uint256 minAmount, uint256 maxAmount) public view returns(uint256) {
-        bytes32 randBytes = keccak256(abi.encodePacked(block.number, blockhash(block.timestamp), msg.sender));
+        bytes32 randBytes = keccak256(abi.encodePacked(block.number, blockhash(block.timestamp), _msgSender()));
         return uint256(randBytes) % (maxAmount - minAmount + 1) + minAmount;
     }
 
     function getUniqueId() public view returns(uint256) {
-        bytes32 randBytes = keccak256(abi.encodePacked(block.number, blockhash(block.timestamp), msg.sender));
+        bytes32 randBytes = keccak256(abi.encodePacked(block.number, blockhash(block.timestamp), _msgSender()));
         return uint256(randBytes);
     }
 
