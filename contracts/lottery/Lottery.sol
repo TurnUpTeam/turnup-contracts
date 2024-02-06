@@ -75,7 +75,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     LFGToken public lfg;
     TurnupSharesV4 public shares;
 
-    mapping(address => mapping(uint256,uint256)) public pickers;
+    mapping(address => mapping(uint256=>uint256)) public pickers;
     mapping(uint256 => RedPackConfig) public redPacks;
     
     function initialize(uint256 minLfgPerPick_, uint256 minMaticPerPick_, uint256 redPackLifeTime_) public initializer {
