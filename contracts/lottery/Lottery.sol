@@ -110,7 +110,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function updateRedPackLifeTime(uint256 redPackLifeTime_) public onlyOwner {
-        redPackLifeTime = redPackLifeTime_
+        redPackLifeTime = redPackLifeTime_;
     }
   
     function isPickable(uint256 packId, address account) public view returns(bool) {
