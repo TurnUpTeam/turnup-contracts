@@ -275,7 +275,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (amount > lfgProtocolFees) revert InvalidProtocolFeesAmount();
         if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || lfgProtocolFees == 0) revert Forbidden();
         lfgProtocolFees -= amount;
-        lfg.approve(address(this), lfgTotal);
+        lfg.approve(address(this), amount);
         lfg.safeTransferFrom(address(this), _msgSender(), amount);
         emit WithdrawProtocolFees(RedPackType.TokenLfg, amount, lfgProtocolFees);
     }
