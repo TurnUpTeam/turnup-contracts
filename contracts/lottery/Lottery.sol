@@ -199,10 +199,9 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].endTime = startTime_ + redPackLifeTime;
  
         if (packType_ == RedPackType.TokenLfg) {
-            uint256 lfgTotal = redPacks[packId_].tokenTotal;
-            _transferLfg(lfgTotal);
+            _transferLfg(redPacks[packId].tokenTotal);
         } else if (packType_ == RedPackType.TokenMatic) {
-            redPacks[packId_].tokenTotal = msg.value;
+            redPacks[packId].tokenTotal = msg.value;
         }  
 
         emit DepositRedPackRequest(
@@ -311,7 +310,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (redPacks[packId].packType == RedPackType.TokenMatic) {
             minAmount = minMaticPerPick;
         }
-        uint256 maxAmount = remainToken - minToken * (remainPick - 1);
+        uint256 maxAmount = remainToken - minAmount * (remainPick - 1);
         uint256 amount = getRandomAmount(minAmount, maxAmount);
         return amount;
     }
