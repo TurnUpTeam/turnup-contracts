@@ -55,7 +55,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 tokenAmount, 
         uint256 tokenTotal,
         uint256 tokenExpend,
-        uint255 pickTotal,
+        uint256 pickTotal,
         uint256 pickAmount,
         uint256 protocolFee
     );
