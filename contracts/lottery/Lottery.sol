@@ -127,11 +127,11 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function isHolder(address subject, address account) public view returns(bool) {
-        uint256 holdNum = shares.getBalanceOf(subject, account)
-        return holdNum > 0;
+        uint256 holdNum = shares.getBalanceOf(subject, account);
+        return (holdNum > 0);
     }
 
-    function _checkRedPackConfig internal (
+    function _checkRedPackConfig() internal (
         RedPackType packType_, 
         uint256 tokenTotal_, 
         uint32 pickTotal_, 
