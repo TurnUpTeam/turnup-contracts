@@ -277,7 +277,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         lfgProtocolFees -= amount;
         lfg.approve(address(this), lfgTotal);
         lfg.safeTransferFrom(address(this), _msgSender(), amount);
-        emit WithdrawProtocolFees(RedPackType.TokenLfg, amount, lfgProtocolFees)
+        emit WithdrawProtocolFees(RedPackType.TokenLfg, amount, lfgProtocolFees);
     }
 
     function withdrawMaticProtocolFees(uint256 amount) public nonReentrant {
@@ -287,7 +287,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         maticProtocolFees -= amount;
         (bool success, ) = protocolFeeDestination.call{value: amount}("");
         if (!success) revert UnableToSendFunds();
-        emit WithdrawProtocolFees(RedPackType.TokenMatic, amount, maticProtocolFees)
+        emit WithdrawProtocolFees(RedPackType.TokenMatic, amount, maticProtocolFees);
     }
 
     function pause() external onlyOwner {
