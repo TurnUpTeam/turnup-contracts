@@ -270,14 +270,24 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         return uint256(randBytes);
     }
 
-    function withdrawLfgProtocolFees(uint256 amount) public external nonReentrant {
+    function withdrawLfgProtocolFees(uint256 amount) public nonReentrant {
         if (amount == 0) amount = lfgProtocolFees;
         if (amount > lfgProtocolFees) revert InvalidProtocolFeesAmount();
         if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || lfgProtocolFees == 0) revert Forbidden();
-        
         lfgProtocolFees -= amount;
         lfg.approve(address(this), lfgTotal);
         lfg.safeTransferFrom(address(this), _msgSender(), amount);
+        emit WithdrawProtocolFees(RedPackType.TokenLfg, amount, lfgProtocolFees)
+    }
+
+    function withdrawMaticProtocolFees(uint256 amount) public nonReentrant {
+        if (amount == 0) amount = maticProtocolFees;
+        if (amount > maticProtocolFees) revert InvalidProtocolFeesAmount();
+        if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || maticProtocolFees == 0) revert Forbidden();
+        maticProtocolFees -= amount;
+        (bool success, ) = protocolFeeDestination.call{value: amount}("");
+        if (!success) revert UnableToSendFunds();
+        emit WithdrawProtocolFees(RedPackType.TokenMatic, amount, maticProtocolFees)
     }
 
     function pause() external onlyOwner {
