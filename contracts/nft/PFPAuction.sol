@@ -21,8 +21,15 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   using SafeMathUpgradeable for uint256;
   using SafeERC20Upgradeable for LFGToken;
 
-  event CollectionChange(address collection, uint256 initialPrice, bool native);
-  event Bid(address collection, uint256 tokenId, uint256 price, uint256 bidAt, address bidder);
+  event ItemForAuction(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 initialPrice,
+    bool native,
+    uint256 startTime,
+    uint256 endTime
+  );
+  event Bid(address tokenAddress, uint256 tokenId, uint256 price, uint256 bidAt, address bidder);
 
   error UnableToTransferFunds();
   error ZeroAddress();
@@ -32,92 +39,138 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error NotTheWinner();
   error CollectionNotListed();
   error AssetNotFound();
-
-  LFGToken internal _lfg;
-
-  struct Collection {
-    uint256 initialPrice;
-    bool native;
-  }
+  error AuctionIsActive();
+  error InvalidInput();
 
   struct Item {
     uint256 price;
-    uint32 bidAt;
+    uint256 startTime;
+    uint256 endTime;
+    uint256 bidAt;
     address bidder;
+    bool native;
   }
 
-  mapping(address => Collection) internal _collections;
+  LFGToken internal _lfg;
   mapping(address => mapping(uint256 => Item)) internal _items;
+  uint256 public nativeFees;
+  uint256 public lfgFees;
 
   function initialize(address lfg_) public initializer {
     __Ownable_init();
     _lfg = LFGToken(lfg_);
   }
 
-  function initialPrice(address collection_) public view returns (uint256) {
-    return _collections[collection_].initialPrice;
-  }
-
-  function isNative(address collection_) public view returns (bool) {
-    return _collections[collection_].native;
-  }
-
-  function item(address collection_, uint256 tokenId_) public view returns (Item memory) {
-    return _items[collection_][tokenId_];
+  function getItem(address tokenAddress, uint256 tokenId) external view returns (Item memory) {
+    return _items[tokenAddress][tokenId];
   }
 
   function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
     return this.onERC721Received.selector;
   }
 
-  // setting the price, in LFG and MATIC, for a collection adds the collection to the managed collections
-  function setCollection(address collection_, uint256 initialPrice_, bool native_) external virtual onlyOwner {
-    _collections[collection_] = Collection(initialPrice_, native_);
-    emit CollectionChange(collection_, initialPrice_, native_);
+  function setItemForAuction(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 initialPrice,
+    bool native,
+    uint256 startTime,
+    uint256 endTime
+  ) public virtual onlyOwner {
+    if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
+      // the auction must own the asset
+      revert AssetNotFound();
+    }
+    if (_items[tokenAddress][tokenId].bidder != address(0)) {
+      // the asset has already received at least a bid
+      revert AuctionIsActive();
+    }
+    _items[tokenAddress][tokenId] = Item({
+      price: initialPrice,
+      native: native,
+      startTime: startTime,
+      endTime: endTime,
+      bidAt: 0,
+      bidder: address(0)
+    });
+    emit ItemForAuction(tokenAddress, tokenId, initialPrice, native, startTime, endTime);
   }
 
-  function getCollection(address collection_) public view virtual returns (Collection memory) {
-    return _collections[collection_];
+  function setItemsForAuction(
+    address[] calldata tokenAddresses,
+    uint256[] calldata tokenIds,
+    uint256[] calldata initialPrices,
+    bool[] calldata natives,
+    uint256[] calldata startTimes,
+    uint256[] calldata endTimes
+  ) external virtual onlyOwner {
+    if (
+      tokenAddresses.length != tokenIds.length ||
+      tokenAddresses.length != initialPrices.length ||
+      tokenAddresses.length != natives.length ||
+      tokenAddresses.length != startTimes.length ||
+      tokenAddresses.length != endTimes.length
+    ) {
+      revert InvalidInput();
+    }
+    for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      setItemForAuction(tokenAddresses[i], tokenIds[i], initialPrices[i], natives[i], startTimes[i], endTimes[i]);
+    }
   }
 
-  function getPrice(address collection_, uint256 tokenId_) external view virtual returns (uint256) {
-    uint256 price = _items[collection_][tokenId_].price + _items[collection_][tokenId_].price / 10;
-    if (price == 0) {
-      price = _collections[collection_].initialPrice;
+  function getNextPrice(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
+    uint256 price = _items[tokenAddress][tokenId].price;
+    if (_items[tokenAddress][tokenId].bidder != address(0)) {
+      price += price / 10;
     }
     return price;
   }
 
-  function bid(address collection_, uint256 tokenId) external payable nonReentrant {
-    Collection memory collection = _collections[collection_];
-    if (collection.initialPrice == 0) revert CollectionNotListed();
-    Item memory _item = _items[collection_][tokenId];
-    if (PFPAsset(collection_).ownerOf(tokenId) != address(this)) {
+  function auctionEndTime(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
+    Item storage item = _items[tokenAddress][tokenId];
+    uint256 endTime = item.endTime;
+    if (item.bidAt > 0 && (item.bidAt > endTime || endTime - item.bidAt < 1 hours)) {
+      endTime = item.bidAt + 1 hours;
+    }
+    return endTime;
+  }
+
+  function isAuctionOver(address tokenAddress, uint256 tokenId) public view virtual returns (bool) {
+    return block.timestamp > auctionEndTime(tokenAddress, tokenId);
+  }
+
+  function bid(address tokenAddress, uint256 tokenId) external payable nonReentrant {
+    Item storage _item = _items[tokenAddress][tokenId];
+    if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
       // the auction must own the asset
       revert AssetNotFound();
     }
-    uint256 newPrice = collection.initialPrice;
-    uint256 fee;
-    if (_item.price > 0) {
-      if (uint256(_item.bidAt) + 1 hours < block.timestamp) revert AuctionIsOver();
-      newPrice = _item.price + _item.price / 10;
-      fee = (newPrice * 5) / 110;
+    if (isAuctionOver(tokenAddress, tokenId)) revert AuctionIsOver();
+    uint256 price = getNextPrice(tokenAddress, tokenId);
+    address previousBidder = _item.bidder;
+    uint256 fee = previousBidder == address(0) ? 0 : (price * 5) / 110;
+    _item.price = price;
+    _item.bidAt = block.timestamp;
+    _item.bidder = _msgSender();
+    if (_item.native) {
+      nativeFees += fee;
+    } else {
+      lfgFees += fee;
     }
-    _items[collection_][tokenId] = Item(newPrice, uint32(block.timestamp), _msgSender());
-    emit Bid(collection_, tokenId, newPrice, block.timestamp, _msgSender());
-    if (collection.native) {
-      if (msg.value < newPrice) revert InsufficientFunds();
-      if (msg.value > newPrice) {
+    emit Bid(tokenAddress, tokenId, price, block.timestamp, _msgSender());
+    if (_item.native) {
+      if (msg.value < price) revert InsufficientFunds();
+      if (msg.value > price) {
         // The user may send more than the current price to be sure that
         // the transaction will not fail if the price has increased in the meantime.
         // If there is a surplus we send it back to the user:
-        (bool success, ) = _msgSender().call{value: msg.value - newPrice}("");
+        (bool success, ) = _msgSender().call{value: msg.value - price}("");
         if (!success) revert UnableToTransferFunds();
         // ^ In this case we reverts to try to anticipate further issues later
       }
-      if (newPrice != collection.initialPrice) {
+      if (previousBidder != address(0)) {
         // Not the first bid.
-        (bool success, ) = _item.bidder.call{value: newPrice - fee}("");
+        (bool success, ) = previousBidder.call{value: price - fee}("");
         if (!success) {
           // ^ We ignore failures. If not, a bidder can use a smart contract to make a bid without
           // implementing a receive function. That would cause the call to fail, making impossible
@@ -127,38 +180,50 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       // If the user approves more than strictly required, they can be able to make a
       // successful bid even if the price has increased in the meantime.
-      LFGToken(_lfg).safeTransferFrom(_msgSender(), address(this), newPrice);
-      if (newPrice != collection.initialPrice) {
+      LFGToken(_lfg).safeTransferFrom(_msgSender(), address(this), price);
+      if (previousBidder != address(0)) {
         // Not the first bid.
-        LFGToken(_lfg).transfer(_item.bidder, newPrice - fee);
+        LFGToken(_lfg).transfer(previousBidder, price - fee);
         // ^ We use transfer to ignore the failure for the same reasons as above
       }
     }
   }
 
-  function claim(address collection_, uint256 tokenId_) external nonReentrant {
-    Item memory _item = _items[collection_][tokenId_];
-    if (uint256(_item.bidAt) + 1 hours > block.timestamp) revert AuctionIsNotOver();
+  function claim(address tokenAddress, uint256 tokenId) external nonReentrant {
+    Item memory _item = _items[tokenAddress][tokenId];
+    if (!isAuctionOver(tokenAddress, tokenId)) revert AuctionIsNotOver();
     if (_item.bidder != _msgSender()) revert NotTheWinner();
-    PFPAsset(collection_).safeTransferFrom(address(this), _item.bidder, tokenId_);
+    PFPAsset(tokenAddress).safeTransferFrom(address(this), _item.bidder, tokenId);
   }
 
   function withdrawProceeds(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {
     if (beneficiary == address(0)) revert ZeroAddress();
     if (native) {
       if (amount == 0) {
-        amount = address(this).balance;
+        amount = nativeFees;
       }
       if (amount > address(this).balance) revert InsufficientFunds();
+      nativeFees -= amount;
       (bool success, ) = beneficiary.call{value: amount}("");
       if (!success) revert UnableToTransferFunds();
     } else {
       uint256 balance = LFGToken(_lfg).balanceOf(address(this));
       if (amount == 0) {
-        amount = balance;
+        amount = lfgFees;
       }
       if (amount > balance) revert InsufficientFunds();
+      lfgFees -= amount;
       LFGToken(_lfg).safeTransfer(beneficiary, amount);
     }
+  }
+
+  function burnLfgProceeds(uint256 amount) external virtual onlyOwner nonReentrant {
+    uint256 balance = LFGToken(_lfg).balanceOf(address(this));
+    if (amount == 0) {
+      amount = lfgFees;
+    }
+    if (amount > balance) revert InsufficientFunds();
+    lfgFees -= amount;
+    LFGToken(_lfg).burn(amount);
   }
 }

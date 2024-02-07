@@ -3,7 +3,7 @@ const {expect} = require("chai");
 const EthDeployUtils = require("eth-deploy-utils");
 const deployUtils = new EthDeployUtils();
 
-const {getTimestamp, increaseBlockTimestampBy, cl} = require("./helpers");
+const {getTimestamp, increaseBlockTimestampBy, cl, addr0} = require("./helpers");
 const {ethers} = require("hardhat");
 
 describe("PFPAuction", function () {
@@ -15,6 +15,7 @@ describe("PFPAuction", function () {
   const priceMatic = ethers.utils.parseEther("130");
   let tenThousand = ethers.utils.parseEther("10000");
   let owner, bob, alice, fred, jim, jane;
+  let tenHours = 36000;
 
   before(async function () {
     [owner, bob, alice, fred, jim, jane] = await ethers.getSigners();
@@ -53,14 +54,6 @@ describe("PFPAuction", function () {
     await rats.preMint(auction.address, 10);
 
     await pigs.preMint(owner.address, 20);
-
-    await expect(auction.setCollection(owls.address, priceLfg, false))
-      .to.emit(auction, "CollectionChange")
-      .withArgs(owls.address, priceLfg, false);
-
-    await expect(auction.setCollection(rats.address, priceMatic, true))
-      .to.emit(auction, "CollectionChange")
-      .withArgs(rats.address, priceMatic, true);
   }
 
   beforeEach(async function () {
@@ -78,18 +71,26 @@ describe("PFPAuction", function () {
   }
 
   describe("auction simulation", function () {
-    it("should allow to bid multiple times over LFG paid owls", async function () {
-      let owlsInitialPrice = await auction.initialPrice(owls.address);
-      let owlsCoin = (await auction.isNative(owls.address)) ? "MATIC" : "LFG";
+    it("should allow to bid multiple times over LFG and MATIC paid owls", async function () {
+      // owls #1
+      let id = 1;
+      let startTime = await ts();
+      // ten hours
+      let endTime = startTime + 60 * 60 * 10;
+
+      await expect(auction.setItemForAuction(owls.address, id, priceLfg, false, startTime, endTime))
+        .to.emit(auction, "ItemForAuction")
+        .withArgs(owls.address, id, priceLfg, false, startTime, endTime);
+
+      let owlsInitialPrice = await auction.getNextPrice(owls.address, 1);
+      let item = await auction.getItem(owls.address, id);
+      expect(item.bidder).to.equal(addr0);
+      let owlsCoin = item.native ? "MATIC" : "LFG";
 
       expect(owlsInitialPrice).to.equal(priceLfg);
       expect(owlsCoin).to.equal("LFG");
 
-      // owls #1
-      let id = 1;
-
       // failing bids
-      await expect(auction.connect(bob).bid(pigs.address, id)).to.be.revertedWith("CollectionNotListed()");
       await expect(auction.connect(bob).bid(owls.address, 110)).to.be.revertedWith("AssetNotFound()");
       await expect(auction.connect(bob).bid(owls.address, 200)).to.be.revertedWith("ERC721: invalid token ID");
 
@@ -106,8 +107,11 @@ describe("PFPAuction", function () {
         .to.emit(auction, "Bid")
         .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
 
+      item = await auction.getItem(owls.address, id);
+      expect(item.bidder).to.equal(bob.address);
+
       // raising price
-      let price = await auction.getPrice(owls.address, id);
+      let price = await auction.getNextPrice(owls.address, id);
       expect(price).to.equal(owlsInitialPrice.add(owlsInitialPrice.mul(10).div(100)));
 
       let fee = price.mul(5).div(110);
@@ -124,7 +128,7 @@ describe("PFPAuction", function () {
         .withArgs(auction.address, bob.address, price.sub(fee));
 
       // alice bids again
-      price = await auction.getPrice(owls.address, id);
+      price = await auction.getNextPrice(owls.address, id);
       fee = price.mul(5).div(110);
       totalFee = totalFee.add(fee);
 
@@ -136,8 +140,11 @@ describe("PFPAuction", function () {
 
       await expect(auction.connect(alice).claim(owls.address, id)).to.be.revertedWith("AuctionIsNotOver()");
 
+      let now = await ts();
+      endTime = await auction.auctionEndTime(owls.address, id);
+
       // an hour passes
-      await increaseBlockTimestampBy(3600);
+      await increaseBlockTimestampBy(endTime - now + 1);
 
       // bob tries to bid again but auction is over
       await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("AuctionIsOver()");
@@ -152,17 +159,27 @@ describe("PFPAuction", function () {
 
       // owls # 2
       id = 2;
+      startTime = await ts();
+      endTime = startTime + tenHours;
+
+      await expect(auction.setItemForAuction(owls.address, id, priceMatic, true, startTime, endTime))
+        .to.emit(auction, "ItemForAuction")
+        .withArgs(owls.address, id, priceMatic, true, startTime, endTime);
 
       // bob approves LFG and bids
       await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
         .to.emit(lfg, "Approval")
         .withArgs(bob.address, auction.address, owlsInitialPrice);
-      await expect(auction.connect(bob).bid(owls.address, id))
-        .to.emit(auction, "Bid")
-        .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
 
+      now = await ts();
+
+      endTime = await auction.auctionEndTime(owls.address, id);
+
+      await expect(auction.connect(bob).bid(owls.address, id, {value: priceMatic}))
+        .to.emit(auction, "Bid")
+        .withArgs(owls.address, id, priceMatic, await ts(), bob.address);
       // nobody beats the bid, an hour passes
-      await increaseBlockTimestampBy(3600);
+      await increaseBlockTimestampBy(3600 * 20);
 
       await expect(auction.connect(bob).claim(owls.address, id))
         .to.emit(owls, "Transfer")
@@ -170,18 +187,33 @@ describe("PFPAuction", function () {
     });
   });
 
-  it("should allow to bid multiple times over MATIC paid owls", async function () {
-    let ratsInitialPrice = await auction.initialPrice(rats.address);
-    let ratsCoin = (await auction.isNative(rats.address)) ? "MATIC" : "LFG";
+  it("should allow to bid multiple times over MATIC paid rats", async function () {
+    let id = 1;
+    let startTime = await ts();
+    let endTime = startTime + 60 * 60 * 10;
+
+    await expect(
+      auction.setItemsForAuction(
+        [rats.address, owls.address],
+        [id, id],
+        [priceMatic, priceLfg],
+        [true, false],
+        [startTime, startTime],
+        [endTime, endTime]
+      )
+    )
+      .to.emit(auction, "ItemForAuction")
+      .withArgs(rats.address, id, priceMatic, true, startTime, endTime)
+      .to.emit(auction, "ItemForAuction")
+      .withArgs(owls.address, id, priceLfg, false, startTime, endTime);
+
+    let ratsInitialPrice = await auction.getNextPrice(rats.address, id);
+    let ratsCoin = (await auction.getItem(rats.address, id)).native ? "MATIC" : "LFG";
     expect(ratsInitialPrice).to.equal(priceMatic);
     expect(ratsCoin).to.equal("MATIC");
 
-    // rats #1
-    let id = 1;
-
     // bid without value
     await expect(auction.connect(bob).bid(rats.address, id)).to.be.revertedWith("InsufficientFunds()");
-
     // successful bid
     await expect(auction.connect(bob).bid(rats.address, id, {value: ratsInitialPrice}))
       .to.emit(auction, "Bid")
@@ -190,7 +222,7 @@ describe("PFPAuction", function () {
     expect(await ethers.provider.getBalance(auction.address)).to.equal(ratsInitialPrice);
 
     // raising price
-    let price = await auction.getPrice(rats.address, id);
+    let price = await auction.getNextPrice(rats.address, id);
     expect(price).to.equal(ratsInitialPrice.add(ratsInitialPrice.mul(10).div(100)));
 
     let fee = price.mul(5).div(110);
@@ -203,7 +235,7 @@ describe("PFPAuction", function () {
 
     expect(await ethers.provider.getBalance(auction.address)).to.equal(totalFee);
 
-    price = await auction.getPrice(rats.address, id);
+    price = await auction.getNextPrice(rats.address, id);
     fee = price.mul(5).div(110);
     totalFee = totalFee.add(fee);
 
@@ -220,9 +252,9 @@ describe("PFPAuction", function () {
     expect(remaining.div("1000000000000000").toNumber()).to.equal(price.div("1000000000000000").toNumber());
 
     // an hour passes
-    await increaseBlockTimestampBy(3600);
+    await increaseBlockTimestampBy(3600 * 10);
 
-    price = await auction.getPrice(rats.address, id);
+    price = await auction.getNextPrice(rats.address, id);
 
     // bob tries to bid again but auction is over
     await expect(auction.connect(bob).bid(rats.address, id, {value: price})).to.be.revertedWith("AuctionIsOver()");
