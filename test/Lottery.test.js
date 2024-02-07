@@ -137,4 +137,40 @@ describe("Lottery", function () {
     await shares.connect(buyer).buyShares(subject.address, 1, {value: price})
     expect(await lottery.isHolder(subject.address, buyer.address)).to.be.true;
   });
+
+  it("should be deposit lfg red pack with invalid parameter", async function () { 
+    let subject = owner;
+    
+    // invalid red pack type
+    expect(await lottery.depositRedPack(subject.address, 99, 1, 1, 0)).revertedWith("InvalidRedPackData");
+
+    // invalid start time
+    expect(await lottery.depositRedPack(subject.address, 0, 1, 1, 1)).revertedWith("InvaildRedPackTime");
+
+    // invalid pick total
+    expect(await lottery.depositRedPack(subject.address, 0, 1, 0, 0)).revertedWith("InvaildRedPackPickTotal");
+
+    // invalid token total
+    expect(await lottery.depositRedPack(subject.address, 0, 10, 1, 0)).revertedWith("InvaildRedPackTokenTotal");
+
+    // hold 0 key
+    expect(await lottery.depositRedPack(subject.address, 0, 500, 1, 0)).revertedWith("NotSubjectHolder"); 
+  });
+
+  it("should be deposit matic red pack with invalid parameter", async function () { 
+    let subject = owner;
+
+    // invalid start time
+    expect(await lottery.depositRedPack(subject.address, 1, 1, 1, 1)).revertedWith("InvaildRedPackTime");
+
+    // invalid pick total
+    expect(await lottery.depositRedPack(subject.address, 1, 1, 0, 0)).revertedWith("InvaildRedPackPickTotal");
+
+    // invalid token total
+    expect(await lottery.depositRedPack(subject.address, 1, 10, 1, 0)).revertedWith("InvaildRedPackTokenTotal");
+
+    // hold 0 key
+    expect(await lottery.depositRedPack(subject.address, 1, 500, 1, 0)).revertedWith("NotSubjectHolder"); 
+  });
+
 });
