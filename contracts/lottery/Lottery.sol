@@ -41,11 +41,11 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     event SharesUpdate(address shares);
     event MinLfgPerPickUpdate(uint256 minValue);
     event MinMaticPerPickUpdate(uint256 minValue);
-    event RedPackLifeTimeUpdate(uint255 lifeTime);
+    event RedPackLifeTimeUpdate(uint256 lifeTime);
     event MaxStartTimeUpdate(uint256 maxStartTime);
     event ProtocolFeePercentUpdate(uint256 feePercent);
     event ProtocolFeeDestinationUpdate(address destination);
-    
+
     event DepositRedPackRequest(
         uint256 packId,
         RedPackType packType, 
