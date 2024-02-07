@@ -85,7 +85,6 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 startTime;
         uint256 endTime;
         bool isClaimed;
-        mapping(uint256 => bool) pickers;
     }
 
     uint256 public minLfgPerPick;
@@ -271,6 +270,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) revert RedPackPickAlreadyEndPick();
         if (redPacks[packId].tokenExpend >= redPacks[packId].tokenTotal) revert RedPackPickAlreadyEndToken();
         if (redPacks[packId].isClaimed) revert RedPackPickAlreadyClaim();
+        
         if (pickers[account][packId] > 0) revert RedPackPickDuplidate(); // pick already
 
         if (!isHolder(redPacks[packId].subject, account)) revert RedPackPickNotHolder();
@@ -285,7 +285,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].pickAmount += 1;
         redPacks[packId].tokenExpend += luckyAmount;
 
-        redPacks[_msgSender()].pickers[packId] = true;
+        pickers[_msgSender()].pickers[packId] = true;
 
         if (redPacks[packId].packType == RedPackType.TokenLfg) {
             lfgProtocolFees += protocolFee;
