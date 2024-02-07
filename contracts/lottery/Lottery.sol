@@ -260,7 +260,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (!success) revert UnableToSendFunds();
     }
 
-    function _withdrawRedPack(uint256 packId) internal payable { 
+    function _withdrawRedPack(uint256 packId) internal { 
         if (packId == 0) revert NotFoundRedPack();
         if (redPacks[packId].packId != packId) revert InvalidRedPackData();
         if (redPacks[packId].endTime > block.timestamp) return;
