@@ -121,7 +121,11 @@ describe("Lottery", function () {
   it("should be holder", async function () { 
     let subject = bob;
     let buyer = owner
+    
     let price = await shares.getBuyPriceAfterFee(subject.address, 1);
+    await shares.connect(subject).buyShares(subject.address, 1, {value: price})
+
+    price = await shares.getBuyPriceAfterFee(subject.address, 1);
     await shares.connect(buyer).buyShares(subject.address, 1, {value: price})
     
     await lottery.setShares(shares.address); 
