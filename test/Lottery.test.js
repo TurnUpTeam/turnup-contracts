@@ -48,7 +48,6 @@ describe("Lottery", function () {
       protocolFeePercent,
       protocolFeeDestination,
     );
-    await lottery.setShares(shares.address); 
   }
 
   beforeEach(async function () {
@@ -115,6 +114,17 @@ describe("Lottery", function () {
   });
 
   it("should be not holder", async function () { 
+    await lottery.setShares(shares.address); 
     expect(await lottery.isHolder(owner.address, bob.address)).to.be.false;
+  });
+
+  it("should be holder", async function () { 
+    let subject = bob.address;
+    let buyer = owner.address
+    let price = await shares.getBuyPriceAfterFee(subject, 1);
+    await shares.connect(buyer).buyShares(subject, 1, {value: price})
+    
+    await lottery.setShares(shares.address); 
+    expect(await lottery.isHolder(subject, buyer)).to.be.true;
   });
 });
