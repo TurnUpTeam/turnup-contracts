@@ -31,8 +31,8 @@ describe("Lottery", function () {
     // deploy shares
     shares = await deployUtils.deployProxy("TurnupSharesV4");
     await shares.setFeeDestination(owner.address)
-    await shares.setProtocolFeePercent(ethers.utils.toWei("0.05", "ether"))
-    await shares.setSubjectFeePercent(ethers.utils.toWei("0.05", "ether"))
+    await shares.setProtocolFeePercent(ethers.utils.parseEther("0.05"))
+    await shares.setSubjectFeePercent(ethers.utils.parseEther("0.05"))
     await shares.setOperator(owner.address, true);
 
     // deploy lfg token
