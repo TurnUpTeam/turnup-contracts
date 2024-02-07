@@ -67,15 +67,27 @@ describe("Lottery", function () {
   });
 
   it("should be set min lfg per pick", async function () {
-    let newValue = ethers.utils.parseEther("199");
+    newValue = ethers.utils.parseEther("199");
     await lottery.updateMinLfgPerPick(newValue);
     expect(await lottery.minLfgPerPick()).to.equal(newValue);
   });
 
   it("should be set min lfg per pick", async function () {
-    let newValue = ethers.utils.parseEther("199");
+    newValue = ethers.utils.parseEther("199");
     await lottery.updateMinMaticPerPick(newValue);
     expect(await lottery.minMaticPerPick()).to.equal(newValue);
+  });
+
+  it("should be set red pack life time", async function () {
+    newValue = 2 * 24 * 3600;
+    await lottery.updateRedPackLifeTime(newValue);
+    expect(await lottery.redPackLifeTime()).to.equal(newValue);
+  });
+
+  it("should be set max start time", async function () {
+    newValue = 2 * 24 * 3600;
+    await lottery.updateMaxStartTime(newValue);
+    expect(await lottery.maxStartTime()).to.equal(newValue);
   });
  
 });
