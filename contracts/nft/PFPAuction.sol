@@ -34,6 +34,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error UnableToTransferFunds();
   error ZeroAddress();
   error InsufficientFunds();
+  error InsufficientFees();
   error AuctionIsOver();
   error AuctionIsNotOver();
   error NotTheWinner();
@@ -202,6 +203,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       if (amount == 0) {
         amount = nativeFees;
       }
+      if (amount > nativeFees) revert InsufficientFees();
+      // this should never happen and nativeFees should always be equal or smaller than the contract balance
       if (amount > address(this).balance) revert InsufficientFunds();
       nativeFees -= amount;
       (bool success, ) = beneficiary.call{value: amount}("");
@@ -211,6 +214,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       if (amount == 0) {
         amount = lfgFees;
       }
+      if (amount > lfgFees) revert InsufficientFees();
+      // as for the native currency, this should never happen
       if (amount > balance) revert InsufficientFunds();
       lfgFees -= amount;
       LFGToken(_lfg).safeTransfer(beneficiary, amount);
