@@ -246,7 +246,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         lfg.approve(from, amount);
         uint256 previousBalance = lfg.balanceOf(from);
         lfg.safeTransferFrom(from, to, amount);
-        uint256 newBalance = lfg.balanceOf(address(this));
+        uint256 newBalance = lfg.balanceOf(from);
         uint256 delta = previousBalance - newBalance;
         if (delta != amount) revert UnableToSendFunds();
     }
