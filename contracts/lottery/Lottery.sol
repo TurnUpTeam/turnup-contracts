@@ -282,14 +282,12 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
 
     function checkPickable(uint256 packId, address account) public view {
         if (redPacks[packId].packId == 0) revert InvalidRedPackData();
+        if (pickers[account][packId]) revert RedPackPickDuplidate(); // pick already
+        if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) revert RedPackPickAlreadyEndPick();
+        if (redPacks[packId].isClaimed) revert RedPackPickAlreadyClaim();
         if (redPacks[packId].startTime > block.timestamp) revert RedPackNotStartYet();
         if (redPacks[packId].endTime < block.timestamp) revert RedPackAlreadyEndTime();
-        if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) revert RedPackPickAlreadyEndPick();
         if (redPacks[packId].tokenExpend >= redPacks[packId].tokenTotal) revert RedPackPickAlreadyEndToken();
-        if (redPacks[packId].isClaimed) revert RedPackPickAlreadyClaim();
-        
-        if (pickers[account][packId]) revert RedPackPickDuplidate(); // pick already
-
         if (!isHolder(redPacks[packId].subject, account)) revert RedPackPickNotHolder();
     }
 
