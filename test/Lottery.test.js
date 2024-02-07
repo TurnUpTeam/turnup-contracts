@@ -53,5 +53,17 @@ describe("Lottery", function () {
     expect(await lottery.lfgProtocolFees()).to.equal(0);
     expect(await lottery.maticProtocolFees()).to.equal(0);
   });
+
+  it("should be set lfg token address", async function () {
+    await lottery.setLFGToken(bob);
+    expect(await lottery.lfg()).to.equal(bob);
+    await expect(lottery.setLFGToken(bob)).revertedWith("InvalidNoZeroLfg");
+  });
+
+  it("should be set shares address", async function () {
+    await lottery.setShares(bob);
+    expect(await lottery.shares()).to.equal(bob);
+    await expect(lottery.setShares(bob)).revertedWith("InvalidNoZeroLfg");
+  });
  
 });
