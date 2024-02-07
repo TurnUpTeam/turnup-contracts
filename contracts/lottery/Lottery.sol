@@ -277,7 +277,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
-        _checkPickable(pickId, _msgSender()); 
+        _checkPickable(packId, _msgSender()); 
         
         uint256 luckyAmount = _randRedPackAmount(packId);
         uint256 protocolFee = luckyAmount * protocolFeePercent / 1 ether;
