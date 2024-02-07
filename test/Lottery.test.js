@@ -27,7 +27,15 @@ describe("Lottery", function () {
   });
 
   async function initAndDeploy() { 
-    lottery = await await deployUtils.deployProxy(
+    // deploy shares
+    shares = await deployUtils.deployProxy("TurnupSharesV4");
+    await shares.setFeeDestination(owner.address)
+    await shares.setProtocolFeePercent(web3.utils.toWei("0.05", "ether"))
+    await shares.setSubjectFeePercent(web3.utils.toWei("0.05", "ether"))
+    await turnup.setOperator(owner.address, true);
+
+    // deploy lottery
+    lottery = await deployUtils.deployProxy(
       "Lottery",
       minLfgPerPick,
       minMaticPerPick,
@@ -36,6 +44,7 @@ describe("Lottery", function () {
       protocolFeePercent,
       protocolFeeDestination,
     );
+    lottery.setShares(shares); 
   }
 
   beforeEach(async function () {
