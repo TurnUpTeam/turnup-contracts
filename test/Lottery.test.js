@@ -63,7 +63,19 @@ describe("Lottery", function () {
   it("should be set shares address", async function () {
     await lottery.setShares(bob.address);
     expect(await lottery.shares()).to.equal(bob.address);
-    await expect(lottery.setShares(bob.address)).revertedWith("InvalidNoZeroLfg");
+    await expect(lottery.setShares(bob.address)).revertedWith("InvalidNoZeroShares");
+  });
+
+  it("should be set min lfg per pick", async function () {
+    let newValue = ethers.utils.parseEther("199");
+    await lottery.updateMinLfgPerPick(newValue);
+    expect(await lottery.minLfgPerPick()).to.equal(newValue);
+  });
+
+  it("should be set min lfg per pick", async function () {
+    let newValue = ethers.utils.parseEther("199");
+    await lottery.updateMinMaticPerPick(newValue);
+    expect(await lottery.minMaticPerPick()).to.equal(newValue);
   });
  
 });
