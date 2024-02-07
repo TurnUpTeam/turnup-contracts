@@ -133,14 +133,14 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (lfg_ == address(0)) revert InvalidZeroLfg();
         if (address(lfg) != address(0)) revert InvalidNoZeroLfg();
         lfg = LFGToken(lfg_);
-        emit LfgTokenUpdate(lfg);
+        emit LfgTokenUpdate(address(lfg));
     }
 
     function setShares(address shares_) public onlyOwner {
         if (shares_ == address(0)) revert InvalidZeroShares();
         if (address(shares) != address(0)) revert InvalidNoZeroShares();
         shares = TurnupSharesV4(shares_);
-        emit SharesUpdate(shares);
+        emit SharesUpdate(address(shares));
     }
   
     function updateMinLfgPerPick(uint256 minLfgPerPick_) public onlyOwner {
