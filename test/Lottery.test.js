@@ -142,35 +142,44 @@ describe("Lottery", function () {
     let subject = owner;
     
     // invalid red pack type
-    expect(await lottery.depositRedPack(subject.address, 99, 1, 1, 0)).revertedWith("InvalidRedPackData");
+    maticAmount = ethers.utils.parseEther("10000")
+    expect(await lottery.depositRedPack(subject.address, 99, maticAmount, 1, 0)).revertedWith("InvalidRedPackData");
 
     // invalid start time
-    expect(await lottery.depositRedPack(subject.address, 0, 1, 1, 1)).revertedWith("InvaildRedPackTime");
+    maticAmount = ethers.utils.parseEther("10000")
+    expect(await lottery.depositRedPack(subject.address, 0, maticAmount, 1, 1)).revertedWith("InvaildRedPackTime");
 
     // invalid pick total
-    expect(await lottery.depositRedPack(subject.address, 0, 1, 0, 0)).revertedWith("InvaildRedPackPickTotal");
+    maticAmount = ethers.utils.parseEther("10000")
+    expect(await lottery.depositRedPack(subject.address, 0, maticAmount, 0, 0)).revertedWith("InvaildRedPackPickTotal");
 
     // invalid token total
-    expect(await lottery.depositRedPack(subject.address, 0, 10, 1, 0)).revertedWith("InvaildRedPackTokenTotal");
+    maticAmount = ethers.utils.parseEther("1")
+    expect(await lottery.depositRedPack(subject.address, 0, maticAmount, 1, 0)).revertedWith("InvaildRedPackTokenTotal");
 
     // hold 0 key
-    expect(await lottery.depositRedPack(subject.address, 0, 500, 1, 0)).revertedWith("NotSubjectHolder"); 
+    maticAmount = ethers.utils.parseEther("10000")
+    expect(await lottery.depositRedPack(subject.address, 0, maticAmount, 1, 0)).revertedWith("NotSubjectHolder"); 
   });
 
   it("should be deposit matic red pack with invalid parameter", async function () { 
     let subject = owner;
 
     // invalid start time
-    expect(await lottery.depositRedPack(subject.address, 1, 1, 1, 1)).revertedWith("InvaildRedPackTime");
+    maticAmount = ethers.utils.parseEther("500")
+    expect(await lottery.depositRedPack(subject.address, 1, maticAmount, 1, 1)).revertedWith("InvaildRedPackTime");
 
     // invalid pick total
-    expect(await lottery.depositRedPack(subject.address, 1, 1, 0, 0)).revertedWith("InvaildRedPackPickTotal");
+    maticAmount = ethers.utils.parseEther("0")
+    expect(await lottery.depositRedPack(subject.address, 1, maticAmount, 0, 0)).revertedWith("InvaildRedPackPickTotal");
 
     // invalid token total
-    expect(await lottery.depositRedPack(subject.address, 1, 10, 1, 0)).revertedWith("InvaildRedPackTokenTotal");
+    maticAmount = ethers.utils.parseEther("0.01")
+    expect(await lottery.depositRedPack(subject.address, 1, maticAmount, 1, 0)).revertedWith("InvaildRedPackTokenTotal");
 
     // hold 0 key
-    expect(await lottery.depositRedPack(subject.address, 1, 500, 1, 0)).revertedWith("NotSubjectHolder"); 
+    maticAmount = ethers.utils.parseEther("500")
+    expect(await lottery.depositRedPack(subject.address, 1, maticAmount, 1, 0)).revertedWith("NotSubjectHolder"); 
   });
 
 });
