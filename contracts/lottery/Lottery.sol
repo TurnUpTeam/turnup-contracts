@@ -91,6 +91,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 tokenExpend;
         uint32 pickTotal;
         uint32 pickAmount;
+        uint256 depositTime;
         uint256 startTime;
         uint256 endTime;
         bool isClaimed;
@@ -183,17 +184,15 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint256 tokenTotal_, 
         uint32 pickTotal_, 
         uint256 startTime_) internal {
-        if (packType_ != RedPackType.TokenLfg && packType_ != RedPackType.TokenMatic) revert InvaildRedPackPickTotal();
+        if (packType_ != RedPackType.TokenLfg && packType_ != RedPackType.TokenMatic) revert InvalidRedPackData();
         if (startTime_ + redPackLifeTime < block.timestamp) revert InvaildRedPackTime();
         if (pickTotal_ <= 0) revert InvaildRedPackPickTotal();
          
         if (packType_ == RedPackType.TokenLfg) {
             if (tokenTotal_ < pickTotal_ * minLfgPerPick) revert InvaildRedPackTokenTotal();    
-        } else if (packType_ == RedPackType.TokenMatic) {
+        } else // RedPackType.TokenMatic
              if (msg.value < pickTotal_ * minMaticPerPick) revert InvaildRedPackTokenTotal();   
-        } else {
-            revert InvaildRedPackPickTotal();
-        }
+        } 
     }
 
     function depositRedPack(
@@ -219,9 +218,11 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].tokenExpend = 0;
         redPacks[packId].pickTotal = pickTotal_;
         redPacks[packId].pickAmount = 0;
+        redPacks[packId].depositTime = block.timestamp;
         redPacks[packId].startTime = startTime_;
         redPacks[packId].endTime = startTime_ + redPackLifeTime;
- 
+        redPacks[packId].isClaimed = false;
+
         if (packType_ == RedPackType.TokenLfg) {
             _transferLfg(_msgSender(), address(this), redPacks[packId].tokenTotal);
         } else if (packType_ == RedPackType.TokenMatic) {
@@ -229,15 +230,16 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         }  
 
         emit DepositRedPackRequest(
-            packId, 
-            packType_, 
-            subject_, 
-            _msgSender(), 
+            redPacks[packId].packId, 
+            redPacks[packId].packType, 
+            redPacks[packId].subject, 
+            redPacks[packId].account, 
             redPacks[packId].tokenTotal, 
-            pickTotal_, 
-            block.timestamp,
-            startTime_, 
-            redPacks[packId].endTime);        
+            redPacks[packId].pickTotal, 
+            redPacks[packId].depositTime,
+            redPacks[packId].startTime, 
+            redPacks[packId].endTime
+        );        
     }
 
     function _transferLfg(address from, address to, uint256 amount) internal {
