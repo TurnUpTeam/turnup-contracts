@@ -119,12 +119,12 @@ describe("Lottery", function () {
   });
 
   it("should be holder", async function () { 
-    let subject = bob.address;
-    let buyer = owner.address
-    let price = await shares.getBuyPriceAfterFee(subject, 1);
-    await shares.connect(buyer).buyShares(subject, 1, {value: price})
+    let subject = bob;
+    let buyer = owner
+    let price = await shares.getBuyPriceAfterFee(subject.address, 1);
+    await shares.connect(buyer).buyShares(subject.address, 1, {value: price})
     
     await lottery.setShares(shares.address); 
-    expect(await lottery.isHolder(subject, buyer)).to.be.true;
+    expect(await lottery.isHolder(subject.address, buyer.address)).to.be.true;
   });
 });
