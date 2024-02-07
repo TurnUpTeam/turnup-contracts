@@ -37,6 +37,15 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvalidRedPackData();  
     error UnableToSendFunds();
  
+    event LfgTokenUpdate(address lfg);
+    event SharesUpdate(address shares);
+    event MinLfgPerPickUpdate(uint256 minValue);
+    event MinMaticPerPickUpdate(uint256 minValue);
+    event RedPackLifeTimeUpdate(uint255 lifeTime);
+    event MaxStartTimeUpdate(uint256 maxStartTime);
+    event ProtocolFeePercentUpdate(uint256 feePercent);
+    event ProtocolFeeDestinationUpdate(address destination);
+    
     event DepositRedPackRequest(
         uint256 packId,
         RedPackType packType, 
@@ -124,36 +133,44 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (lfg_ == address(0)) revert InvalidZeroLfg();
         if (address(lfg) != address(0)) revert InvalidNoZeroLfg();
         lfg = LFGToken(lfg_);
+        emit LfgTokenUpdate(lfg);
     }
 
     function setShares(address shares_) public onlyOwner {
         if (shares_ == address(0)) revert InvalidZeroShares();
         if (address(shares) != address(0)) revert InvalidNoZeroShares();
         shares = TurnupSharesV4(shares_);
+        emit SharesUpdate(shares);
     }
   
     function updateMinLfgPerPick(uint256 minLfgPerPick_) public onlyOwner {
         minLfgPerPick = minLfgPerPick_;
+        emit MinLfgPerPickUpdate(minLfgPerPick);
     }
 
     function updateMinMaticPerPick(uint256 minMaticPerPick_) public onlyOwner { 
         minMaticPerPick = minMaticPerPick_;
+        emit MinMaticPerPickUpdate(minMaticPerPick);
     }
 
     function updateRedPackLifeTime(uint256 redPackLifeTime_) public onlyOwner {
         redPackLifeTime = redPackLifeTime_;
+        emit RedPackLifeTimeUpdate(redPackLifeTime);
     }
 
     function updateMaxStartTime(uint256 maxStartTime_) public onlyOwner {
         maxStartTime = maxStartTime_;
+        emit MaxStartTimeUpdate(maxStartTime);
     }
 
     function updateProtocolFeePercent(uint256 feePercent_) public onlyOwner {
         protocolFeePercent = feePercent_;
+        emit ProtocolFeePercentUpdate(protocolFeePercent);
     }
 
     function updateProtocolFeeDestination(address feeDestination_) public onlyOwner {
         protocolFeeDestination = feeDestination_;
+        emit ProtocolFeeDestinationUpdate(protocolFeeDestination);
     }
 
     function isHolder(address subject, address account) public view returns(bool) {
