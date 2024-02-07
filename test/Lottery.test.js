@@ -32,10 +32,10 @@ describe("Lottery", function () {
     await shares.setFeeDestination(owner.address)
     await shares.setProtocolFeePercent(web3.utils.toWei("0.05", "ether"))
     await shares.setSubjectFeePercent(web3.utils.toWei("0.05", "ether"))
-    await turnup.setOperator(owner.address, true);
+    await shares.setOperator(owner.address, true);
 
     // deploy lfg token
-    
+
     // deploy lottery
     lottery = await deployUtils.deployProxy(
       "Lottery",
