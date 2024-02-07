@@ -263,7 +263,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         }
     }
 
-    function _checkPickable(uint256 packId, address account) internal {
+    function checkPickable(uint256 packId, address account) public view {
         if (redPacks[packId].packId == 0) revert InvalidRedPackData();
         if (redPacks[packId].startTime > block.timestamp) revert RedPackNotStartYet();
         if (redPacks[packId].endTime < block.timestamp) revert RedPackAlreadyEndTime();
@@ -277,7 +277,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     }
 
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
-        _checkPickable(packId, _msgSender()); 
+        checkPickable(packId, _msgSender()); 
         
         uint256 luckyAmount = _randRedPackAmount(packId);
         uint256 protocolFee = luckyAmount * protocolFeePercent / 1 ether;
