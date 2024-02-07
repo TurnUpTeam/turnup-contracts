@@ -41,10 +41,17 @@ describe("Lottery", function () {
   beforeEach(async function () {
     await initAndDeploy();
   });
- 
 
-  it("should be initialized with the correct owner", async function () {
+  it("should be initialized with the correct parameter", async function () {
     expect(await lottery.owner()).to.equal(owner.address);
+    expect(await lottery.minLfgPerPick()).to.equal(minLfgPerPick);
+    expect(await lottery.minMaticPerPick()).to.equal(minMaticPerPick);
+    expect(await lottery.redPackLifeTime()).to.equal(redPackLifeTime);
+    expect(await lottery.maxStartTime()).to.equal(maxStartTime);
+    expect(await lottery.protocolFeePercent()).to.equal(protocolFeePercent);
+    expect(await lottery.protocolFeeDestination()).to.equal(protocolFeeDestination);
+    expect(await lottery.lfgProtocolFees()).to.equal(0);
+    expect(await lottery.maticProtocolFees()).to.equal(0);
   });
  
 });
