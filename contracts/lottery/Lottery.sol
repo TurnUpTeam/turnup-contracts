@@ -23,8 +23,14 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvaildRedPackPickTotal();
     error InvalidProtocolFeesAmount();
     error Forbidden();
-    error NotSubjectHolder(); 
-    error RedPackUnpickable();
+    error NotSubjectHolder();  
+    error RedPackNotStartYet();
+    error RedPackAlreadyEndTime();
+    error RedPackPickAlreadyEndPick();
+    error RedPackPickAlreadyEndToken();
+    error RedPackPickAlreadyClaim();
+    error RedPackPickDuplidate();
+    error RedPackPickNotHolder();
     error InvalidRedPackId();
     error InvaildRedPackTime();
     error NotFoundRedPack();
@@ -258,28 +264,28 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         }
     }
 
-    function isPickable(uint256 packId, address account) public view returns(bool) {
-        if (redPacks[packId].packId == 0) return false;
-        if (redPacks[packId].startTime > block.timestamp) return false;
-        if (redPacks[packId].endTime < block.timestamp) return false;
-        if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) return false;
-        if (redPacks[packId].tokenExpend >= redPacks[packId].tokenTotal) return false;
-        if (redPacks[packId].isClaimed) return false;
-        if (pickers[account][packId] > 0) return false; // pick already
+    function _checkPickable(uint256 packId, address account) internal {
+        if (redPacks[packId].packId == 0) revert InvalidRedPackData();
+        if (redPacks[packId].startTime > block.timestamp) revert RedPackNotStartYet();
+        if (redPacks[packId].endTime < block.timestamp) revert RedPackAlreadyEndTime();
+        if (redPacks[packId].pickAmount >= redPacks[packId].pickTotal) revert RedPackPickAlreadyEndPick();
+        if (redPacks[packId].tokenExpend >= redPacks[packId].tokenTotal) revert RedPackPickAlreadyEndToken();
+        if (redPacks[packId].isClaimed) revert RedPackPickAlreadyClaim();
+        if (pickers[account][packId] > 0) revert RedPackPickDuplidate(); // pick already
 
-        if (!isHolder(redPacks[packId].subject, account)) return false;
-
-        return true;
+        if (!isHolder(redPacks[packId].subject, account)) revert RedPackPickNotHolder();
     }
 
     function pickRedPack(uint256 packId) external whenNotPaused nonReentrant {
-        if (!isPickable(packId, _msgSender())) revert RedPackUnpickable();
+        _checkPickable(); 
         
         uint256 luckyAmount = _randRedPackAmount(packId);
         uint256 protocolFee = luckyAmount * protocolFeePercent / 1 ether;
 
         redPacks[packId].pickAmount += 1;
         redPacks[packId].tokenExpend += luckyAmount;
+        
+        redPacks[_msgSender].pickers[packId] = true;
 
         if (redPacks[packId].packType == RedPackType.TokenLfg) {
             lfgProtocolFees += protocolFee;
