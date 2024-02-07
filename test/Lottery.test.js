@@ -102,6 +102,6 @@ describe("Lottery", function () {
   });
 
   it("should be not holder", async function () { 
-    expect(await lottery.isHolder(owner.address, bob.address)).to.equal(false);
+    expect(await lottery.isHolder(owner.address, bob.address)).to.be.false;
   });
 });
