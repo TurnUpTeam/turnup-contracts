@@ -285,7 +285,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].pickAmount += 1;
         redPacks[packId].tokenExpend += luckyAmount;
 
-        pickers[_msgSender()].pickers[packId] = true;
+        pickers[_msgSender()][packId] = true;
 
         if (redPacks[packId].packType == RedPackType.TokenLfg) {
             lfgProtocolFees += protocolFee;
