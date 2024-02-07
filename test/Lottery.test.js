@@ -16,13 +16,14 @@ describe("Lottery", function () {
   let redPackLifeTime = 24 * 3600;   // 1 day
   let maxStartTime = 24 * 3600; // 1 day
   let protocolFeePercent = ethers.utils.parseEther("0.01");
-  let protocolFeeDestination = owner.address;
+  let protocolFeeDestination;
 
   before(async function () {
     [
       owner,
       bob, 
     ] = await ethers.getSigners();
+    protocolFeeDestination = owner.address;
   });
 
   async function initAndDeploy() { 
