@@ -9,6 +9,7 @@ describe("Lottery", function () {
   let lottery;
   let owner,bob;
   
+  const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
  
   let minLfgPerPick = ethers.utils.parseEther("100");
@@ -30,8 +31,8 @@ describe("Lottery", function () {
     // deploy shares
     shares = await deployUtils.deployProxy("TurnupSharesV4");
     await shares.setFeeDestination(owner.address)
-    await shares.setProtocolFeePercent(web3.utils.toWei("0.05", "ether"))
-    await shares.setSubjectFeePercent(web3.utils.toWei("0.05", "ether"))
+    await shares.setProtocolFeePercent(ethers.utils.toWei("0.05", "ether"))
+    await shares.setSubjectFeePercent(ethers.utils.toWei("0.05", "ether"))
     await shares.setOperator(owner.address, true);
 
     // deploy lfg token
@@ -46,7 +47,7 @@ describe("Lottery", function () {
       protocolFeePercent,
       protocolFeeDestination,
     );
-    lottery.setShares(shares); 
+    await lottery.setShares(shares); 
   }
 
   beforeEach(async function () {
