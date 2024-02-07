@@ -224,7 +224,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].isClaimed = false;
 
         if (packType_ == RedPackType.TokenLfg) {
-            _transferLfg(_msgSender(), address(this), redPacks[packId].tokenTotal);
+            _transferLfgFrom(_msgSender(), address(this), redPacks[packId].tokenTotal);
         } else if (packType_ == RedPackType.TokenMatic) {
             redPacks[packId].tokenTotal = msg.value;
         }  
@@ -242,12 +242,20 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         );        
     }
 
-    function _transferLfg(address from, address to, uint256 amount) internal {
-        lfg.approve(_msgSender(), amount);
+    function _transferLfgFrom(address from, address to, uint256 amount) internal {
+        lfg.approve(from, amount);
+        uint256 previousBalance = lfg.balanceOf(from);
         lfg.safeTransferFrom(from, to, amount);
+        uint256 newBalance = lfg.balanceOf(address(this));
+        uint256 delta = previousBalance - newBalance;
+        if (delta != amount) revert UnableToSendFunds();
     }
 
-    function _transferMatic(address to, uint256 amount) internal {
+    function _transferLfg(address to, uint256 amount) internal {
+        lfg.transfer(to, amount);
+    }
+
+    function _transferMatic(address to, uint256 amount) internal { 
         (bool success, ) = to.call{value: amount}("");
         if (!success) revert UnableToSendFunds();
     }
@@ -266,7 +274,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         redPacks[packId].tokenExpend = redPacks[packId].tokenTotal;
 
         if (redPacks[packId].packType == RedPackType.TokenLfg) {
-            _transferLfg(address(this), _msgSender(), backAmount);
+            _transferLfg(_msgSender(), backAmount);
         } else if (redPacks[packId].packType == RedPackType.TokenMatic) {
             _transferMatic(_msgSender(), backAmount);
         } else {
@@ -306,7 +314,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
 
         if (redPacks[packId].packType == RedPackType.TokenLfg) {
             lfgProtocolFees += protocolFee;
-            _transferLfg(address(this), _msgSender(), luckyAmount - protocolFee);
+            _transferLfg(_msgSender(), luckyAmount - protocolFee);
         } else if (redPacks[packId].packType == RedPackType.TokenMatic) {
             maticProtocolFees += protocolFee;
             _transferMatic(_msgSender(), luckyAmount - protocolFee);
@@ -356,7 +364,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (amount > lfgProtocolFees) revert InvalidProtocolFeesAmount();
         if (_msgSender() != protocolFeeDestination || protocolFeeDestination == address(0) || lfgProtocolFees == 0) revert Forbidden();
         lfgProtocolFees -= amount;
-        _transferLfg(address(this), protocolFeeDestination, amount);
+        _transferLfg(protocolFeeDestination, amount);
         emit WithdrawProtocolFees(RedPackType.TokenLfg, amount, lfgProtocolFees);
     }
 
