@@ -19,8 +19,8 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error InvalidNoZeroLfg();
     error InvalidZeroShares();
     error InvalidNoZeroShares();  
-    error InvaildRedPackTokenTotal();
-    error InvaildRedPackPickTotal();
+    error InvalidRedPackTokenTotal();
+    error InvalidRedPackPickTotal();
     error InvalidProtocolFeesAmount();
     error Forbidden();
     error NotSubjectHolder();  
@@ -32,7 +32,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     error RedPackPickDuplidate();
     error RedPackPickNotHolder();
     error InvalidRedPackId();
-    error InvaildRedPackTime();
+    error InvalidRedPackTime();
     error NotFoundRedPack();
     error InvalidRedPackData();  
     error UnableToSendFunds();
@@ -185,13 +185,13 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         uint32 pickTotal_, 
         uint256 startTime_) internal {
         if (packType_ != RedPackType.TokenLfg && packType_ != RedPackType.TokenMatic) revert InvalidRedPackData();
-        if (startTime_ + redPackLifeTime < block.timestamp) revert InvaildRedPackTime();
-        if (pickTotal_ <= 0) revert InvaildRedPackPickTotal();
+        if (startTime_ + redPackLifeTime < block.timestamp) revert InvalidRedPackTime();
+        if (pickTotal_ <= 0) revert InvalidRedPackPickTotal();
          
         if (packType_ == RedPackType.TokenLfg) {
-            if (tokenTotal_ < pickTotal_ * minLfgPerPick) revert InvaildRedPackTokenTotal();    
+            if (tokenTotal_ < pickTotal_ * minLfgPerPick) revert InvalidRedPackTokenTotal();    
         } else { // RedPackType.TokenMatic
-             if (msg.value < pickTotal_ * minMaticPerPick) revert InvaildRedPackTokenTotal();   
+             if (msg.value < pickTotal_ * minMaticPerPick) revert InvaliddRedPackTokenTotal();   
         } 
     }
 
