@@ -7,6 +7,7 @@ const {getTimestamp, increaseBlockTimestampBy} = require("./helpers");
 
 describe("Lottery", function () {
   let lottery;
+  let shares;
   let owner,bob;
   
   const addr0 = "0x" + "0".repeat(40);
@@ -47,7 +48,7 @@ describe("Lottery", function () {
       protocolFeePercent,
       protocolFeeDestination,
     );
-    await lottery.setShares(shares); 
+    await lottery.setShares(shares.address); 
   }
 
   beforeEach(async function () {
