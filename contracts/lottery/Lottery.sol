@@ -99,7 +99,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
     LFGToken public lfg;
     TurnupSharesV4 public shares;
 
-    mapping(address => mapping(uint256=>uint256)) public pickers;
+    mapping(address => mapping(uint256=>bool)) public pickers;
     mapping(uint256 => RedPackConfig) public redPacks;
     
     function initialize(
@@ -271,7 +271,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (redPacks[packId].tokenExpend >= redPacks[packId].tokenTotal) revert RedPackPickAlreadyEndToken();
         if (redPacks[packId].isClaimed) revert RedPackPickAlreadyClaim();
         
-        if (pickers[account][packId] > 0) revert RedPackPickDuplidate(); // pick already
+        if (pickers[account][packId]) revert RedPackPickDuplidate(); // pick already
 
         if (!isHolder(redPacks[packId].subject, account)) revert RedPackPickNotHolder();
     }
