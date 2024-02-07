@@ -90,4 +90,18 @@ describe("Lottery", function () {
     expect(await lottery.maxStartTime()).to.equal(newValue);
   });
  
+  it("should be set protocol fee percent", async function () { 
+    newValue = ethers.utils.parseEther("0.15");
+    await lottery.updateProtocolFeePercent(newValue);
+    expect(await lottery.protocolFeePercent()).to.equal(newValue);
+  });
+
+  it("should be set protocol fee destination", async function () { 
+    await lottery.updateProtocolFeeDestination(bob.address);
+    expect(await lottery.protocolFeeDestination()).to.equal(bob.address);
+  });
+
+  it("should be not holder", async function () { 
+    expect(await lottery.isHolder(owner.address, bob.address)).to.equal(false);
+  });
 });
