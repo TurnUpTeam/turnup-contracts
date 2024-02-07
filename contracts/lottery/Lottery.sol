@@ -191,7 +191,7 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (packType_ == RedPackType.TokenLfg) {
             if (tokenTotal_ < pickTotal_ * minLfgPerPick) revert InvalidRedPackTokenTotal();    
         } else { // RedPackType.TokenMatic
-             if (msg.value < pickTotal_ * minMaticPerPick) revert InvaliddRedPackTokenTotal();   
+             if (msg.value < pickTotal_ * minMaticPerPick) revert InvalidRedPackTokenTotal();   
         } 
     }
 
