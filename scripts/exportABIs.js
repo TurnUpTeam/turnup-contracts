@@ -17,6 +17,7 @@ async function main() {
   abi("SharesPool", "contracts/pool");
   abi("LFGToken", "contracts/token");
   abi("LFGFactory", "contracts/token");
+  abi("Lottery", "contracts/lottery");
 
   await fs.writeFile(path.resolve(__dirname, "../export/ABIs.json"), JSON.stringify(ABIs, null, 2));
 }
