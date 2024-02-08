@@ -70,142 +70,162 @@ describe("PFPAuction", function () {
     return (await getTimestamp()) + 1;
   }
 
-  describe("auction simulation", function () {
-    it("should allow to bid multiple times over LFG and MATIC paid owls", async function () {
-      // owls #1
-      let id = 1;
-      let startTime = await ts();
-      // ten hours
-      let endTime = startTime + 60 * 60 * 10;
+  it("should allow to bid multiple times over LFG and MATIC paid owls", async function () {
+    // owls #1
+    let id = 1;
+    let startTime = BigInt(await ts());
+    // ten hours
+    let endTime = BigInt(startTime + 3600n * 10n);
+    let deferredDuration = 3600n; // 1 hours
+    let encodedTiming = startTime + (endTime << 32n) + (deferredDuration << 64n);
 
-      await expect(auction.setItemForAuction(owls.address, id, priceLfg, false, startTime, endTime))
-        .to.emit(auction, "ItemForAuction")
-        .withArgs(owls.address, id, priceLfg, false, startTime, endTime);
+    await expect(auction.setItemForAuction(owls.address, id, priceLfg, false, encodedTiming))
+      .to.emit(auction, "ItemForAuction")
+      .withArgs(owls.address, id, priceLfg, false, startTime, endTime, deferredDuration);
 
-      let owlsInitialPrice = await auction.getNextPrice(owls.address, 1);
-      let item = await auction.getItem(owls.address, id);
-      expect(item.bidder).to.equal(addr0);
-      let owlsCoin = item.native ? "MATIC" : "LFG";
+    let owlsInitialPrice = await auction.getNextPrice(owls.address, 1);
+    let item = await auction.getItem(owls.address, id);
+    expect(item.bidder).to.equal(addr0);
+    let owlsCoin = item.native ? "MATIC" : "LFG";
 
-      expect(owlsInitialPrice).to.equal(priceLfg);
-      expect(owlsCoin).to.equal("LFG");
+    expect(owlsInitialPrice).to.equal(priceLfg);
+    expect(owlsCoin).to.equal("LFG");
 
-      // failing bids
-      await expect(auction.connect(bob).bid(owls.address, 110)).to.be.revertedWith("AssetNotFound()");
-      await expect(auction.connect(bob).bid(owls.address, 200)).to.be.revertedWith("ERC721: invalid token ID");
+    // failing bids
+    await expect(auction.connect(bob).bid(owls.address, 110)).to.be.revertedWith("AssetNotFound()");
+    await expect(auction.connect(bob).bid(owls.address, 200)).to.be.revertedWith("ERC721: invalid token ID");
 
-      // unapproved bid
-      await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("ERC20: insufficient allowance");
+    // unapproved bid
+    await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("ERC20: insufficient allowance");
 
-      // bob approves LFG
-      await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
-        .to.emit(lfg, "Approval")
-        .withArgs(bob.address, auction.address, owlsInitialPrice);
+    // bob approves LFG
+    await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
+      .to.emit(lfg, "Approval")
+      .withArgs(bob.address, auction.address, owlsInitialPrice);
 
-      // successful bid
-      await expect(auction.connect(bob).bid(owls.address, id))
-        .to.emit(auction, "Bid")
-        .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
+    const endTimeBefore = await auction.auctionEndTime(owls.address, id);
 
-      item = await auction.getItem(owls.address, id);
-      expect(item.bidder).to.equal(bob.address);
+    // after 8 hours
+    await increaseBlockTimestampBy(3600 * 8);
 
-      // raising price
-      let price = await auction.getNextPrice(owls.address, id);
-      expect(price).to.equal(owlsInitialPrice.add(owlsInitialPrice.mul(10).div(100)));
+    // successful bid
+    await expect(auction.connect(bob).bid(owls.address, id))
+      .to.emit(auction, "Bid")
+      .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
 
-      let fee = price.mul(5).div(110);
-      let totalFee = owlsInitialPrice.add(fee);
+    let endTimeAfter = await auction.auctionEndTime(owls.address, id);
 
-      // alice approves lfg
-      await lfg.connect(alice).approve(auction.address, price.mul(10));
+    expect(endTimeAfter).to.equal(endTimeBefore);
 
-      // alice bids
-      await expect(auction.connect(alice).bid(owls.address, id))
-        .to.emit(auction, "Bid")
-        .withArgs(owls.address, id, price, await ts(), alice.address)
-        .to.emit(lfg, "Transfer")
-        .withArgs(auction.address, bob.address, price.sub(fee));
+    item = await auction.getItem(owls.address, id);
+    expect(item.bidder).to.equal(bob.address);
 
-      // alice bids again
-      price = await auction.getNextPrice(owls.address, id);
-      fee = price.mul(5).div(110);
-      totalFee = totalFee.add(fee);
+    // raising price
+    let price = await auction.getNextPrice(owls.address, id);
+    expect(price).to.equal(owlsInitialPrice.add(owlsInitialPrice.mul(10).div(100)));
 
-      await expect(auction.connect(alice).bid(owls.address, id))
-        .to.emit(auction, "Bid")
-        .withArgs(owls.address, id, price, await ts(), alice.address)
-        .to.emit(lfg, "Transfer")
-        .withArgs(auction.address, alice.address, price.sub(fee));
+    let fee = price.mul(5).div(110);
+    let totalFee = owlsInitialPrice.add(fee);
 
-      await expect(auction.connect(alice).claim(owls.address, id)).to.be.revertedWith("AuctionIsNotOver()");
+    // alice approves lfg
+    await lfg.connect(alice).approve(auction.address, price.mul(10));
 
-      let now = await ts();
-      endTime = await auction.auctionEndTime(owls.address, id);
+    await increaseBlockTimestampBy(Math.round(3600 * 1.6));
 
-      // an hour passes
-      await increaseBlockTimestampBy(endTime - now + 1);
+    // alice bids
+    await expect(auction.connect(alice).bid(owls.address, id))
+      .to.emit(auction, "Bid")
+      .withArgs(owls.address, id, price, await ts(), alice.address)
+      .to.emit(lfg, "Transfer")
+      .withArgs(auction.address, bob.address, price.sub(fee));
 
-      // bob tries to bid again but auction is over
-      await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("AuctionIsOver()");
+    let item2 = await auction.getItem(owls.address, id);
+    endTimeAfter = await auction.auctionEndTime(owls.address, id);
+    expect(endTimeAfter).to.equal(item2.bidAt + Number(deferredDuration));
 
-      await expect(auction.connect(fred).claim(owls.address, id)).to.be.revertedWith("NotTheWinner()");
+    // alice bids again
+    price = await auction.getNextPrice(owls.address, id);
+    fee = price.mul(5).div(110);
+    totalFee = totalFee.add(fee);
 
-      await expect(auction.connect(alice).claim(owls.address, id))
-        .to.emit(owls, "Transfer")
-        .withArgs(auction.address, alice.address, id);
+    await expect(auction.connect(alice).bid(owls.address, id))
+      .to.emit(auction, "Bid")
+      .withArgs(owls.address, id, price, await ts(), alice.address)
+      .to.emit(lfg, "Transfer")
+      .withArgs(auction.address, alice.address, price.sub(fee));
 
-      expect(await lfg.balanceOf(auction.address)).to.equal(totalFee);
+    await expect(auction.connect(alice).claim(owls.address, id)).to.be.revertedWith("AuctionIsNotOver()");
 
-      // owls # 2
-      id = 2;
-      startTime = await ts();
-      endTime = startTime + tenHours;
+    let now = await ts();
+    endTime = await auction.auctionEndTime(owls.address, id);
 
-      await expect(auction.setItemForAuction(owls.address, id, priceMatic, true, startTime, endTime))
-        .to.emit(auction, "ItemForAuction")
-        .withArgs(owls.address, id, priceMatic, true, startTime, endTime);
+    // an hour passes
+    await increaseBlockTimestampBy(endTime - now + 1);
 
-      // bob approves LFG and bids
-      await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
-        .to.emit(lfg, "Approval")
-        .withArgs(bob.address, auction.address, owlsInitialPrice);
+    // bob tries to bid again but auction is over
+    await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("AuctionIsOver()");
 
-      now = await ts();
+    await expect(auction.connect(fred).claim(owls.address, id)).to.be.revertedWith("NotTheWinner()");
 
-      endTime = await auction.auctionEndTime(owls.address, id);
+    await expect(auction.connect(alice).claim(owls.address, id))
+      .to.emit(owls, "Transfer")
+      .withArgs(auction.address, alice.address, id);
 
-      await expect(auction.connect(bob).bid(owls.address, id, {value: priceMatic}))
-        .to.emit(auction, "Bid")
-        .withArgs(owls.address, id, priceMatic, await ts(), bob.address);
-      // nobody beats the bid, an hour passes
-      await increaseBlockTimestampBy(3600 * 20);
+    expect(await lfg.balanceOf(auction.address)).to.equal(totalFee);
 
-      await expect(auction.connect(bob).claim(owls.address, id))
-        .to.emit(owls, "Transfer")
-        .withArgs(auction.address, bob.address, id);
-    });
+    // owls # 2
+    id = 2;
+
+    startTime = BigInt(await ts());
+    // twelve hours
+    endTime = BigInt(startTime + 3600n * 12n);
+    deferredDuration = 2n * 3600n; // 2 hours
+    encodedTiming = startTime + (endTime << 32n) + (deferredDuration << 64n);
+
+    await expect(auction.setItemForAuction(owls.address, id, priceMatic, true, encodedTiming))
+      .to.emit(auction, "ItemForAuction")
+      .withArgs(owls.address, id, priceMatic, true, startTime, endTime, deferredDuration);
+
+    // bob approves LFG and bids
+    await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
+      .to.emit(lfg, "Approval")
+      .withArgs(bob.address, auction.address, owlsInitialPrice);
+
+    await expect(auction.connect(bob).bid(owls.address, id, {value: priceMatic}))
+      .to.emit(auction, "Bid")
+      .withArgs(owls.address, id, priceMatic, await ts(), bob.address);
+    // nobody beats the bid, an hour passes
+    await increaseBlockTimestampBy(3600 * 20);
+
+    await expect(auction.connect(bob).claim(owls.address, id))
+      .to.emit(owls, "Transfer")
+      .withArgs(auction.address, bob.address, id);
   });
 
   it("should allow to bid multiple times over MATIC paid rats", async function () {
     let id = 1;
-    let startTime = await ts();
-    let endTime = startTime + 60 * 60 * 10;
-
+    let startTime = BigInt(await ts());
+    let endTime = BigInt(startTime + 3600n * 8n);
+    let deferredDuration = 3600n; // 2 hours
+    let encodedTiming = startTime + (endTime << 32n) + (deferredDuration << 64n);
+    let startTime2 = BigInt(await ts());
+    // twelve hours
+    let endTime2 = BigInt(startTime2 + 3600n * 12n);
+    let deferredDuration2 = 2n * 3600n; // 2 hours
+    let encodedTiming2 = startTime2 + (endTime2 << 32n) + (deferredDuration2 << 64n);
     await expect(
       auction.setItemsForAuction(
         [rats.address, owls.address],
         [id, id],
         [priceMatic, priceLfg],
         [true, false],
-        [startTime, startTime],
-        [endTime, endTime]
+        [encodedTiming, encodedTiming2]
       )
     )
       .to.emit(auction, "ItemForAuction")
-      .withArgs(rats.address, id, priceMatic, true, startTime, endTime)
+      .withArgs(rats.address, id, priceMatic, true, startTime, endTime, deferredDuration)
       .to.emit(auction, "ItemForAuction")
-      .withArgs(owls.address, id, priceLfg, false, startTime, endTime);
+      .withArgs(owls.address, id, priceLfg, false, startTime2, endTime2, deferredDuration2);
 
     let ratsInitialPrice = await auction.getNextPrice(rats.address, id);
     let ratsCoin = (await auction.getItem(rats.address, id)).native ? "MATIC" : "LFG";

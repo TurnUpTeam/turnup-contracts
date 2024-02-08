@@ -27,7 +27,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 initialPrice,
     bool native,
     uint256 startTime,
-    uint256 endTime
+    uint256 endTime,
+    uint256 deferredDuration
   );
   event Bid(address tokenAddress, uint256 tokenId, uint256 price, uint256 bidAt, address bidder);
 
@@ -43,12 +44,16 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error AuctionIsActive();
   error InvalidInput();
 
+  // Optimized to reduce storage consumption
   struct Item {
-    uint256 price;
-    uint256 startTime;
-    uint256 endTime;
-    uint256 bidAt;
+    // 1st word
+    uint96 price;
     address bidder;
+    // 2nd word
+    uint32 startTime;
+    uint32 endTime;
+    uint32 deferredDuration;
+    uint32 bidAt;
     bool native;
   }
 
@@ -75,8 +80,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 tokenId,
     uint256 initialPrice,
     bool native,
-    uint256 startTime,
-    uint256 endTime
+    // This is encoded using bitwise operators to avoid too many variables:
+    // encodedTiming = startTime + (endTime << 32) + (deferredDuration << 64)
+    uint256 encodedTiming
   ) public virtual onlyOwner {
     if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
       // the auction must own the asset
@@ -87,14 +93,23 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       revert AuctionIsActive();
     }
     _items[tokenAddress][tokenId] = Item({
-      price: initialPrice,
+      price: uint96(initialPrice),
       native: native,
-      startTime: startTime,
-      endTime: endTime,
+      startTime: uint32(encodedTiming),
+      endTime: uint32(encodedTiming >> 32),
+      deferredDuration: uint32(encodedTiming >> 64),
       bidAt: 0,
       bidder: address(0)
     });
-    emit ItemForAuction(tokenAddress, tokenId, initialPrice, native, startTime, endTime);
+    emit ItemForAuction(
+      tokenAddress,
+      tokenId,
+      initialPrice,
+      native,
+      uint32(encodedTiming),
+      uint32(encodedTiming >> 32),
+      uint32(encodedTiming >> 64)
+    );
   }
 
   function setItemsForAuction(
@@ -102,20 +117,18 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256[] calldata tokenIds,
     uint256[] calldata initialPrices,
     bool[] calldata natives,
-    uint256[] calldata startTimes,
-    uint256[] calldata endTimes
+    uint256[] calldata encodedTimings
   ) external virtual onlyOwner {
     if (
       tokenAddresses.length != tokenIds.length ||
       tokenAddresses.length != initialPrices.length ||
       tokenAddresses.length != natives.length ||
-      tokenAddresses.length != startTimes.length ||
-      tokenAddresses.length != endTimes.length
+      tokenAddresses.length != encodedTimings.length
     ) {
       revert InvalidInput();
     }
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
-      setItemForAuction(tokenAddresses[i], tokenIds[i], initialPrices[i], natives[i], startTimes[i], endTimes[i]);
+      setItemForAuction(tokenAddresses[i], tokenIds[i], initialPrices[i], natives[i], encodedTimings[i]);
     }
   }
 
@@ -130,8 +143,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   function auctionEndTime(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
     Item storage item = _items[tokenAddress][tokenId];
     uint256 endTime = item.endTime;
-    if (item.bidAt > 0 && (item.bidAt > endTime || endTime - item.bidAt < 1 hours)) {
-      endTime = item.bidAt + 1 hours;
+    if (item.bidAt > 0 && (item.bidAt > endTime || endTime - item.bidAt < item.deferredDuration)) {
+      endTime = item.bidAt + item.deferredDuration;
     }
     return endTime;
   }
@@ -150,8 +163,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 price = getNextPrice(tokenAddress, tokenId);
     address previousBidder = _item.bidder;
     uint256 fee = previousBidder == address(0) ? 0 : (price * 5) / 110;
-    _item.price = price;
-    _item.bidAt = block.timestamp;
+    _item.price = uint96(price);
+    _item.bidAt = uint32(block.timestamp);
     _item.bidder = _msgSender();
     if (_item.native) {
       nativeFees += fee;
