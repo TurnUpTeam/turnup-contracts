@@ -68,7 +68,7 @@ describe("CorePool", function () {
     ] = await ethers.getSigners();
   });
 
-  it.only("should fix the pool", async function () {
+  it("should fix the pool", async function () {
     let maxSupply = bn("3000000000");
     let initialSupply = bn("900000000");
     let amountReservedToSharesPool = bn("200000000");
