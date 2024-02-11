@@ -344,7 +344,11 @@ contract Lottery is Initializable, OwnableUpgradeable, PausableUpgradeable, Reen
         if (redPacks[packId].packType == RedPackType.TokenMatic) {
             minAmount = minMaticPerPick;
         }
-        uint256 maxAmount = remainToken - minAmount * (remainPick - 1);
+        uint256 maxAmount = remainToken * 2 / remainPick;
+        uint256 n = remainToken - minAmount * (remainPick - 1);
+        if (maxAmount > n) {
+            maxAmount = n;
+        }
         uint256 amount = getRandomAmount(minAmount, maxAmount);
         return amount;
     }
