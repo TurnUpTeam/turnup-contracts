@@ -190,10 +190,6 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       lfgFees += fee;
     }
-    //    console.log(auctionEndTime(tokenAddress, tokenId));
-    //    console.log(previousBidder == address(0) ? 0 : previousPrice);
-    //    console.log(previousBidder);
-    //    console.log(price - fee);
     emit Bid(
       tokenAddress,
       tokenId,
