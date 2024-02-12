@@ -30,7 +30,17 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 endTime,
     uint256 deferredDuration
   );
-  event Bid(address tokenAddress, uint256 tokenId, uint256 price, uint256 bidAt, address bidder);
+  event Bid(
+    address indexed tokenAddress,
+    uint256 indexed tokenId,
+    uint256 price,
+    uint256 bidAt,
+    address indexed bidder,
+    uint256 newEndTime,
+    uint256 previousPrice,
+    address previousBidder,
+    uint256 previousBidderRefund
+  );
 
   error UnableToTransferFunds();
   error ZeroAddress();
@@ -140,6 +150,13 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     return price;
   }
 
+  function getFee(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
+    if (_items[tokenAddress][tokenId].bidder != address(0)) {
+      return (_items[tokenAddress][tokenId].price * 5) / 110;
+    }
+    return 0;
+  }
+
   function auctionEndTime(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
     Item storage item = _items[tokenAddress][tokenId];
     uint256 endTime = item.endTime;
@@ -162,7 +179,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     if (isAuctionOver(tokenAddress, tokenId)) revert AuctionIsOver();
     uint256 price = getNextPrice(tokenAddress, tokenId);
     address previousBidder = _item.bidder;
-    uint256 fee = previousBidder == address(0) ? 0 : (price * 5) / 110;
+    uint256 fee = getFee(tokenAddress, tokenId);
+    //previousBidder == address(0) ? 0 : (price * 5) / 110;
+    uint256 previousPrice = _item.price;
     _item.price = uint96(price);
     _item.bidAt = uint32(block.timestamp);
     _item.bidder = _msgSender();
@@ -171,7 +190,21 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       lfgFees += fee;
     }
-    emit Bid(tokenAddress, tokenId, price, block.timestamp, _msgSender());
+    //    console.log(auctionEndTime(tokenAddress, tokenId));
+    //    console.log(previousBidder == address(0) ? 0 : previousPrice);
+    //    console.log(previousBidder);
+    //    console.log(price - fee);
+    emit Bid(
+      tokenAddress,
+      tokenId,
+      price,
+      block.timestamp,
+      _msgSender(),
+      auctionEndTime(tokenAddress, tokenId),
+      previousBidder == address(0) ? 0 : previousPrice,
+      previousBidder,
+      price - fee
+    );
     if (_item.native) {
       if (msg.value < price) revert InsufficientFunds();
       if (msg.value > price) {

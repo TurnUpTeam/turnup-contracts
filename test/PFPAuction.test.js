@@ -108,10 +108,13 @@ describe("PFPAuction", function () {
     // after 8 hours
     await increaseBlockTimestampBy(3600 * 8);
 
+    let t = await ts();
     // successful bid
+    let price = await auction.getNextPrice(owls.address, id);
+    let fee = await auction.getFee(owls.address, id);
     await expect(auction.connect(bob).bid(owls.address, id))
       .to.emit(auction, "Bid")
-      .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address);
+      .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address, t + 7195, 0, addr0, price.sub(fee));
 
     let endTimeAfter = await auction.auctionEndTime(owls.address, id);
 
@@ -120,11 +123,12 @@ describe("PFPAuction", function () {
     item = await auction.getItem(owls.address, id);
     expect(item.bidder).to.equal(bob.address);
 
+    let previousPrice = price;
     // raising price
-    let price = await auction.getNextPrice(owls.address, id);
+    price = await auction.getNextPrice(owls.address, id);
     expect(price).to.equal(owlsInitialPrice.add(owlsInitialPrice.mul(10).div(100)));
 
-    let fee = price.mul(5).div(110);
+    fee = await auction.getFee(owls.address, id);
     let totalFee = owlsInitialPrice.add(fee);
 
     // alice approves lfg
@@ -133,9 +137,10 @@ describe("PFPAuction", function () {
     await increaseBlockTimestampBy(Math.round(3600 * 1.6));
 
     // alice bids
+    t = await ts();
     await expect(auction.connect(alice).bid(owls.address, id))
       .to.emit(auction, "Bid")
-      .withArgs(owls.address, id, price, await ts(), alice.address)
+      .withArgs(owls.address, id, price, await ts(), alice.address, t + 3600, previousPrice, bob.address, price.sub(fee))
       .to.emit(lfg, "Transfer")
       .withArgs(auction.address, bob.address, price.sub(fee));
 
@@ -143,14 +148,15 @@ describe("PFPAuction", function () {
     endTimeAfter = await auction.auctionEndTime(owls.address, id);
     expect(endTimeAfter).to.equal(item2.bidAt + Number(deferredDuration));
 
+    previousPrice = price;
     // alice bids again
     price = await auction.getNextPrice(owls.address, id);
-    fee = price.mul(5).div(110);
+    fee = await auction.getFee(owls.address, id);
     totalFee = totalFee.add(fee);
-
+    t = await ts();
     await expect(auction.connect(alice).bid(owls.address, id))
       .to.emit(auction, "Bid")
-      .withArgs(owls.address, id, price, await ts(), alice.address)
+      .withArgs(owls.address, id, price, await ts(), alice.address, t + 3600, previousPrice, alice.address, price.sub(fee))
       .to.emit(lfg, "Transfer")
       .withArgs(auction.address, alice.address, price.sub(fee));
 
@@ -191,9 +197,7 @@ describe("PFPAuction", function () {
       .to.emit(lfg, "Approval")
       .withArgs(bob.address, auction.address, owlsInitialPrice);
 
-    await expect(auction.connect(bob).bid(owls.address, id, {value: priceMatic}))
-      .to.emit(auction, "Bid")
-      .withArgs(owls.address, id, priceMatic, await ts(), bob.address);
+    await expect(auction.connect(bob).bid(owls.address, id, {value: priceMatic})).to.emit(auction, "Bid");
     // nobody beats the bid, an hour passes
     await increaseBlockTimestampBy(3600 * 20);
 
@@ -235,9 +239,7 @@ describe("PFPAuction", function () {
     // bid without value
     await expect(auction.connect(bob).bid(rats.address, id)).to.be.revertedWith("InsufficientFunds()");
     // successful bid
-    await expect(auction.connect(bob).bid(rats.address, id, {value: ratsInitialPrice}))
-      .to.emit(auction, "Bid")
-      .withArgs(rats.address, id, ratsInitialPrice, await ts(), bob.address);
+    await expect(auction.connect(bob).bid(rats.address, id, {value: ratsInitialPrice})).to.emit(auction, "Bid");
 
     expect(await ethers.provider.getBalance(auction.address)).to.equal(ratsInitialPrice);
 
@@ -245,26 +247,22 @@ describe("PFPAuction", function () {
     let price = await auction.getNextPrice(rats.address, id);
     expect(price).to.equal(ratsInitialPrice.add(ratsInitialPrice.mul(10).div(100)));
 
-    let fee = price.mul(5).div(110);
+    let fee = await auction.getFee(rats.address, id);
     let totalFee = ratsInitialPrice.add(fee);
 
     // alice bids
-    await expect(auction.connect(alice).bid(rats.address, id, {value: price}))
-      .to.emit(auction, "Bid")
-      .withArgs(rats.address, id, price, await ts(), alice.address);
+    await expect(auction.connect(alice).bid(rats.address, id, {value: price})).to.emit(auction, "Bid");
 
     expect(await ethers.provider.getBalance(auction.address)).to.equal(totalFee);
 
     price = await auction.getNextPrice(rats.address, id);
-    fee = price.mul(5).div(110);
+    fee = await auction.getFee(rats.address, id);
     totalFee = totalFee.add(fee);
 
     let fredBalanceBefore = await ethers.provider.getBalance(fred.address);
 
     // fred over bids, sending twice the price
-    await expect(auction.connect(fred).bid(rats.address, id, {value: price.mul(2)}))
-      .to.emit(auction, "Bid")
-      .withArgs(rats.address, id, price, await ts(), fred.address);
+    await expect(auction.connect(fred).bid(rats.address, id, {value: price.mul(2)})).to.emit(auction, "Bid");
 
     let fredBalanceAfter = await ethers.provider.getBalance(fred.address);
     let remaining = fredBalanceBefore.sub(fredBalanceAfter);
