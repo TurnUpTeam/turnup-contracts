@@ -41,6 +41,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     address previousBidder,
     uint256 previousBidderRefund
   );
+  event Claim(address indexed tokenAddress, uint256 indexed tokenId, address indexed winner);
 
   error UnableToTransferFunds();
   error ZeroAddress();
@@ -190,6 +191,10 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       lfgFees += fee;
     }
+    //    console.log(auctionEndTime(tokenAddress, tokenId));
+    //    console.log(previousBidder == address(0) ? 0 : previousPrice);
+    //    console.log(previousBidder);
+    //    console.log(price - fee);
     emit Bid(
       tokenAddress,
       tokenId,
@@ -237,6 +242,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     if (!isAuctionOver(tokenAddress, tokenId)) revert AuctionIsNotOver();
     if (_item.bidder != _msgSender()) revert NotTheWinner();
     PFPAsset(tokenAddress).safeTransferFrom(address(this), _item.bidder, tokenId);
+    emit Claim(tokenAddress, tokenId, _item.bidder);
   }
 
   function withdrawProceeds(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {

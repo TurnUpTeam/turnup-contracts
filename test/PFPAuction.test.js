@@ -175,7 +175,9 @@ describe("PFPAuction", function () {
 
     await expect(auction.connect(alice).claim(owls.address, id))
       .to.emit(owls, "Transfer")
-      .withArgs(auction.address, alice.address, id);
+      .withArgs(auction.address, alice.address, id)
+      .to.emit(auction, "Claim")
+      .withArgs(owls.address, id, alice.address);
 
     expect(await lfg.balanceOf(auction.address)).to.equal(totalFee);
 
