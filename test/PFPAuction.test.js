@@ -269,7 +269,7 @@ describe("PFPAuction", function () {
       .to.emit(owls, "Transfer")
       .withArgs(auction.address, alice.address, id)
       .to.emit(auction, "Claim")
-      .withArgs(owls.address, id, alice.address);
+      .withArgs(owls.address, id, alice.address, price);
 
     expect(await lfg.balanceOf(auction.address)).to.equal(totalFee);
 
