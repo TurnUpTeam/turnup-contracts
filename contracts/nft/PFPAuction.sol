@@ -172,17 +172,24 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   }
 
   function bid(address tokenAddress, uint256 tokenId) external payable nonReentrant {
+    _bid(tokenAddress, tokenId, 0);
+  }
+
+  function _bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending) internal returns (bool) {
     Item storage _item = _items[tokenAddress][tokenId];
+    Item memory oldItem = _item;
     if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
       // the auction must own the asset
-      revert AssetNotFound();
+      if (expectedSpending == 0) revert AssetNotFound();
+      // during batch we just skip the bid
+      else return false;
     }
-    if (isAuctionOver(tokenAddress, tokenId)) revert AuctionIsOver();
+    if (isAuctionOver(tokenAddress, tokenId)) {
+      if (expectedSpending == 0) revert AuctionIsOver();
+      else return false;
+    }
     uint256 price = getNextPrice(tokenAddress, tokenId);
-    address previousBidder = _item.bidder;
     uint256 fee = getFee(tokenAddress, tokenId);
-    //previousBidder == address(0) ? 0 : (price * 5) / 110;
-    uint256 previousPrice = _item.price;
     _item.price = uint96(price);
     _item.bidAt = uint32(block.timestamp);
     _item.bidder = _msgSender();
@@ -191,34 +198,31 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       lfgFees += fee;
     }
-    //    console.log(auctionEndTime(tokenAddress, tokenId));
-    //    console.log(previousBidder == address(0) ? 0 : previousPrice);
-    //    console.log(previousBidder);
-    //    console.log(price - fee);
-    emit Bid(
-      tokenAddress,
-      tokenId,
-      price,
-      block.timestamp,
-      _msgSender(),
-      auctionEndTime(tokenAddress, tokenId),
-      previousBidder == address(0) ? 0 : previousPrice,
-      previousBidder,
-      price - fee
-    );
     if (_item.native) {
-      if (msg.value < price) revert InsufficientFunds();
-      if (msg.value > price) {
+      uint256 value = expectedSpending > 0 ? expectedSpending : msg.value;
+      if (value < price) {
+        if (expectedSpending == 0) revert InsufficientFunds();
+        // during batch we just skip the bid
+        else {
+          // we prefer to revert the change than setting the values after the external calls
+          // to avoid potential reentrancy issues
+          _item.price = oldItem.price;
+          _item.bidAt = oldItem.bidAt;
+          _item.bidder = oldItem.bidder;
+          nativeFees -= fee;
+          return false;
+        }
+      } else {
         // The user may send more than the current price to be sure that
         // the transaction will not fail if the price has increased in the meantime.
-        // If there is a surplus we send it back to the user:
-        (bool success, ) = _msgSender().call{value: msg.value - price}("");
+        // If there is a surplus (during single bid) we send it back to the user:
+        (bool success, ) = _msgSender().call{value: value - price}("");
         if (!success) revert UnableToTransferFunds();
         // ^ In this case we reverts to try to anticipate further issues later
       }
-      if (previousBidder != address(0)) {
+      if (oldItem.bidder != address(0)) {
         // Not the first bid.
-        (bool success, ) = previousBidder.call{value: price - fee}("");
+        (bool success, ) = oldItem.bidder.call{value: price - fee}("");
         if (!success) {
           // ^ We ignore failures. If not, a bidder can use a smart contract to make a bid without
           // implementing a receive function. That would cause the call to fail, making impossible
@@ -228,12 +232,68 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       // If the user approves more than strictly required, they can be able to make a
       // successful bid even if the price has increased in the meantime.
+      if (LFGToken(_lfg).balanceOf(_msgSender()) < price) {
+        if (expectedSpending == 0) revert InsufficientFunds();
+        // during batch we just skip the bid
+        else {
+          // we prefer to revert the change than setting the values after the external calls
+          // to avoid potential reentrancy issues
+          _item.price = oldItem.price;
+          _item.bidAt = oldItem.bidAt;
+          _item.bidder = oldItem.bidder;
+          lfgFees -= fee;
+          return false;
+        }
+      }
       LFGToken(_lfg).safeTransferFrom(_msgSender(), address(this), price);
-      if (previousBidder != address(0)) {
+      if (oldItem.bidder != address(0)) {
         // Not the first bid.
-        LFGToken(_lfg).transfer(previousBidder, price - fee);
+        LFGToken(_lfg).transfer(oldItem.bidder, price - fee);
         // ^ We use transfer to ignore the failure for the same reasons as above
       }
+    }
+    emit Bid(
+      tokenAddress,
+      tokenId,
+      price,
+      block.timestamp,
+      _msgSender(),
+      auctionEndTime(tokenAddress, tokenId),
+      oldItem.bidder == address(0) ? 0 : oldItem.price,
+      oldItem.bidder,
+      price - fee
+    );
+    return true;
+  }
+
+  function bidBatch(
+    address[] memory tokenAddresses,
+    uint256[] memory tokenIds,
+    uint256[] memory expectedSpendings
+  ) external payable nonReentrant {
+    if (tokenAddresses.length != tokenIds.length || tokenAddresses.length != expectedSpendings.length) {
+      revert InvalidInput();
+    }
+    uint256 remaining = msg.value;
+    for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      // the expected spending must be > 0 during batch bidding
+      if (expectedSpendings[i] == 0) continue;
+      uint256 expectedSpending = expectedSpendings[i];
+      if (_items[tokenAddresses[i]][tokenIds[i]].native && expectedSpending > remaining) {
+        // most likely it will fail later
+        expectedSpending = remaining;
+      }
+      if (_bid(tokenAddresses[i], tokenIds[i], expectedSpending)) {
+        if (_items[tokenAddresses[i]][tokenIds[i]].native) {
+          remaining -= expectedSpending;
+        }
+      }
+    }
+    // if there are unused funds, we refund them
+    if (remaining > 0) {
+      // all funds used. Refunding the remaining
+      (bool success, ) = _msgSender().call{value: remaining}("");
+      if (!success) revert UnableToTransferFunds();
     }
   }
 
