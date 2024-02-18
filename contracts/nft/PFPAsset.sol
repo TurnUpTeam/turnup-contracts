@@ -106,9 +106,8 @@ contract PFPAsset is
   function preMint(address recipient, uint256 amount) external onlyOwner {
     uint256 tokenId = lastTokenId;
     for (uint256 i = 0; i < amount; i++) {
-      tokenId++;
+      _safeMint(recipient, ++tokenId);
       if (maxSupply > 0 && tokenId > maxSupply) revert InvalidTokenId();
-      _safeMint(recipient, tokenId);
     }
     lastTokenId = tokenId;
   }
