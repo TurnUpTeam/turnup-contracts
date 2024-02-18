@@ -104,12 +104,13 @@ contract PFPAsset is
 
   // the owner must distribute the auctionable tokens to the factory to allow the factory to operate
   function preMint(address recipient, uint256 amount) external onlyOwner {
-    uint256 tokenId = lastTokenId + 1;
+    if (amount <= 0) revert InvalidTokenId();
     for (uint256 i = 0; i < amount; i++) {
+      uint256 tokenId = lastTokenId + i + 1;
       if (maxSupply > 0 && tokenId > maxSupply) revert InvalidTokenId();
-      _safeMint(recipient, tokenId++);
+      _safeMint(recipient, tokenId);
     }
-    lastTokenId = tokenId;
+    lastTokenId += amount;
   }
 
   uint256[50] private __gap;
