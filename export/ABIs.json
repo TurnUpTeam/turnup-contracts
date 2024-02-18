@@ -5705,21 +5705,6 @@
       },
       {
         "inputs": [],
-        "name": "InvaildRedPackPickTotal",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "InvaildRedPackTime",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "InvaildRedPackTokenTotal",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "InvalidNoZeroLfg",
         "type": "error"
       },
@@ -5745,6 +5730,21 @@
       },
       {
         "inputs": [],
+        "name": "InvalidRedPackPickTotal",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidRedPackTime",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidRedPackTokenTotal",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "InvalidZeroLfg",
         "type": "error"
       },
@@ -5765,7 +5765,37 @@
       },
       {
         "inputs": [],
-        "name": "RedPackUnpickable",
+        "name": "RedPackAlreadyEndTime",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RedPackNotStartYet",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RedPackPickAlreadyClaim",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RedPackPickAlreadyEndPick",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RedPackPickAlreadyEndToken",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RedPackPickDuplidate",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RedPackPickNotHolder",
         "type": "error"
       },
       {
@@ -5845,6 +5875,58 @@
           }
         ],
         "name": "Initialized",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "lfg",
+            "type": "address"
+          }
+        ],
+        "name": "LfgTokenUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "maxStartTime",
+            "type": "uint256"
+          }
+        ],
+        "name": "MaxStartTimeUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "minValue",
+            "type": "uint256"
+          }
+        ],
+        "name": "MinLfgPerPickUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "minValue",
+            "type": "uint256"
+          }
+        ],
+        "name": "MinMaticPerPickUpdate",
         "type": "event"
       },
       {
@@ -5952,6 +6034,58 @@
           {
             "indexed": false,
             "internalType": "address",
+            "name": "destination",
+            "type": "address"
+          }
+        ],
+        "name": "ProtocolFeeDestinationUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "feePercent",
+            "type": "uint256"
+          }
+        ],
+        "name": "ProtocolFeePercentUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lifeTime",
+            "type": "uint256"
+          }
+        ],
+        "name": "RedPackLifeTimeUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "shares",
+            "type": "address"
+          }
+        ],
+        "name": "SharesUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
             "name": "account",
             "type": "address"
           }
@@ -6020,6 +6154,24 @@
         "name": "batchWithdrawRedPack",
         "outputs": [],
         "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "packId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "checkPickable",
+        "outputs": [],
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -6144,30 +6296,6 @@
           }
         ],
         "name": "isHolder",
-        "outputs": [
-          {
-            "internalType": "bool",
-            "name": "",
-            "type": "bool"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "packId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
-        "name": "isPickable",
         "outputs": [
           {
             "internalType": "bool",
@@ -6318,9 +6446,9 @@
         "name": "pickers",
         "outputs": [
           {
-            "internalType": "uint256",
+            "internalType": "bool",
             "name": "",
-            "type": "uint256"
+            "type": "bool"
           }
         ],
         "stateMutability": "view",
@@ -6414,6 +6542,11 @@
             "internalType": "uint32",
             "name": "pickAmount",
             "type": "uint32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "depositTime",
+            "type": "uint256"
           },
           {
             "internalType": "uint256",
@@ -6602,19 +6735,6 @@
         "name": "withdrawMaticProtocolFees",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "packId",
-            "type": "uint256"
-          }
-        ],
-        "name": "withdrawRedPack",
-        "outputs": [],
-        "stateMutability": "payable",
         "type": "function"
       }
     ]
