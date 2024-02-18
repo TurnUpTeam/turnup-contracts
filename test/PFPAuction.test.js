@@ -10,7 +10,7 @@ describe("PFPAuction", function () {
   let auction;
   let lfg;
   // three pfp collections
-  let owls, rats, pigs;
+  let owls, rats, pigs, dogs;
   const priceLfg = ethers.utils.parseEther("82");
   const priceMatic = ethers.utils.parseEther("130");
   let tenThousand = ethers.utils.parseEther("10000");
@@ -39,6 +39,7 @@ describe("PFPAuction", function () {
     owls = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Owls", "TOWLS", "https://meta.turnup.so/owls/");
     rats = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Rats", "TRATS", "https://meta.turnup.so/rats/");
     pigs = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Pigs", "TPIGS", "https://meta.turnup.so/pigs/");
+    dogs = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Dogs", "TDOGS", "https://meta.turnup.so/dogs/");
 
     auction = await deployUtils.deployProxy("PFPAuction", lfg.address);
 
@@ -54,6 +55,8 @@ describe("PFPAuction", function () {
     await rats.preMint(auction.address, 10);
 
     await pigs.preMint(owner.address, 20);
+
+    await dogs.preMint(auction.address, 20);
   }
 
   beforeEach(async function () {
@@ -69,6 +72,95 @@ describe("PFPAuction", function () {
   async function ts() {
     return (await getTimestamp()) + 1;
   }
+
+  it("should allow to batch bid", async function () {
+    let id = 1;
+    let id2 = 2;
+    let id3 = 3;
+
+    let startTime = BigInt(await ts());
+    let endTime = BigInt(startTime + 3600n * 8n);
+    let deferredDuration = 3600n; // 2 hours
+    let encodedTiming = startTime + (endTime << 32n) + (deferredDuration << 64n);
+
+    await auction.setItemsForAuction(
+      [rats.address, owls.address, dogs.address, rats.address],
+      [id, id2, id3, id2],
+      [priceMatic, priceLfg, priceMatic, priceMatic],
+      [true, false, true, true],
+      [encodedTiming, encodedTiming, encodedTiming, encodedTiming]
+    );
+
+    let ratsPrice = await auction.getNextPrice(rats.address, id);
+    let owlsPrice = await auction.getNextPrice(owls.address, id2);
+    let dogsPrice = await auction.getNextPrice(dogs.address, id3);
+
+    // bob makes a batch bid
+
+    let lfgBalanceBefore = await lfg.balanceOf(bob.address);
+    await lfg.connect(bob).approve(auction.address, owlsPrice.add(1000000));
+    // successful bid
+    let balanceBefore = await ethers.provider.getBalance(bob.address);
+    await auction
+      .connect(bob)
+      .bidBatch([rats.address, owls.address, dogs.address], [id, id2, id3], [ratsPrice, owlsPrice, dogsPrice], {
+        value: ratsPrice.add(owlsPrice).add(dogsPrice),
+      });
+    // notice that owls are paid in LFG, so there is an extra value sent to the contract
+    let lfgBalanceAfter = await lfg.balanceOf(bob.address);
+    let balanceAfter = await ethers.provider.getBalance(bob.address);
+
+    expect(lfgBalanceBefore.sub(lfgBalanceAfter)).to.equal(owlsPrice);
+
+    const dec = "1000000000000000000";
+    // it just spends some extra gas
+    expect(balanceBefore.sub(balanceAfter).div(dec)).to.equal(priceMatic.mul(2).div(dec));
+    // all bids have been successful
+    expect((await auction.getNextPrice(rats.address, id)).div(dec).toNumber()).greaterThan(ratsPrice.div(dec).toNumber());
+    expect((await auction.getNextPrice(owls.address, id2)).div(dec).toNumber()).greaterThan(owlsPrice.div(dec).toNumber());
+    expect((await auction.getNextPrice(dogs.address, id3)).div(dec).toNumber()).greaterThan(dogsPrice.div(dec).toNumber());
+
+    // alice makes a batch bid
+    // passing insufficient funds
+
+    let previousRatsPrice = ratsPrice;
+    ratsPrice = await auction.getNextPrice(rats.address, id);
+    let ratsPrice2 = await auction.getNextPrice(rats.address, id2);
+
+    balanceBefore = await ethers.provider.getBalance(alice.address);
+
+    await auction
+      .connect(alice)
+      .bidBatch([rats.address, rats.address], [id, id2], [ratsPrice, ratsPrice2], {value: ratsPrice.mul(3).div(2)});
+
+    expect((await auction.getNextPrice(rats.address, id)).div(dec).toNumber()).greaterThan(
+      previousRatsPrice.div(dec).toNumber()
+    );
+    // the second bid failed
+    expect(await auction.getNextPrice(rats.address, id2)).equal(ratsPrice2);
+
+    balanceAfter = await ethers.provider.getBalance(alice.address);
+
+    expect(balanceBefore.sub(balanceAfter).div(dec)).to.equal(ratsPrice.div(dec));
+
+    // fred makes a batch bid
+    // passing insufficient spending amount
+    ratsPrice = await auction.getNextPrice(rats.address, id2);
+    dogsPrice = await auction.getNextPrice(dogs.address, id3);
+
+    await auction
+      .connect(fred)
+      .bidBatch([rats.address, dogs.address], [id2, id3], [ratsPrice.div(2), dogsPrice], {value: ratsPrice.add(dogsPrice)});
+
+    // the first bid failed
+    expect(await auction.getNextPrice(rats.address, id2)).equal(ratsPrice);
+    // the second bit succeeded
+    expect((await auction.getNextPrice(dogs.address, id3)).div(dec).toNumber()).greaterThan(dogsPrice.div(dec).toNumber());
+
+    balanceAfter = await ethers.provider.getBalance(fred.address);
+
+    expect(balanceBefore.sub(balanceAfter).div(dec)).to.equal(dogsPrice.div(dec));
+  });
 
   it("should allow to bid multiple times over LFG and MATIC paid owls", async function () {
     // owls #1
@@ -177,7 +269,7 @@ describe("PFPAuction", function () {
       .to.emit(owls, "Transfer")
       .withArgs(auction.address, alice.address, id)
       .to.emit(auction, "Claim")
-      .withArgs(owls.address, id, alice.address);
+      .withArgs(owls.address, id, alice.address, price);
 
     expect(await lfg.balanceOf(auction.address)).to.equal(totalFee);
 
