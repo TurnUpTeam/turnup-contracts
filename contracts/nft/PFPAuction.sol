@@ -54,6 +54,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error AssetNotFound();
   error AuctionIsActive();
   error InvalidInput();
+  error ItemPriceTypeNotIdentical();
 
   // Optimized to reduce storage consumption
   struct Item {
@@ -151,6 +152,30 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     return price;
   }
 
+  function getNextPriceBatch(address[] memory tokenAddresses, uint256[] memory tokenIds) public view virtual returns (uint256) {
+    if (tokenAddresses.length != tokenIds.length) {
+      revert InvalidInput();
+    }
+    uint256 totalPrice = 0;
+    bool isNative = _items[tokenAddresses[0]][tokenIds[0]].native;
+    for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      address tokenAddress = tokenAddresses[i];
+      uint256 tokenId = tokenIds[i];
+
+      if (i > 0 && isNative != _items[tokenAddress][tokenId].native){
+        revert ItemPriceTypeNotIdentical();  //can only sum one type of price
+      }
+      
+      uint256 price = _items[tokenAddress][tokenId].price;
+      if (_items[tokenAddress][tokenId].bidder != address(0)) {
+        totalPrice += (price + price / 10);
+      }else{
+        totalPrice += price;
+      }
+    }
+    return totalPrice;
+  }
+  
   function getFee(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
     if (_items[tokenAddress][tokenId].bidder != address(0)) {
       return (_items[tokenAddress][tokenId].price * 5) / 110;
