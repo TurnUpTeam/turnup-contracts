@@ -18,7 +18,6 @@ async function main() {
     LOTTERY_PROTOCOL_FEE_DESTINATION,
   } = process.env;
 
-
   let lfgAddress = "0x2aA9B551929d55fa8ecf6e3b009E13bde9E79bA8";
   let sharesAddress = "0x133E84D51a6852f9ACEB0Fef2E2D0a6a9705EBb7";
 
@@ -30,8 +29,8 @@ async function main() {
 
   const factory = await ethers.getContractFactory("Lottery");
   const lottery = await upgrades.deployProxy(
-    factory, 
-    [  
+    factory,
+    [
       minLfgPerPick,
       minMaticPerPick,
       LOTTERY_RED_PACK_LIFE_TIME,
@@ -41,7 +40,7 @@ async function main() {
     ],
     {
       kind: "transparent",
-      redeployImplementation: "always", 
+      redeployImplementation: "always",
       timeout: 180000,
     }
   );
@@ -53,7 +52,7 @@ async function main() {
 
   await lottery.setLFGToken(lfgAddress, {gasPrice: gasPrice});
   await lottery.setShares(sharesAddress, {gasPrice: gasPrice});
-    
+
   console.log("minLfgPerPick:", await lottery.minLfgPerPick());
   console.log("minMaticPerPick:", await lottery.minMaticPerPick());
   console.log("redPackLifeTime:", await lottery.redPackLifeTime());
@@ -62,7 +61,7 @@ async function main() {
   console.log("lfgProtocolFees:", await lottery.lfgProtocolFees());
   console.log("maticProtocolFees:", await lottery.maticProtocolFees());
   console.log("lfg:", await lottery.lfg());
-  console.log("shares:", await lottery.shares()); 
+  console.log("shares:", await lottery.shares());
 }
 
 main().catch((error) => {

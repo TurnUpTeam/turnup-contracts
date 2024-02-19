@@ -162,20 +162,20 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       address tokenAddress = tokenAddresses[i];
       uint256 tokenId = tokenIds[i];
 
-      if (i > 0 && isNative != _items[tokenAddress][tokenId].native){
-        revert ItemPriceTypeNotIdentical();  //can only sum one type of price
+      if (i > 0 && isNative != _items[tokenAddress][tokenId].native) {
+        revert ItemPriceTypeNotIdentical(); //can only sum one type of price
       }
-      
+
       uint256 price = _items[tokenAddress][tokenId].price;
       if (_items[tokenAddress][tokenId].bidder != address(0)) {
         totalPrice += (price + price / 10);
-      }else{
+      } else {
         totalPrice += price;
       }
     }
     return totalPrice;
   }
-  
+
   function getFee(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
     if (_items[tokenAddress][tokenId].bidder != address(0)) {
       return (_items[tokenAddress][tokenId].price * 5) / 110;
@@ -219,9 +219,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     _item.bidAt = uint32(block.timestamp);
     _item.bidder = _msgSender();
     if (_item.native) {
-      nativeFees += fee;
+      nativeFees += fee > 0 ? fee : price;
     } else {
-      lfgFees += fee;
+      lfgFees += fee > 0 ? fee : price;
     }
     if (_item.native) {
       uint256 value = expectedSpending > 0 ? expectedSpending : msg.value;
