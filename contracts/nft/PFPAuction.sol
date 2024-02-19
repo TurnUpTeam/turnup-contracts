@@ -55,6 +55,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error AuctionIsActive();
   error InvalidInput();
   error ItemPriceTypeNotIdentical();
+  error CannotBatchBidSameItemTwice();
 
   // Optimized to reduce storage consumption
   struct Item {
@@ -73,6 +74,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   mapping(address => mapping(uint256 => Item)) internal _items;
   uint256 public nativeFees;
   uint256 public lfgFees;
+
+  // used to avoid double bidding during batch bidding
+  mapping(address => mapping(uint256 => bool)) private _checked;
 
   function initialize(address lfg_) public initializer {
     __Ownable_init();
@@ -161,11 +165,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
       address tokenAddress = tokenAddresses[i];
       uint256 tokenId = tokenIds[i];
-
       if (i > 0 && isNative != _items[tokenAddress][tokenId].native) {
         revert ItemPriceTypeNotIdentical(); //can only sum one type of price
       }
-
       uint256 price = _items[tokenAddress][tokenId].price;
       if (_items[tokenAddress][tokenId].bidder != address(0)) {
         totalPrice += (price + price / 10);
@@ -177,10 +179,13 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   }
 
   function getFee(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
+    uint256 price = _items[tokenAddress][tokenId].price;
     if (_items[tokenAddress][tokenId].bidder != address(0)) {
-      return (_items[tokenAddress][tokenId].price * 5) / 110;
+      price += price / 10;
+      return (price * 5) / 110;
+    } else {
+      return price;
     }
-    return 0;
   }
 
   function auctionEndTime(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
@@ -219,9 +224,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     _item.bidAt = uint32(block.timestamp);
     _item.bidder = _msgSender();
     if (_item.native) {
-      nativeFees += fee > 0 ? fee : price;
+      nativeFees += fee;
     } else {
-      lfgFees += fee > 0 ? fee : price;
+      lfgFees += fee;
     }
     if (_item.native) {
       uint256 value = expectedSpending > 0 ? expectedSpending : msg.value;
@@ -301,6 +306,12 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     }
     uint256 remaining = msg.value;
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      // avoiding double bidding, which would break the way
+      // getNextPriceBatch is built
+      if (_checked[tokenAddresses[i]][tokenIds[i]]) {
+        revert CannotBatchBidSameItemTwice();
+      }
+
       // the expected spending must be > 0 during batch bidding
       if (expectedSpendings[i] == 0) continue;
       uint256 expectedSpending = expectedSpendings[i];
@@ -313,7 +324,13 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
           remaining -= expectedSpending;
         }
       }
+      _checked[tokenAddresses[i]][tokenIds[i]] = true;
     }
+    // cleaning up
+    for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      delete _checked[tokenAddresses[i]][tokenIds[i]];
+    }
+
     // if there are unused funds, we refund them
     if (remaining > 0) {
       // all funds used. Refunding the remaining
