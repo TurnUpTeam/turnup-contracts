@@ -8,6 +8,12 @@ dependencies:
   '@ndujalabs/erc721lockable':
     specifier: ^0.13.0
     version: 0.13.0
+  dn404:
+    specifier: ^0.0.10
+    version: 0.0.10
+  solady:
+    specifier: ^0.0.168
+    version: 0.0.168
 
 devDependencies:
   '@ethersproject/contracts':
@@ -4344,6 +4350,10 @@ packages:
     dependencies:
       path-type: 4.0.0
     dev: true
+
+  /dn404@0.0.10:
+    resolution: {integrity: sha512-XAQ3EMfDks2kwdwk2CZ5FzGSTPE4XTT+ZcKfj/qc1eKL0LIFEPAq6AZcGROyHb3TVRTSUw0Hk70z6EsJy7abCg==}
+    dev: false
 
   /dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
@@ -9613,6 +9623,10 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /solady@0.0.168:
+    resolution: {integrity: sha512-7tgy21selT6Tg+8aAxkLUyjjCx9iQ3m3KE+5D4x/tIXr4wAfoVe6EK0lmmZjyIv8MRqQSx/vB6NfIC1LME3oZA==}
+    dev: false
 
   /solc@0.4.26:
     resolution: {integrity: sha512-o+c6FpkiHd+HPjmjEVpQgH7fqZ14tJpXhho+/bQXlXbliLIS/xjXb42Vxh+qQY1WCSTMQ0+a5vR9vi0MfhU6mA==}

@@ -14,6 +14,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "./LFGToken.sol";
+import {LFGTokenV2} from "./LFGTokenV2.sol";
 import {ICorePool} from "../pool/ICorePool.sol";
 
 //import {console} from "hardhat/console.sol";
@@ -153,6 +154,12 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     if (pool_ == address(0)) revert NoZeroAddress();
     config.supplyReservedToPool = uint128(lfg.amountReservedToPool());
     pool = pool_;
+  }
+
+  function setLFGTokenV2(address lfgV2_) public onlyOwner {
+    if (lfgV2_ == address(0)) revert NoZeroAddress();
+    config.supplyReservedToPool = uint128(lfg.amountReservedToPool());
+    pool = lfgV2_;
   }
 
   // we do not add variable to avoid risks with the storage schema
