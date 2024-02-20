@@ -165,6 +165,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
       address tokenAddress = tokenAddresses[i];
       uint256 tokenId = tokenIds[i];
+
       if (i > 0 && isNative != _items[tokenAddress][tokenId].native) {
         revert ItemPriceTypeNotIdentical(); //can only sum one type of price
       }
