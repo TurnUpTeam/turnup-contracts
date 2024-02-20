@@ -104,7 +104,8 @@ contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradea
 
   function burnFromFactory(address account, uint256 amount) external onlyFactory {
     _burn(account, amount);
-    // we reduce it making it deflationary
+    // We reduce it making it deflationary.
+    // Will revert if trying to burn more than the reserved amount
     amountReservedToFactory -= amount;
   }
 }

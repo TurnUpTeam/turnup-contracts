@@ -58,6 +58,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   error WrongRequest();
   error PendingRequest();
   error InvalidLockTime();
+  error SupplyAlreadyReduced();
 
   // this error should never happen. If it happens, we are in trouble
   error CapReachedForPool();
@@ -106,6 +107,8 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
 
   uint256 private _reservedSupply;
   uint256 private _minLockTime;
+
+  bool private _supplyReduced;
 
   modifier onlyOperator() {
     if (!config.operators[_msgSender()]) revert NotAuthorized();
@@ -398,6 +401,14 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     }
   }
 
+  function oneTimeReduceSupply() external whenNotPaused onlyOwner {
+    if (_supplyReduced) revert SupplyAlreadyReduced();
+    _supplyReduced = true;
+    // it will revert if the factory does not have enough LFG
+    // at the time of the reduction
+    lfg.burnFromFactory(address(this), 357681323 * 1e18);
+  }
+
   function hashBurnLfg(
     uint256 orderId,
     address account,
@@ -433,5 +444,5 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     _unpause();
   }
 
-  uint256[50] private __gap;
+  uint256[49] private __gap;
 }
