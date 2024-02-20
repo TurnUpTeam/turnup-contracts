@@ -7,9 +7,7 @@ import {Ownable} from "solady/src/auth/Ownable.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 
-
 contract LFGTokenV2 is DN404, Ownable {
-
   error NotAuthorized();
   error NoZeroAddress();
   error SupplyOverflow();
@@ -24,17 +22,14 @@ contract LFGTokenV2 is DN404, Ownable {
   string private _symbol;
   string private _baseURI;
 
+  address public factory;
+
   modifier onlyFactory() {
-    if (factory == address(0) || factory != _msgSender()) revert NotAuthorized();
+    if (factory == address(0) || factory != msg.sender) revert NotAuthorized();
     _;
   }
 
-  constructor(
-    string memory name_,
-    string memory symbol_,
-    uint96 initialTokenSupply,
-    address initialSupplyOwner
-  ) {
+  constructor(string memory name_, string memory symbol_, uint96 initialTokenSupply, address initialSupplyOwner) {
     _initializeOwner(msg.sender);
 
     _name = name_;
@@ -50,9 +45,9 @@ contract LFGTokenV2 is DN404, Ownable {
     factory = _factory;
   }
 
-  function _unit() internal view virtual returns (uint256) {
+  function _unit() internal view virtual override returns (uint256) {
     // since LFG total supply is 4B, we may associate it to a 10,000 NFT supply
-    return 40000 ** 18;
+    return 40000 * 1e18;
   }
 
   function name() public view override returns (string memory) {
