@@ -11,8 +11,8 @@ describe("PFPAuction", function () {
   let lfg;
   // three pfp collections
   let owls, rats, pigs, dogs;
-  const priceLfg = ethers.utils.parseEther("82");
-  const priceMatic = ethers.utils.parseEther("130");
+  const priceLfg = ethers.utils.parseEther("100");
+  const priceMatic = ethers.utils.parseEther("200");
   let tenThousand = ethers.utils.parseEther("10000");
   let owner, bob, alice, fred, jim, jane;
   let tenHours = 36000;
