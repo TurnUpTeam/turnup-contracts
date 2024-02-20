@@ -8,32 +8,29 @@ const {getTimestamp, increaseBlockTimestampBy} = require("./helpers");
 describe("Lottery", function () {
   let lottery;
   let shares;
-  let owner,bob;
-  
+  let owner, bob;
+
   const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
- 
+
   let minLfgPerPick = ethers.utils.parseEther("100");
   let minMaticPerPick = ethers.utils.parseEther("0.1");
-  let redPackLifeTime = 24 * 3600;   // 1 day
+  let redPackLifeTime = 24 * 3600; // 1 day
   let maxStartTime = 24 * 3600; // 1 day
   let protocolFeePercent = ethers.utils.parseEther("0.01");
   let protocolFeeDestination;
 
   before(async function () {
-    [
-      owner,
-      bob, 
-    ] = await ethers.getSigners();
+    [owner, bob] = await ethers.getSigners();
     protocolFeeDestination = owner.address;
   });
 
-  async function initAndDeploy() { 
+  async function initAndDeploy() {
     // deploy shares
     shares = await deployUtils.deployProxy("TurnupSharesV4");
-    await shares.setFeeDestination(owner.address)
-    await shares.setProtocolFeePercent(ethers.utils.parseEther("0.05"))
-    await shares.setSubjectFeePercent(ethers.utils.parseEther("0.05"))
+    await shares.setFeeDestination(owner.address);
+    await shares.setProtocolFeePercent(ethers.utils.parseEther("0.05"));
+    await shares.setSubjectFeePercent(ethers.utils.parseEther("0.05"));
     await shares.setOperator(owner.address, true);
 
     // deploy lfg token
@@ -46,7 +43,7 @@ describe("Lottery", function () {
       redPackLifeTime,
       maxStartTime,
       protocolFeePercent,
-      protocolFeeDestination,
+      protocolFeeDestination
     );
   }
 
@@ -101,47 +98,47 @@ describe("Lottery", function () {
     await lottery.updateMaxStartTime(newValue);
     expect(await lottery.maxStartTime()).to.equal(newValue);
   });
- 
-  it("should be set protocol fee percent", async function () { 
+
+  it("should be set protocol fee percent", async function () {
     newValue = ethers.utils.parseEther("0.15");
     await lottery.updateProtocolFeePercent(newValue);
     expect(await lottery.protocolFeePercent()).to.equal(newValue);
   });
 
-  it("should be set protocol fee destination", async function () { 
+  it("should be set protocol fee destination", async function () {
     await lottery.updateProtocolFeeDestination(bob.address);
     expect(await lottery.protocolFeeDestination()).to.equal(bob.address);
   });
 
-  it("should be not holder", async function () { 
-    await lottery.setShares(shares.address); 
+  it("should be not holder", async function () {
+    await lottery.setShares(shares.address);
     expect(await lottery.isHolder(owner.address, bob.address)).to.be.false;
   });
 
-  it("should be holder", async function () { 
+  it("should be holder", async function () {
     let subject = bob;
-    let buyer = owner
-    
+    let buyer = owner;
+
     let price = await shares.getBuyPriceAfterFee(subject.address, 1);
-    await shares.connect(subject).buyShares(subject.address, 1, {value: price})
+    await shares.connect(subject).buyShares(subject.address, 1, {value: price});
 
     // Hold 1 key
     price = await shares.getBuyPriceAfterFee(subject.address, 1);
-    await shares.connect(buyer).buyShares(subject.address, 1, {value: price})
-    
-    await lottery.setShares(shares.address); 
+    await shares.connect(buyer).buyShares(subject.address, 1, {value: price});
+
+    await lottery.setShares(shares.address);
     expect(await lottery.isHolder(subject.address, buyer.address)).to.be.true;
 
     // Hold 2 key
     price = await shares.getBuyPriceAfterFee(subject.address, 1);
-    await shares.connect(buyer).buyShares(subject.address, 1, {value: price})
+    await shares.connect(buyer).buyShares(subject.address, 1, {value: price});
     expect(await lottery.isHolder(subject.address, buyer.address)).to.be.true;
   });
 
-  it("should be deposit lfg red pack with invalid parameter", async function () { 
+  it("should be deposit lfg red pack with invalid parameter", async function () {
     let subject = owner;
     await lottery.setShares(shares.address);
-    
+
     // invalid red pack type
     amount = ethers.utils.parseEther("10000");
     // await expect(lottery.depositRedPack(subject.address, 99, amount, 1, 0)).to.be.revertedWith("InvalidRedPackData()");
@@ -160,28 +157,31 @@ describe("Lottery", function () {
 
     // hold 0 key
     amount = ethers.utils.parseEther("10000");
-    await expect(lottery.depositRedPack(subject.address, 0, amount, 1, 0)).revertedWith("NotSubjectHolder()"); 
+    await expect(lottery.depositRedPack(subject.address, 0, amount, 1, 0)).revertedWith("NotSubjectHolder()");
   });
 
-  it("should be deposit matic red pack with invalid parameter", async function () { 
+  it("should be deposit matic red pack with invalid parameter", async function () {
     let subject = owner;
     await lottery.setShares(shares.address);
 
     // invalid start time
     amount = ethers.utils.parseEther("100");
-    await expect(lottery.depositRedPack(subject.address, 1, 0, 1, 1, {value:amount})).revertedWith("InvalidRedPackTime()");
+    await expect(lottery.depositRedPack(subject.address, 1, 0, 1, 1, {value: amount})).revertedWith("InvalidRedPackTime()");
 
     // invalid pick total
     amount = ethers.utils.parseEther("100");
-    await expect(lottery.depositRedPack(subject.address, 1, 0, 0, 0, {value:amount})).revertedWith("InvalidRedPackPickTotal()");
+    await expect(lottery.depositRedPack(subject.address, 1, 0, 0, 0, {value: amount})).revertedWith(
+      "InvalidRedPackPickTotal()"
+    );
 
     // invalid token total
     amount = ethers.utils.parseEther("0.001");
-    await expect(lottery.depositRedPack(subject.address, 1, 0, 1, 0, {value:amount})).revertedWith("InvalidRedPackTokenTotal()");
+    await expect(lottery.depositRedPack(subject.address, 1, 0, 1, 0, {value: amount})).revertedWith(
+      "InvalidRedPackTokenTotal()"
+    );
 
     // hold 0 key
     amount = ethers.utils.parseEther("100");
-    await expect(lottery.depositRedPack(subject.address, 1, 0, 1, 0, {value:amount})).revertedWith("NotSubjectHolder()"); 
+    await expect(lottery.depositRedPack(subject.address, 1, 0, 1, 0, {value: amount})).revertedWith("NotSubjectHolder()");
   });
-
 });
