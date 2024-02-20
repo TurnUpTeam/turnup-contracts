@@ -43,8 +43,17 @@ describe("PFPAuction", function () {
 
     auction = await deployUtils.deployProxy("PFPAuction", lfg.address);
 
-    await owls.preMint(auction.address, 20);
-    await owls.preMint(auction.address, 20);
+    await expect(owls.preMint(auction.address, 20))
+      .to.emit(owls, "Transfer")
+      .withArgs(addr0, auction.address, 1)
+      .to.emit(owls, "Transfer")
+      .withArgs(addr0, auction.address, 20);
+
+    await expect(owls.preMint(auction.address, 20))
+      .to.emit(owls, "Transfer")
+      .withArgs(addr0, auction.address, 21)
+      .to.emit(owls, "Transfer")
+      .withArgs(addr0, auction.address, 40);
     await owls.preMint(auction.address, 20);
     await owls.preMint(auction.address, 20);
     await owls.preMint(auction.address, 20);
