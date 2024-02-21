@@ -4600,6 +4600,11 @@
       },
       {
         "inputs": [],
+        "name": "SupplyAlreadyReduced",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "TooManyValidators",
         "type": "error"
       },
@@ -5522,6 +5527,13 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "oneTimeReduceSupply",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
