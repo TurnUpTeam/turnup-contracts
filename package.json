@@ -58,6 +58,8 @@
     "*.{js,css,md}": "prettier --write"
   },
   "dependencies": {
-    "@ndujalabs/erc721lockable": "^0.13.0"
+    "@ndujalabs/erc721lockable": "^0.13.0",
+    "dn404": "^0.0.10",
+    "solady": "^0.0.168"
   }
 }

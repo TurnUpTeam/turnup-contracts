@@ -14,7 +14,9 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "./LFGToken.sol";
+import {LFGTokenV2} from "./LFGTokenV2.sol";
 import {ICorePool} from "../pool/ICorePool.sol";
+import {CorePool} from "../pool/CorePool.sol";
 
 //import {console} from "hardhat/console.sol";
 
@@ -59,7 +61,9 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
   error PendingRequest();
   error InvalidLockTime();
   error SupplyAlreadyReduced();
-
+  error RewardsAlreadyCollected();
+  error AlreadySet();
+  error NotReady();
   // this error should never happen. If it happens, we are in trouble
   error CapReachedForPool();
 
@@ -107,8 +111,14 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
 
   uint256 private _reservedSupply;
   uint256 private _minLockTime;
+  // gap 50
 
   bool private _supplyReduced;
+  // gap 49
+
+  LFGTokenV2 public lfgV2;
+  mapping(uint256 => bool) private _usedDeposits;
+  // gap 47
 
   modifier onlyOperator() {
     if (!config.operators[_msgSender()]) revert NotAuthorized();
@@ -444,5 +454,35 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     _unpause();
   }
 
-  uint256[49] private __gap;
+  // LFGTokenV2
+
+  function setLFGTokenV2(address payable lfgV2_) public onlyOwner {
+    if (address(lfgV2_) == address(0)) revert NoZeroAddress();
+    if (address(lfgV2) != address(0)) revert AlreadySet();
+    lfgV2 = LFGTokenV2(lfgV2_);
+  }
+
+  function swapLfgFromV1ToV2(uint256 amount) external nonReentrant whenNotPaused {
+    if (address(lfgV2) == address(0)) revert NotReady();
+    lfg.burnFromFactory(_msgSender(), amount);
+    // if we need a conversion factor, it should be add here
+    lfgV2.mint(_msgSender(), amount);
+  }
+
+  function rewardsFromLfgStakedInCorePool(uint256 depositId) external onlyPool {
+    ICorePool.Deposit memory deposit = CorePool(pool).getDeposit(_msgSender(), depositId);
+    if (deposit.tokenAmount > 0) {
+      uint256 key = (uint160(_msgSender()) << 1e6) | depositId;
+      if (_usedDeposits[key]) revert RewardsAlreadyCollected();
+      _usedDeposits[key] = true;
+      // Here we must decide how we calculate the rewards.
+      // This is temporary formula:
+      uint256 weight = 1 + (deposit.lockedUntil - deposit.lockedFrom) / 365 days;
+      uint256 factor = 10;
+      uint256 amount = (deposit.tokenAmount * weight * factor) / 100;
+      lfgV2.mint(_msgSender(), amount);
+    }
+  }
+
+  uint256[47] private __gap;
 }

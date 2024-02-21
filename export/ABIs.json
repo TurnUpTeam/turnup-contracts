@@ -4520,6 +4520,11 @@
     "LFGFactory": [
       {
         "inputs": [],
+        "name": "AlreadySet",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "CapReachedForOthers",
         "type": "error"
       },
@@ -4575,6 +4580,11 @@
       },
       {
         "inputs": [],
+        "name": "NotReady",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "OperatorAlreadySet",
         "type": "error"
       },
@@ -4586,6 +4596,11 @@
       {
         "inputs": [],
         "name": "PendingRequest",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "RewardsAlreadyCollected",
         "type": "error"
       },
       {
@@ -5518,6 +5533,19 @@
       },
       {
         "inputs": [],
+        "name": "lfgV2",
+        "outputs": [
+          {
+            "internalType": "contract LFGTokenV2",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
         "name": "minLockTime",
         "outputs": [
           {
@@ -5593,6 +5621,32 @@
         "inputs": [
           {
             "internalType": "uint256",
+            "name": "depositId",
+            "type": "uint256"
+          }
+        ],
+        "name": "rewardsFromLfgStakedInCorePool",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address payable",
+            "name": "lfgV2_",
+            "type": "address"
+          }
+        ],
+        "name": "setLFGTokenV2",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
             "name": "minLockTime_",
             "type": "uint256"
           }
@@ -5655,6 +5709,19 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "swapLfgFromV1ToV2",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
