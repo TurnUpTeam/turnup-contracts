@@ -330,13 +330,13 @@ contract CorePool is Rewards {
       365 days +
       _config.weightMultiplier) * (stakeDeposit.tokenAmount - _amount);
 
-    // update the deposit, or delete it if its depleted
-    if (stakeDeposit.tokenAmount - _amount == 0) {
-      delete user.deposits[_depositId];
-    } else {
-      stakeDeposit.tokenAmount -= _amount;
-      stakeDeposit.weight = newWeight;
-    }
+    // We don't delete to avoid conflicts with swapping rewards
+    //    if (stakeDeposit.tokenAmount - _amount == 0) {
+    //      delete user.deposits[_depositId];
+    //    } else {
+    stakeDeposit.tokenAmount -= _amount;
+    stakeDeposit.weight = newWeight;
+    //    }
 
     // update user record
     user.tokenAmount -= _amount;
