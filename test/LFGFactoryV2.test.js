@@ -198,7 +198,8 @@ describe("LFGFactoryV2", function () {
 
       await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
       expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
-      await lfg2.withdraw();
+      expect(await lfg2.totalSupply()).equal("900000000500000000000000000");
+      await lfg2.connect(owner).withdraw();
       console.log(await lfg2.totalSupply());
       console.log(await lfg2.balanceOf(bob.address));
     });
