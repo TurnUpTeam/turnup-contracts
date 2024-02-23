@@ -103,6 +103,7 @@ describe("PFPAuction", function () {
     let ratsPrice = await auction.getNextPrice(rats.address, id);
     let owlsPrice = await auction.getNextPrice(owls.address, id2);
     let dogsPrice = await auction.getNextPrice(dogs.address, id3);
+    let previousDogPrice = dogsPrice;
 
     // bob makes a batch bid
 
@@ -156,10 +157,18 @@ describe("PFPAuction", function () {
     // passing insufficient spending amount
     ratsPrice = await auction.getNextPrice(rats.address, id2);
     dogsPrice = await auction.getNextPrice(dogs.address, id3);
+    let fee = await auction.getFee(dogs.address, id3);
+    let t = await ts();
 
-    await auction
-      .connect(fred)
-      .bidBatch([rats.address, dogs.address], [id2, id3], [ratsPrice.div(2), dogsPrice], {value: ratsPrice.add(dogsPrice)});
+    await expect(
+      auction
+        .connect(fred)
+        .bidBatch([rats.address, dogs.address], [id2, id3], [ratsPrice.div(2), dogsPrice], {value: ratsPrice.add(dogsPrice)})
+    )
+      .emit(auction, "Bid")
+      .withArgs(dogs.address, id3, dogsPrice, t, fred.address, t + 28796, previousDogPrice, bob.address, dogsPrice.sub(fee))
+      .emit(auction, "BidFailed")
+      .withArgs(rats.address, id2, ratsPrice, fred.address);
 
     // the first bid failed
     expect(await auction.getNextPrice(rats.address, id2)).equal(ratsPrice);
@@ -169,6 +178,39 @@ describe("PFPAuction", function () {
     balanceAfter = await ethers.provider.getBalance(fred.address);
 
     expect(balanceBefore.sub(balanceAfter).div(dec)).to.equal(dogsPrice.div(dec));
+  });
+
+  it("should make many batch bid without going out of gas", async function () {
+    await lfg.transfer(bob.address, tenThousand.mul(100));
+
+    let startTime = BigInt(await ts());
+    let endTime = BigInt(startTime + 3600n * 8n);
+    let deferredDuration = 3600n; // 2 hours
+    let encodedTiming = startTime + (endTime << 32n) + (deferredDuration << 64n);
+
+    const tokens = [];
+    for (let i = 0; i < 30; i++) {
+      let newToken = await deployUtils.deployProxy(
+        "TurnUPNFT",
+        "TurnUP Token" + i,
+        "T" + i,
+        "https://meta.turnup.so/t" + i + "/"
+      );
+      await newToken.preMint(auction.address, 1);
+      await auction.setItemsForAuction([newToken.address], [1], [priceLfg], [false], [encodedTiming]);
+      tokens.push(newToken);
+    }
+    await lfg.connect(bob).approve(auction.address, priceLfg.mul(30));
+
+    const tx = await auction.connect(bob).bidBatch(
+      tokens.map((t) => t.address),
+      tokens.map((t) => 1),
+      tokens.map((t) => priceLfg),
+      {value: priceLfg.mul(30)}
+    );
+    const receipt = await tx.wait();
+    const bidEvents = receipt.events.filter((event) => event.event === "Bid");
+    expect(bidEvents.length).to.equal(30);
   });
 
   it("should allow to bid multiple times over LFG and MATIC paid owls", async function () {

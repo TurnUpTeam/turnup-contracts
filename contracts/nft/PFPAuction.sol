@@ -42,6 +42,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 previousBidderRefund
   );
   event Claim(address indexed tokenAddress, uint256 indexed tokenId, address indexed winner, uint256 price);
+  event BidFailed(address indexed tokenAddress, uint256 indexed tokenId, uint256 price, address indexed bidder);
 
   error UnableToTransferFunds();
   error ZeroAddress();
@@ -326,6 +327,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
         if (_items[tokenAddresses[i]][tokenIds[i]].native) {
           remaining -= expectedSpending;
         }
+      } else {
+        emit BidFailed(tokenAddresses[i], tokenIds[i], _items[tokenAddresses[i]][tokenIds[i]].price, _msgSender());
       }
       _checked[tokenAddresses[i]][tokenIds[i]] = true;
     }
