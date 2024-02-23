@@ -22,23 +22,10 @@ describe("LFGFactoryV2", function () {
 
   let owner, bob, alice, fred, operator, validator, tokenHolder;
 
-  let MintType = {
-    Mint: 0,
-    MintAndStake: 1,
-    MintAndBurn: 2,
-  };
-
   const blocksPerDay = 42000;
-  const blocksPerWeek = blocksPerDay * 7;
-  const twoYearsBlocks = blocksPerDay * 365 * 2;
   const reservedToTool = 400000000;
   const amountReservedToPool = ethers.utils.parseEther(reservedToTool.toString());
   const minLockTime = 3600 * 24 * 7 * 16;
-
-  const BurnReason = {
-    UnlockMission: 0,
-    LootFee: 1,
-  };
 
   before(async function () {
     [owner, bob, alice, fred, operator, validator, tokenHolder] = await ethers.getSigners();
@@ -56,6 +43,7 @@ describe("LFGFactoryV2", function () {
   async function initAndDeploy() {
     let maxSupply = ethers.utils.parseEther("3000000000");
     let initialSupply = ethers.utils.parseEther("900000000");
+    let initialSupplyLFGV2 = initialSupply.div(5);
     let amountReservedToPool = ethers.utils.parseEther("300000000");
     let amountReservedToSharesPool = ethers.utils.parseEther("200000000");
     let maxLockTime = 365 * 24 * 3600;
@@ -68,7 +56,7 @@ describe("LFGFactoryV2", function () {
       amountReservedToSharesPool
     );
 
-    lfg2 = await deployUtils.deploy("LFGTokenV2", "LFGTokenV2", "LFG2", initialSupply, tokenHolder.address);
+    lfg2 = await deployUtils.deploy("LFGTokenV2", "LFGTokenV2", "LFG2", initialSupplyLFGV2, tokenHolder.address);
 
     const maxDaily = (await lfg.amountReservedToPool()).div(365);
 
@@ -122,18 +110,14 @@ describe("LFGFactoryV2", function () {
     });
 
     it("should return the total supply", async function () {
-      expect(await lfg2.totalSupply()).equal("900000000000000000000000000");
+      expect(await lfg2.totalSupply()).equal("180000000000000000000000000");
     });
 
     it("should return the name of the contract", async function () {
       expect(await lfg2.name()).equal("LFGTokenV2");
     });
 
-    it("should return the name of the contract", async function () {
-      expect(await lfg2.name()).equal("LFGTokenV2");
-    });
-
-    it("should return the name of the symbol", async function () {
+    it("should return the symbol", async function () {
       expect(await lfg2.symbol()).equal("LFG2");
     });
 
