@@ -207,12 +207,12 @@ describe("LFGFactoryV2", function () {
     it("should rewards From Lfg Staked In CorePool", async function () {
       const orderId = 1;
       const amount = ethers.utils.parseEther("1");
-      console.log(amount)
       const ts = await getTimestamp();
       let lockedUntil = ts + 60 * 60 * 24;
       let validFor = 60 * 60 * 2;
       const t90days = 3600 * 24 * 90;
       const stakeLockedUntil = ts + t90days;
+      let daysInSeconds = 365 * 86400;
 
       let hash = await factory.hashForApplyToMintLfgAndStake(
         orderId,
@@ -237,8 +237,12 @@ describe("LFGFactoryV2", function () {
         .withArgs(addr0, pool.address, amount)
         .to.emit(pool, "Staked");
 
+      const deposit = await pool.getDeposit(bob.address, 0);
+      const weight = 1 + Math.floor((deposit.lockedUntil - deposit.lockedFrom) / daysInSeconds);
+      let value = deposit.tokenAmount.mul(weight).mul(10).div(100);
+
       await factory.connect(bob).rewardsFromLfgStakedInCorePool(0);
-      expect(await lfg2.balanceOf(bob.address)).equal("100000000000000000");
+      expect(await lfg2.balanceOf(bob.address)).equal(value.toString());
     });
   });
 });
