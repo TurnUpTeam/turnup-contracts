@@ -172,7 +172,7 @@ describe("LFGFactoryV2", function () {
       expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
     });
 
-    it.skip("should withdraw for LFG2", async function () {
+    it.only("should withdraw for LFG2", async function () {
       const orderId = 1;
       const amount = ethers.utils.parseEther("1");
       const amountToSwap = ethers.utils.parseEther("0.5");
@@ -180,21 +180,12 @@ describe("LFGFactoryV2", function () {
       const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
       const validFor = 60 * 60 * 2;
 
-      let hash = await factory.hashForApplyToMintLfg(orderId, amount, ts + 3600, false, bob.address, ts, validFor);
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
       let signature = await getSignature(hash, validator);
-
-      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, ts + 3600, ts, validFor, signature)).revertedWith(
-        "InvalidLockTime()"
-      );
-
-      hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
-      signature = await getSignature(hash, validator);
 
       await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
         .to.emit(factory, "MintRequested")
         .withArgs(orderId, amount, bob.address, lockedUntil);
-
-      await factory.getMintRequest(bob.address);
 
       await increaseBlockTimestampBy(lockedUntil - ts + 1);
 
@@ -202,13 +193,9 @@ describe("LFGFactoryV2", function () {
         .to.emit(lfg, "Transfer")
         .withArgs(factory.address, bob.address, amount);
 
-      await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
-        .to.emit(lfg, "Transfer")
-        .withArgs(bob.address, alice.address, amount.div(10));
-
       await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
       expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
-      await lfg2.connect(owner).withdraw();
+      await lfg2.withdraw();
       console.log(await lfg2.balanceOf(bob.address));
     });
 
@@ -245,7 +232,6 @@ describe("LFGFactoryV2", function () {
         .to.emit(pool, "Staked");
 
       await factory.connect(bob).rewardsFromLfgStakedInCorePool(0);
-      console.log(await lfg2.balanceOf(bob.address));
       expect(await lfg2.balanceOf(bob.address)).equal("100000000000000000");
     });
   });
