@@ -42,12 +42,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 previousBidderRefund
   );
   event Claim(address indexed tokenAddress, uint256 indexed tokenId, address indexed winner, uint256 price);
-  event BidFailed(
-    address indexed tokenAddress,
-    uint256 indexed tokenId,
-    uint256 price,
-    address indexed bidder
-  );
+  event BidFailed(address indexed tokenAddress, uint256 indexed tokenId, uint256 price, address indexed bidder);
 
   error UnableToTransferFunds();
   error ZeroAddress();
