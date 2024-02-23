@@ -56,6 +56,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error InvalidInput();
   error ItemPriceTypeNotIdentical();
   error CannotBatchBidSameItemTwice();
+  error AuctionNotStarted();
 
   // Optimized to reduce storage consumption
   struct Item {
@@ -208,6 +209,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
 
   function _bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending) internal returns (bool) {
     Item storage _item = _items[tokenAddress][tokenId];
+    if (_item.startTime > block.timestamp) revert AuctionNotStarted();
     Item memory oldItem = _item;
     if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
       // the auction must own the asset
