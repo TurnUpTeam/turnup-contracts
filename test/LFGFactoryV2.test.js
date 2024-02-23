@@ -117,6 +117,11 @@ describe("LFGFactoryV2", function () {
 
   describe("applyToMintLfg2", function () {
     it("should return the token uri of the contract", async function () {
+      await lfg2.setBaseURI("Uri/");
+      expect(await lfg2.tokenURI(1)).equal("Uri/1");
+    });
+
+    it("should return the total supply", async function () {
       expect(await lfg2.totalSupply()).equal("900000000000000000000000000");
     });
 
