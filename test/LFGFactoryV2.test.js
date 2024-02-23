@@ -207,6 +207,7 @@ describe("LFGFactoryV2", function () {
     it("should rewards From Lfg Staked In CorePool", async function () {
       const orderId = 1;
       const amount = ethers.utils.parseEther("1");
+      console.log(amount)
       const ts = await getTimestamp();
       let lockedUntil = ts + 60 * 60 * 24;
       let validFor = 60 * 60 * 2;
