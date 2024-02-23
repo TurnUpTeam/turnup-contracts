@@ -469,7 +469,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     lfgV2.mint(_msgSender(), amount);
   }
 
-  function rewardsFromLfgStakedInCorePool(uint256 depositId) external onlyPool {
+  function rewardsFromLfgStakedInCorePool(uint256 depositId) external {
     ICorePool.Deposit memory deposit = CorePool(pool).getDeposit(_msgSender(), depositId);
     if (deposit.tokenAmount > 0) {
       uint256 key = (uint160(_msgSender()) << 1e6) | depositId;
