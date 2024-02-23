@@ -171,6 +171,30 @@ describe("PFPAuction", function () {
     expect(balanceBefore.sub(balanceAfter).div(dec)).to.equal(dogsPrice.div(dec));
   });
 
+  it("should make many batch bid without going out of gas", async function () {
+    await lfg.transfer(bob.address, tenThousand.mul(100));
+
+    let startTime = BigInt(await ts());
+    let endTime = BigInt(startTime + 3600n * 8n);
+    let deferredDuration = 3600n; // 2 hours
+    let encodedTiming = startTime + (endTime << 32n) + (deferredDuration << 64n);
+
+    const tokens = [];
+    for (let i = 0; i < 30; i++) {
+      let newToken = await deployUtils.deployProxy("TurnUPNFT", "TurnUP Token"+i, "T"+i, "https://meta.turnup.so/t"+i+"/");
+      await newToken.preMint(auction.address, 1);
+      await auction.setItemsForAuction([newToken.address], [1], [priceLfg], [false], [encodedTiming]);
+      tokens.push(newToken);
+    }
+    await lfg.connect(bob).approve(auction.address, priceLfg.mul(30));
+
+    const tx = await auction.connect(bob).bidBatch(tokens.map((t) => t.address), tokens.map((t) => 1), tokens.map((t) => priceLfg), {value: priceLfg.mul(30)});
+    const receipt = await tx.wait();
+    const bidEvents = receipt.events.filter((event) => event.event === 'Bid');
+    expect(bidEvents.length).to.equal(30);
+
+  });
+
   it("should allow to bid multiple times over LFG and MATIC paid owls", async function () {
     // owls #1
     let id = 1;
