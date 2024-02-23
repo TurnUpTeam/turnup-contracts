@@ -115,7 +115,12 @@ describe("LFGFactoryV2", function () {
     // check the initAndDeploy function
   });
 
-  describe.only("applyToMintLfg2", function () {
+  describe("applyToMintLfg2", function () {
+    it("should return the token uri of the contract", async function () {
+      await lfg2.connect(owner).setBaseURI("Uri/");
+      expect(await lfg2.tokenURI(1)).equal("Uri/1");
+    });
+
     it("should return the name of the contract", async function () {
       expect(await lfg2.name()).equal("LFGTokenV2");
     });
