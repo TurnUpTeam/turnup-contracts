@@ -70,8 +70,8 @@ contract LFGTokenV2 is DN404, Ownable {
     _mint(to, amount);
   }
 
-  function burn(address account, uint256 amount) external onlyFactory {
-    _burn(account, amount);
+  function burn(uint256 amount) external {
+    _burn(msg.sender, amount);
   }
 
   function setBaseURI(string calldata baseURI_) public onlyOwner {
