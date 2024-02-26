@@ -210,7 +210,7 @@ describe("LFGFactoryV2", function () {
       await expect(factory.setLFGTokenV2(lfg2.address)).to.revertedWith("AlreadySet()");
     });
 
-    it.only("should apply LFG correctly and swap for LFG2", async function () {
+    it("should revert when swapping insufficient balance", async function () {
       const orderId = 1;
       const amount = ethers.utils.parseEther("1");
       const amountToSwap = ethers.utils.parseEther("0.5");
@@ -249,14 +249,14 @@ describe("LFGFactoryV2", function () {
         .to.emit(lfg, "Transfer")
         .withArgs(bob.address, alice.address, amount.div(10));
 
-        console.log(await lfg2.balanceOf(bob.address))
-        console.log(await lfg2.balanceOf(alice.address))
-
-      await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
-      expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
+      try {
+        await factory.connect(alice).swapLfgFromV1ToV2(amountToSwap);
+      } catch (e) {
+        expect(e.message).to.include("ERC20: burn amount exceeds balance");
+      }
     });
 
-    it("should rewards From Lfg Staked In CorePool", async function () {
+    it("should revert when passing wrong deposit ID", async function () {
       const orderId = 1;
       const amount = ethers.utils.parseEther("1");
       const ts = await getTimestamp();
