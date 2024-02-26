@@ -164,34 +164,35 @@ describe("LFGFactoryV2", function () {
       expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
     });
 
-    it("should apply LFG correctly and swap for LFG2", async function () {
-        const orderId = 1;
-        const amount = ethers.utils.parseEther("1");
-        const amountToSwap = ethers.utils.parseEther("0.5");
-        const ts = await getTimestamp();
-        const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
-        const validFor = 60 * 60 * 2;
-  
-        let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
-        let signature = await getSignature(hash, validator);
-  
-        await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
-          .to.emit(factory, "MintRequested")
-          .withArgs(orderId, amount, bob.address, lockedUntil);
-  
-        await increaseBlockTimestampBy(lockedUntil - ts + 1);
-  
-        await expect(factory.connect(bob).claimAllPending())
-          .to.emit(lfg, "Transfer")
-          .withArgs(factory.address, bob.address, amount);
-  
-        await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
-          .to.emit(lfg, "Transfer")
-          .withArgs(bob.address, alice.address, amount.div(10));
-  
-        await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
-        expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
-      });
+    it("should burn token", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const amountToSwap = ethers.utils.parseEther("0.5");
+      const ts = await getTimestamp();
+      const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      const validFor = 60 * 60 * 2;
+
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
+        .to.emit(factory, "MintRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil);
+
+      await increaseBlockTimestampBy(lockedUntil - ts + 1);
+
+      await expect(factory.connect(bob).claimAllPending())
+        .to.emit(lfg, "Transfer")
+        .withArgs(factory.address, bob.address, amount);
+
+      await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
+        .to.emit(lfg, "Transfer")
+        .withArgs(bob.address, alice.address, amount.div(10));
+
+      await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
+      await lfg2.connect(bob).burn(amountToSwap);
+      expect(await lfg2.balanceOf(bob.address)).equal("0");
+    });
 
     it("should rewards From Lfg Staked In CorePool", async function () {
       const orderId = 1;
@@ -283,6 +284,35 @@ describe("LFGFactoryV2", function () {
       } catch (e) {
         expect(e.message).to.include("ERC20: burn amount exceeds balance");
       }
+    });
+
+    it("insufficient balance to burn", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const amountToSwap = ethers.utils.parseEther("0.5");
+      const ts = await getTimestamp();
+      const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      const validFor = 60 * 60 * 2;
+
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
+        .to.emit(factory, "MintRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil);
+
+      await increaseBlockTimestampBy(lockedUntil - ts + 1);
+
+      await expect(factory.connect(bob).claimAllPending())
+        .to.emit(lfg, "Transfer")
+        .withArgs(factory.address, bob.address, amount);
+
+      await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
+        .to.emit(lfg, "Transfer")
+        .withArgs(bob.address, alice.address, amount.div(10));
+
+      await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
+      await expect(lfg2.connect(bob).burn(amount)).to.revertedWith("InsufficientBalance()");
     });
 
     it("should revert when passing wrong deposit ID", async function () {
