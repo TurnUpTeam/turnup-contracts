@@ -5145,14 +5145,8 @@
         "type": "function"
       },
       {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "pool_",
-            "type": "address"
-          }
-        ],
-        "name": "fixPool",
+        "inputs": [],
+        "name": "fixReservedSupply",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -5587,6 +5581,19 @@
         "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "reservedSupply",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
