@@ -160,10 +160,10 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
 
   // we do not add variable to avoid risks with the storage schema
   // execute this only one time
-  function fixPool(address pool_) public onlyOwner {
-    if (pool_ == address(0)) revert NoZeroAddress();
-    pool = pool_;
-  }
+  //  function fixPool(address pool_) public onlyOwner {
+  //    if (pool_ == address(0)) revert NoZeroAddress();
+  //    pool = pool_;
+  //  }
 
   function minLockTime() external view returns (uint256) {
     return _minLockTime;
@@ -202,9 +202,15 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
 
     config.minted += uint128(amount);
     if (_reservedSupply == 0) {
-      _reservedSupply = config.supplyReservedToPool;
+      _reservedSupply = lfg.amountReservedToFactory();
     }
     if (config.minted > _reservedSupply) revert CapReachedForTurnUp();
+  }
+
+  function fixReservedSupply() external onlyOwner {
+    if (_reservedSupply == config.supplyReservedToPool) {
+      _reservedSupply = lfg.amountReservedToFactory();
+    }
   }
 
   function _validateSignature(

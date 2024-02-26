@@ -5145,14 +5145,8 @@
         "type": "function"
       },
       {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "pool_",
-            "type": "address"
-          }
-        ],
-        "name": "fixPool",
+        "inputs": [],
+        "name": "fixReservedSupply",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
