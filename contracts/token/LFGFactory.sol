@@ -202,7 +202,7 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
 
     config.minted += uint128(amount);
     if (_reservedSupply == 0) {
-      _reservedSupply = lfg.amountReservedToFactory();
+      _reservedSupply = config.supplyReservedToPool;
     }
     if (config.minted > _reservedSupply) revert CapReachedForTurnUp();
   }
@@ -211,6 +211,10 @@ contract LFGFactory is Initializable, ValidatableUpgradeable, PausableUpgradeabl
     if (_reservedSupply == config.supplyReservedToPool) {
       _reservedSupply = lfg.amountReservedToFactory();
     }
+  }
+
+  function reservedSupply() external view returns (uint256) {
+    return _reservedSupply;
   }
 
   function _validateSignature(

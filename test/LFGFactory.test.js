@@ -148,6 +148,12 @@ describe("LFGFactory", function () {
       await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
         .to.emit(lfg, "Transfer")
         .withArgs(bob.address, alice.address, amount.div(10));
+
+      expect(await factory.reservedSupply()).equal(ethers.utils.parseEther("300000000"));
+
+      await factory.fixReservedSupply();
+
+      expect(await factory.reservedSupply()).equal(ethers.utils.parseEther("1600000000"));
     });
 
     it("should cancel to stake LFG correctly", async function () {
