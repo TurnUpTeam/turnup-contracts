@@ -205,4 +205,100 @@ describe("LFGFactoryV2", function () {
       expect(await lfg2.balanceOf(bob.address)).equal(value.toString());
     });
   });
+  describe("should reverter LFGV2", function () {
+    it("should revert when setting again", async function () {
+      await expect(factory.setLFGTokenV2(lfg2.address)).to.revertedWith("AlreadySet()");
+    });
+
+    it.only("should apply LFG correctly and swap for LFG2", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const amountToSwap = ethers.utils.parseEther("0.5");
+      const ts = await getTimestamp();
+      const lockedUntil = ts + 60 * 60 * 24; // 24 hours from now
+      const validFor = 60 * 60 * 2;
+
+      let hash = await factory.hashForApplyToMintLfg(orderId, amount, ts + 3600, false, bob.address, ts, validFor);
+      let signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, ts + 3600, ts, validFor, signature)).revertedWith(
+        "InvalidLockTime()"
+      );
+
+      hash = await factory.hashForApplyToMintLfg(orderId, amount, lockedUntil, false, bob.address, ts, validFor);
+      signature = await getSignature(hash, validator);
+
+      await expect(factory.connect(bob).applyToMintLfg(orderId, amount, lockedUntil, ts, validFor, signature))
+        .to.emit(factory, "MintRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil);
+
+      const request = await factory.getMintRequest(bob.address);
+      expect(request.amount).to.equal(amount);
+      expect(request.lockedUntil).to.equal(lockedUntil);
+      expect(request.orderId).to.equal(orderId);
+
+      expect(await lfg.balanceOf(bob.address)).to.equal(0);
+
+      await increaseBlockTimestampBy(lockedUntil - ts + 1);
+
+      await expect(factory.connect(bob).claimAllPending())
+        .to.emit(lfg, "Transfer")
+        .withArgs(factory.address, bob.address, amount);
+
+      await expect(lfg.connect(bob).transfer(alice.address, amount.div(10)))
+        .to.emit(lfg, "Transfer")
+        .withArgs(bob.address, alice.address, amount.div(10));
+
+        console.log(await lfg2.balanceOf(bob.address))
+        console.log(await lfg2.balanceOf(alice.address))
+
+      await factory.connect(bob).swapLfgFromV1ToV2(amountToSwap);
+      expect(await lfg2.balanceOf(bob.address)).equal(amountToSwap);
+    });
+
+    it("should rewards From Lfg Staked In CorePool", async function () {
+      const orderId = 1;
+      const amount = ethers.utils.parseEther("1");
+      const ts = await getTimestamp();
+      let lockedUntil = ts + 60 * 60 * 24;
+      let validFor = 60 * 60 * 2;
+      const t90days = 3600 * 24 * 90;
+      const stakeLockedUntil = ts + t90days;
+      let daysInSeconds = 365 * 86400;
+
+      let hash = await factory.hashForApplyToMintLfgAndStake(
+        orderId,
+        amount,
+        lockedUntil,
+        stakeLockedUntil,
+        bob.address,
+        ts,
+        validFor
+      );
+      let signature = await getSignature(hash, validator);
+
+      await expect(
+        factory.connect(bob).applyToMintLfgAndStake(orderId, amount, lockedUntil, stakeLockedUntil, ts, validFor, signature)
+      )
+        .to.emit(factory, "MintAndStakeRequested")
+        .withArgs(orderId, amount, bob.address, lockedUntil, stakeLockedUntil);
+
+      await increaseBlockTimestampBy(lockedUntil - ts + 1);
+
+      await expect(factory.connect(bob).claimAllPending())
+        .to.emit(lfg, "Transfer")
+        .withArgs(addr0, pool.address, amount)
+        .to.emit(pool, "Staked");
+
+      const deposit = await pool.getDeposit(bob.address, 0);
+      const weight = 1 + Math.floor((deposit.lockedUntil - deposit.lockedFrom) / daysInSeconds);
+      let value = deposit.tokenAmount.mul(weight).mul(10).div(100);
+
+      try {
+        await factory.connect(bob).rewardsFromLfgStakedInCorePool(1);
+      } catch (e) {
+        expect(e.message).to.include("reverted with panic code 0x32");
+      }
+    });
+  });
 });

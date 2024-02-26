@@ -71,8 +71,8 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 ## Test coverage
 
 ```
-  95 passing (47s)
-  1 pending
+  97 passing (48s)
+  2 pending
 
 -----------------------------|----------|----------|----------|----------|----------------|
 File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
@@ -91,15 +91,15 @@ File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncove
  shares/                     |    95.13 |    67.34 |    96.49 |    96.06 |                |
   TurnupSharesV4.sol         |    94.85 |     69.2 |    97.87 |    96.25 |... 249,251,665 |
   TurnupSharesV4c.sol        |    96.88 |       50 |       90 |    94.87 |          91,98 |
- token/                      |    91.18 |     47.4 |    79.66 |       90 |                |
-  LFGFactory.sol             |       92 |    52.24 |    80.56 |     91.2 |... 419,450,454 |
+ token/                      |    91.18 |    47.92 |    79.66 |       90 |                |
+  LFGFactory.sol             |       92 |    52.99 |    80.56 |     91.2 |... 419,450,454 |
   LFGToken.sol               |    90.48 |       35 |       75 |    85.29 | 36,37,41,42,70 |
   LFGTokenV2.sol             |    86.67 |    38.89 |    81.82 |    90.48 |          74,82 |
  utils/                      |    83.33 |    38.89 |      100 |    72.73 |                |
   IERC4906.sol               |      100 |      100 |      100 |      100 |                |
   ValidatableUpgradeable.sol |    83.33 |    38.89 |      100 |    72.73 |... 54,56,57,59 |
 -----------------------------|----------|----------|----------|----------|----------------|
-All files                    |    79.09 |    48.92 |    79.62 |    78.23 |                |
+All files                    |    79.09 |    49.04 |    79.62 |    78.23 |                |
 -----------------------------|----------|----------|----------|----------|----------------|
 
 > Istanbul reports written to ./coverage/ and ./coverage.json
