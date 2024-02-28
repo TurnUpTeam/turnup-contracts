@@ -36,7 +36,7 @@ contract LFGAirdropV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     __Ownable_init();
   }
 
-  function setLfg(address lfg_) public onlyOwner {
+  function setLfgToken(address lfg_) public onlyOwner {
     if (lfg_ == address(0)) revert InvalidParameter();
     if (address(lfg) != address(0)) revert InvalidParameter();
     lfg = LFGToken(lfg_);
@@ -58,6 +58,7 @@ contract LFGAirdropV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     if (memberAddresses.length == 0) revert InvalidParameter();
     if (memberAddresses.length != lfgAmountes.length) revert InvalidParameter();
     for (uint256 i = 0; i < memberAddresses.length; i++) {
+        if (memberAddresses[i] == address(0)) revert InvalidParameter();
         if (lfgAmountes[i] == 0 || lfgAmountes[i] > maxLfgPerMember) revert InvalidLfgAmount();
         if (records[memberAddresses[i]] != 0) revert CantDuplicateDrop();
         if (lfg.balanceOf(address(this)) < lfgAmountes[i]) revert InsufficientLfg();
@@ -65,6 +66,7 @@ contract LFGAirdropV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         lfg.transfer(memberAddresses[i], lfgAmountes[i]);
         emit AirdropComplete(memberAddresses[i], lfgAmountes[i]);
     }
+    dropMemberAmount += memberAddresses.length;
   }
 
   function getAirdropAmount(address memberAddress) public view returns(uint256) {
