@@ -157,6 +157,37 @@ describe("Lottery", function () {
     expect(await airdrop.dropMemberAmount()).to.equal(0);
   });
 
+  it("should be airdrop duplicate", async function () {
+    lfg.connect(tokenHolder).transfer(airdrop.address, 1000000);
+    
+    await airdrop.setLfgToken(lfg.address);
+    await airdrop.setMaxLfgPerMember(8000)
+
+    await airdrop.airdrop([bob.address], [100]);
+    await airdrop.airdrop([bob.address, alice.address], [200, 200]);
+
+    expect(await lfg.balanceOf(bob.address)).to.equal(100); 
+    expect(await lfg.balanceOf(alice.address)).to.equal(200); 
+  });
+
+  it("should be batch get airdrop amount", async function () {
+    lfg.connect(tokenHolder).transfer(airdrop.address, 1000000);
+    
+    await airdrop.setLfgToken(lfg.address);
+    await airdrop.setMaxLfgPerMember(8000)
+
+    await airdrop.airdrop([bob.address, alice.address], [100, 200]);
+    
+    amounts = await airdrop.batchGetAirdropAmount([bob.address, alice.address]);
+    expect(amounts[0]).to.equal(100);
+    expect(amounts[1]).to.equal(200);
+
+    amounts = await airdrop.batchGetAirdropAmount([bob.address, alice.address, fred.address]);
+    expect(amounts[0]).to.equal(100);
+    expect(amounts[1]).to.equal(200);
+    expect(amounts[2]).to.equal(0);
+  });
+
   it("should be withdraw funds with invalid parameter", async function () {
     lfg.connect(tokenHolder).transfer(airdrop.address, 10000);
     
