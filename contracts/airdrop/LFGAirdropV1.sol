@@ -14,9 +14,9 @@ contract LFGAirdropV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
   using SafeERC20Upgradeable for LFGToken;
 
   error InvalidParameter();
-  error InvalidLfgAmount(); 
+  error InvalidLfgAmount();
   error InsufficientLfg();
-  error ZeroFundDestiniation();
+  error ZeroFundDestination();
 
   event LfgTokenUpdate(address lfg);
   event FundDestinationUpdate(address dest);
@@ -53,43 +53,43 @@ contract LFGAirdropV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     emit MaxLfgPerMemberUpdate(maxLfgPerMember);
   }
 
-  function airdrop(address[] memory memberAddresses, uint256[] memory lfgAmountes) public onlyOwner nonReentrant {
+  function airdrop(address[] memory memberAddresses, uint256[] memory lfgAmounts) public onlyOwner nonReentrant {
     if (memberAddresses.length == 0) revert InvalidParameter();
-    if (memberAddresses.length != lfgAmountes.length) revert InvalidParameter();
+    if (memberAddresses.length != lfgAmounts.length) revert InvalidParameter();
     for (uint256 i = 0; i < memberAddresses.length; i++) {
-        if (memberAddresses[i] == address(0)) revert InvalidParameter();
-        if (lfgAmountes[i] == 0 || lfgAmountes[i] > maxLfgPerMember) revert InvalidLfgAmount();
-        if (records[memberAddresses[i]] == 0) {
-            if (lfg.balanceOf(address(this)) < lfgAmountes[i]) revert InsufficientLfg();
-            records[memberAddresses[i]] = lfgAmountes[i];
-            lfg.transfer(memberAddresses[i], lfgAmountes[i]);
-            emit AirdropComplete(memberAddresses[i], lfgAmountes[i]);
-            dropMemberAmount++;
-        }
+      if (memberAddresses[i] == address(0)) revert InvalidParameter();
+      if (lfgAmounts[i] == 0 || lfgAmounts[i] > maxLfgPerMember) revert InvalidLfgAmount();
+      if (records[memberAddresses[i]] == 0) {
+        if (lfg.balanceOf(address(this)) < lfgAmounts[i]) revert InsufficientLfg();
+        records[memberAddresses[i]] = lfgAmounts[i];
+        lfg.safeTransfer(memberAddresses[i], lfgAmounts[i]);
+        emit AirdropComplete(memberAddresses[i], lfgAmounts[i]);
+        dropMemberAmount++;
+      }
     }
   }
 
-  function getAirdropAmount(address memberAddress) public view returns(uint256) {
+  function getAirdropAmount(address memberAddress) public view returns (uint256) {
     return records[memberAddress];
   }
 
-  function batchGetAirdropAmount(address[] calldata memberAddresses) public view returns(uint256[] memory) {
+  function batchGetAirdropAmount(address[] calldata memberAddresses) public view returns (uint256[] memory) {
     uint256[] memory amounts = new uint256[](memberAddresses.length);
     for (uint256 i = 0; i < memberAddresses.length; i++) {
-        amounts[i] = records[memberAddresses[i]];
+      amounts[i] = records[memberAddresses[i]];
     }
     return amounts;
   }
 
   function withdrawFunds(uint256 amount) public onlyOwner {
-    if (fundDestination == address(0)) revert ZeroFundDestiniation();
+    if (fundDestination == address(0)) revert ZeroFundDestination();
     uint256 balance = lfg.balanceOf(address(this));
     if (amount > balance) revert InvalidParameter();
     if (amount == 0) {
-        amount = balance;
+      amount = balance;
     }
-    lfg.transfer(fundDestination, amount);
+    lfg.safeTransfer(fundDestination, amount);
   }
-  
+
   uint256[50] private __gap;
 }
