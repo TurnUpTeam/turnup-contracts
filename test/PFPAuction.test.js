@@ -235,11 +235,11 @@ describe("PFPAuction", function () {
     expect(owlsCoin).to.equal("LFG");
 
     // failing bids
-    await expect(auction.connect(bob).bid(owls.address, 110)).to.be.revertedWith("AssetNotFound()");
-    await expect(auction.connect(bob).bid(owls.address, 200)).to.be.revertedWith("ERC721: invalid token ID");
+    await expect(auction.connect(bob).bid(owls.address, 110, owlsInitialPrice)).to.be.revertedWith("AssetNotFound()");
+    await expect(auction.connect(bob).bid(owls.address, 200, owlsInitialPrice)).to.be.revertedWith("ERC721: invalid token ID");
 
     // unapproved bid
-    await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("InsufficientAllowance");
+    await expect(auction.connect(bob).bid(owls.address, id, owlsInitialPrice)).to.be.revertedWith("InsufficientAllowance");
 
     // bob approves LFG
     await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
@@ -255,7 +255,7 @@ describe("PFPAuction", function () {
     // successful bid
     let price = await auction.getNextPrice(owls.address, id);
     let fee = await auction.getFee(owls.address, id);
-    await expect(auction.connect(bob).bid(owls.address, id))
+    await expect(auction.connect(bob).bid(owls.address, id, price))
       .to.emit(auction, "Bid")
       .withArgs(owls.address, id, owlsInitialPrice, await ts(), bob.address, t + 7195, 0, addr0, price.sub(fee));
 
@@ -281,7 +281,7 @@ describe("PFPAuction", function () {
 
     // alice bids
     t = await ts();
-    await expect(auction.connect(alice).bid(owls.address, id))
+    await expect(auction.connect(alice).bid(owls.address, id, price))
       .to.emit(auction, "Bid")
       .withArgs(owls.address, id, price, await ts(), alice.address, t + 3600, previousPrice, bob.address, price.sub(fee))
       .to.emit(lfg, "Transfer")
@@ -297,7 +297,7 @@ describe("PFPAuction", function () {
     fee = await auction.getFee(owls.address, id);
     totalFee = totalFee.add(fee);
     t = await ts();
-    await expect(auction.connect(alice).bid(owls.address, id))
+    await expect(auction.connect(alice).bid(owls.address, id, price))
       .to.emit(auction, "Bid")
       .withArgs(owls.address, id, price, await ts(), alice.address, t + 3600, previousPrice, alice.address, price.sub(fee))
       .to.emit(lfg, "Transfer")
@@ -312,7 +312,7 @@ describe("PFPAuction", function () {
     await increaseBlockTimestampBy(endTime - now + 1);
 
     // bob tries to bid again but auction is over
-    await expect(auction.connect(bob).bid(owls.address, id)).to.be.revertedWith("AuctionIsOver()");
+    await expect(auction.connect(bob).bid(owls.address, id, price)).to.be.revertedWith("AuctionIsOver()");
 
     await expect(auction.connect(fred).claim(owls.address, id)).to.be.revertedWith("NotTheWinner()");
 
@@ -342,7 +342,7 @@ describe("PFPAuction", function () {
       .to.emit(lfg, "Approval")
       .withArgs(bob.address, auction.address, owlsInitialPrice);
 
-    await expect(auction.connect(bob).bid(owls.address, id, {value: priceMatic})).to.emit(auction, "Bid");
+    await expect(auction.connect(bob).bid(owls.address, id, priceMatic, {value: priceMatic})).to.emit(auction, "Bid");
     // nobody beats the bid, an hour passes
     await increaseBlockTimestampBy(3600 * 20);
 
@@ -382,9 +382,13 @@ describe("PFPAuction", function () {
     expect(ratsCoin).to.equal("MATIC");
 
     // bid without value
-    await expect(auction.connect(bob).bid(rats.address, id)).to.be.revertedWith("InsufficientFunds()");
+    await expect(auction.connect(bob).bid(rats.address, id, ratsInitialPrice)).to.be.revertedWith("InsufficientFunds()");
+
     // successful bid
-    await expect(auction.connect(bob).bid(rats.address, id, {value: ratsInitialPrice})).to.emit(auction, "Bid");
+    await expect(auction.connect(bob).bid(rats.address, id, ratsInitialPrice, {value: ratsInitialPrice})).to.emit(
+      auction,
+      "Bid"
+    );
 
     expect(await ethers.provider.getBalance(auction.address)).to.equal(ratsInitialPrice);
 
@@ -396,7 +400,7 @@ describe("PFPAuction", function () {
     let totalFee = ratsInitialPrice.add(fee);
 
     // alice bids
-    await expect(auction.connect(alice).bid(rats.address, id, {value: price})).to.emit(auction, "Bid");
+    await expect(auction.connect(alice).bid(rats.address, id, price, {value: price})).to.emit(auction, "Bid");
 
     expect(await ethers.provider.getBalance(auction.address)).to.equal(totalFee);
 
@@ -407,7 +411,7 @@ describe("PFPAuction", function () {
     let fredBalanceBefore = await ethers.provider.getBalance(fred.address);
 
     // fred over bids, sending twice the price
-    await expect(auction.connect(fred).bid(rats.address, id, {value: price.mul(2)})).to.emit(auction, "Bid");
+    await expect(auction.connect(fred).bid(rats.address, id, price, {value: price.mul(2)})).to.emit(auction, "Bid");
 
     let fredBalanceAfter = await ethers.provider.getBalance(fred.address);
     let remaining = fredBalanceBefore.sub(fredBalanceAfter);
@@ -420,7 +424,7 @@ describe("PFPAuction", function () {
     price = await auction.getNextPrice(rats.address, id);
 
     // bob tries to bid again but auction is over
-    await expect(auction.connect(bob).bid(rats.address, id, {value: price})).to.be.revertedWith("AuctionIsOver()");
+    await expect(auction.connect(bob).bid(rats.address, id, price, {value: price})).to.be.revertedWith("AuctionIsOver()");
 
     await expect(auction.connect(alice).claim(rats.address, id)).to.be.revertedWith("NotTheWinner()");
 
