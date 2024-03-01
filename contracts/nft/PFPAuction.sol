@@ -47,6 +47,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error UnableToTransferFunds();
   error ZeroAddress();
   error InsufficientFunds();
+  error InsufficientAllowance();
   error InsufficientFees();
   error AuctionIsOver();
   error AuctionIsNotOver();
@@ -266,10 +267,12 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       // If the user approves more than strictly required, they can be able to make a
       // successful bid even if the price has increased in the meantime.
-      if (LFGToken(_lfg).balanceOf(_msgSender()) < price) {
-        if (expectedSpending == 0) revert InsufficientFunds();
-        // during batch we just skip the bid
-        else {
+      if (_lfg.balanceOf(_msgSender()) < price || _lfg.allowance(_msgSender(), address(this)) < price) {
+        if (expectedSpending == 0) {
+          if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds();
+          else revert InsufficientAllowance();
+          // during batch we just skip the bid
+        } else {
           // we prefer to revert the change than setting the values after the external calls
           // to avoid potential reentrancy issues
           _item.price = oldItem.price;
@@ -279,10 +282,10 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
           return false;
         }
       }
-      LFGToken(_lfg).safeTransferFrom(_msgSender(), address(this), price);
+      _lfg.safeTransferFrom(_msgSender(), address(this), price);
       if (oldItem.bidder != address(0)) {
         // Not the first bid.
-        LFGToken(_lfg).transfer(oldItem.bidder, price - fee);
+        _lfg.transfer(oldItem.bidder, price - fee);
         // ^ We use transfer to ignore the failure for the same reasons as above
       }
     }
@@ -366,7 +369,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       (bool success, ) = beneficiary.call{value: amount}("");
       if (!success) revert UnableToTransferFunds();
     } else {
-      uint256 balance = LFGToken(_lfg).balanceOf(address(this));
+      uint256 balance = _lfg.balanceOf(address(this));
       if (amount == 0) {
         amount = lfgFees;
       }
@@ -374,17 +377,17 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       // as for the native currency, this should never happen
       if (amount > balance) revert InsufficientFunds();
       lfgFees -= amount;
-      LFGToken(_lfg).safeTransfer(beneficiary, amount);
+      _lfg.safeTransfer(beneficiary, amount);
     }
   }
 
   function burnLfgProceeds(uint256 amount) external virtual onlyOwner nonReentrant {
-    uint256 balance = LFGToken(_lfg).balanceOf(address(this));
+    uint256 balance = _lfg.balanceOf(address(this));
     if (amount == 0) {
       amount = lfgFees;
     }
     if (amount > balance) revert InsufficientFunds();
     lfgFees -= amount;
-    LFGToken(_lfg).burn(amount);
+    _lfg.burn(amount);
   }
 }
