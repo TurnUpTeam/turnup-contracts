@@ -413,6 +413,8 @@ describe("PFPAuction", function () {
     // fred over bids, sending twice the price
     await expect(auction.connect(fred).bid(rats.address, id, price, {value: price.mul(2)})).to.emit(auction, "Bid");
 
+    await expect(auction.connect(alice).bid(rats.address, id, price, {value: price})).revertedWith("PriceChanged");
+
     let fredBalanceAfter = await ethers.provider.getBalance(fred.address);
     let remaining = fredBalanceBefore.sub(fredBalanceAfter);
     // we account for the gas used
