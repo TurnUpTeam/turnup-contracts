@@ -59,6 +59,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error ItemPriceTypeNotIdentical();
   error CannotBatchBidSameItemTwice();
   error AuctionNotStarted();
+  error PriceChanged();
 
   // Optimized to reduce storage consumption
   struct Item {
@@ -205,25 +206,29 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     return block.timestamp > auctionEndTime(tokenAddress, tokenId);
   }
 
-  function bid(address tokenAddress, uint256 tokenId) external payable nonReentrant {
-    _bid(tokenAddress, tokenId, 0);
+  function bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending) external payable nonReentrant {
+    _bid(tokenAddress, tokenId, expectedSpending, true);
   }
 
-  function _bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending) internal returns (bool) {
+  function _bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending, bool revertOnFailure) internal returns (bool) {
     Item storage _item = _items[tokenAddress][tokenId];
     if (_item.startTime > block.timestamp) revert AuctionNotStarted();
     Item memory oldItem = _item;
     if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
       // the auction must own the asset
-      if (expectedSpending == 0) revert AssetNotFound();
+      if (revertOnFailure) revert AssetNotFound();
       // during batch we just skip the bid
       else return false;
     }
     if (isAuctionOver(tokenAddress, tokenId)) {
-      if (expectedSpending == 0) revert AuctionIsOver();
+      if (revertOnFailure) revert AuctionIsOver();
       else return false;
     }
     uint256 price = getNextPrice(tokenAddress, tokenId);
+    if (price != expectedSpending) {
+      if (revertOnFailure) revert PriceChanged();
+      else return false;
+    }
     uint256 fee = getFee(tokenAddress, tokenId);
     _item.price = uint96(price);
     _item.bidAt = uint32(block.timestamp);
@@ -234,9 +239,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       lfgFees += fee;
     }
     if (_item.native) {
-      uint256 value = expectedSpending > 0 ? expectedSpending : msg.value;
+      uint256 value = revertOnFailure ? msg.value : expectedSpending;
       if (value < price) {
-        if (expectedSpending == 0) revert InsufficientFunds();
+        if (revertOnFailure) revert InsufficientFunds();
         // during batch we just skip the bid
         else {
           // we prefer to revert the change than setting the values after the external calls
@@ -268,7 +273,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       // If the user approves more than strictly required, they can be able to make a
       // successful bid even if the price has increased in the meantime.
       if (_lfg.balanceOf(_msgSender()) < price || _lfg.allowance(_msgSender(), address(this)) < price) {
-        if (expectedSpending == 0) {
+        if (revertOnFailure) {
           if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds();
           else revert InsufficientAllowance();
           // during batch we just skip the bid
@@ -326,7 +331,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
         // most likely it will fail later
         expectedSpending = remaining;
       }
-      if (_bid(tokenAddresses[i], tokenIds[i], expectedSpending)) {
+      if (_bid(tokenAddresses[i], tokenIds[i], expectedSpending, false)) {
         if (_items[tokenAddresses[i]][tokenIds[i]].native) {
           remaining -= expectedSpending;
         }
