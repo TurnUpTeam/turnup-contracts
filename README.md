@@ -70,13 +70,15 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 
 ## Test coverage
 
-```
-  88 passing (28s)
+``` 
+  103 passing (27s) 
   2 pending
 
 -----------------------------|----------|----------|----------|----------|----------------|
 File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 -----------------------------|----------|----------|----------|----------|----------------|
+ airdrop/                    |      100 |       75 |      100 |      100 |                |
+  LFGAirdropV1.sol           |      100 |       75 |      100 |      100 |                |
  lottery/                    |    28.97 |    23.13 |    46.15 |    28.89 |                |
   Lottery.sol                |    28.97 |    23.13 |    46.15 |    28.89 |... 377,381,385 |
  nft/                        |    66.95 |    41.56 |    65.52 |    61.88 |                |
