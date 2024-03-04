@@ -61,7 +61,6 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
   struct AssetHoldInfo {
      mapping(address => uint256) holders;
   }
-  // token address => (TokenId => (user address => balance))
   mapping(address => mapping(uint256 => AssetHoldInfo)) internal _balanceOf;
 
   function initialize( 
@@ -177,8 +176,12 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
 
     lfg.approve(_msgSender(), priceTotal);
     lfg.safeTransferFrom(_msgSender(), address(this), priceTotal);
-    lfg.safeTransfer(tokenOwner, subjectFee);
-  
+    
+    // ^ We ignore failures. If not, a trader can use a smart contract to buy without
+    // implementing a receive function. That would cause the call to fail, making impossible
+    // for any other to buy over the asset
+    lfg.transfer(tokenOwner, subjectFee);
+ 
     protocolFees += protocolFee;
 
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
@@ -213,7 +216,11 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     uint256 subjectFee = getSubjectFee(priceBase);
 
     lfg.safeTransfer(_msgSender(), priceBase - protocolFee - subjectFee);
-    lfg.safeTransfer(tokenOwner, subjectFee);
+    
+    // ^ We ignore failures. If not, a trader can use a smart contract to sell without
+    // implementing a receive function. That would cause the call to fail, making impossible
+    // for any other to sell over the asset
+    lfg.transfer(tokenOwner, subjectFee);
 
     protocolFees += protocolFee;
 
