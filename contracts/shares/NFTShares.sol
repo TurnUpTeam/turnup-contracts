@@ -235,7 +235,7 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     );
   }
 
-  function withdrawProtocolFees(uint256 amount) external virtual onlyIfSetUp onlyOwner nonReentrant {
+  function withdrawProtocolFees(uint256 amount) external virtual onlyIfSetUp nonReentrant {
     if (amount == 0) amount = protocolFees;
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFees == 0) revert Forbidden();
