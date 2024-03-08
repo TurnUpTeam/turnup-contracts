@@ -4,7 +4,7 @@ const fs = require("fs");
 const dropUsersFile = "./scripts/lfg_airdrop_users.csv";
 const dropUserAmountPer = 2;
 
-const lfgAirdropAddress = "0x5B78eb1C51F5580034ec8B6A39e59b81Fb67d371";   // test, mumbai 
+const lfgAirdropAddress = "0x5B78eb1C51F5580034ec8B6A39e59b81Fb67d371"; // test, mumbai
 
 const gasPrice = ethers.utils.parseUnits("80", "gwei");
 
@@ -17,22 +17,22 @@ async function main() {
 
   const factory = await ethers.getContractFactory("LFGAirdropV1");
   const airdrop = factory.attach(lfgAirdropAddress);
-  
+
   console.log("LFG token contract address:", await airdrop.lfg());
   console.log("fundDestination:", await airdrop.fundDestination());
   console.log("maxLfgPerMember:", await airdrop.maxLfgPerMember());
   console.log("dropMemberAmount:", await airdrop.dropMemberAmount());
-  
+
   let allUsers = new Array();
   let eligibleUsers = new Array();
 
   const content = fs.readFileSync(dropUsersFile, "utf-8");
-  content.split(/\r?\n/).forEach(line => {
+  content.split(/\r?\n/).forEach((line) => {
     let toks = line.trim().split(" ");
-    allUsers.push({"wallet": toks[0], "amount": toks[1]});
+    allUsers.push({wallet: toks[0], amount: toks[1]});
   });
   console.log("$LFG airdrop user count:", allUsers.length);
-  
+
   let idx = 0;
   while (idx < allUsers.length) {
     let batchUsers = new Array();
@@ -40,7 +40,7 @@ async function main() {
     for (var i = 0; i < batchSize; i++) {
       batchUsers.push(allUsers[idx + i]["wallet"]);
     }
-    
+
     let retVal = await airdrop.batchGetAirdropAmount(batchUsers);
     for (var i = 0; i < retVal.length; i++) {
       if (retVal[i].isZero()) {
@@ -50,7 +50,7 @@ async function main() {
 
     idx += batchSize;
   }
-  
+
   console.log("$LFG airdrop eligible user count:", eligibleUsers.length);
 
   idx = 0;

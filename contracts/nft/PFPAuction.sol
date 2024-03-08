@@ -354,9 +354,28 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   }
 
   function claim(address tokenAddress, uint256 tokenId) external nonReentrant {
+    _claim(tokenAddress, tokenId, true);
+  }
+
+  function claimBatch(address[] memory tokenAddresses, uint256[] memory tokenIds) external nonReentrant {
+    if (tokenAddresses.length != tokenIds.length) {
+      revert InvalidInput();
+    }
+    for (uint256 i; i < tokenIds.length; i++) {
+      _claim(tokenAddresses[i], tokenIds[i], false);
+    }
+  }
+
+  function _claim(address tokenAddress, uint256 tokenId, bool revertOnError) internal {
     Item memory _item = _items[tokenAddress][tokenId];
-    if (!isAuctionOver(tokenAddress, tokenId)) revert AuctionIsNotOver();
-    if (_item.bidder != _msgSender()) revert NotTheWinner();
+    if (!isAuctionOver(tokenAddress, tokenId)) {
+      if (revertOnError) revert AuctionIsNotOver();
+      else return;
+    }
+    if (_item.bidder != _msgSender()) {
+      if (revertOnError) revert NotTheWinner();
+      else return;
+    }
     PFPAsset(tokenAddress).safeTransferFrom(address(this), _item.bidder, tokenId);
     emit Claim(tokenAddress, tokenId, _item.bidder, _item.price);
   }
