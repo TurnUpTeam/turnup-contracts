@@ -225,7 +225,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       else return false;
     }
     uint256 price = getNextPrice(tokenAddress, tokenId);
-    if (price != expectedSpending) {
+    if (price > expectedSpending) {
       if (revertOnFailure) revert PriceChanged();
       else return false;
     }
@@ -270,6 +270,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
         }
       }
     } else {
+      
+      _lfg.approve(_msgSender(), price);
+      
       // If the user approves more than strictly required, they can be able to make a
       // successful bid even if the price has increased in the meantime.
       if (_lfg.balanceOf(_msgSender()) < price || _lfg.allowance(_msgSender(), address(this)) < price) {
