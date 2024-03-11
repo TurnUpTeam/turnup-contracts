@@ -207,6 +207,8 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   }
 
   function bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending) external payable nonReentrant {
+    uint256 price = getNextPrice(tokenAddress, tokenId);
+    _lfg.approve(address(this), price);
     _bid(tokenAddress, tokenId, expectedSpending, true);
   }
 
@@ -270,15 +272,11 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
         }
       }
     } else {
-      
-      _lfg.approve(_msgSender(), price);
-      
       // If the user approves more than strictly required, they can be able to make a
       // successful bid even if the price has increased in the meantime.
-      if (_lfg.balanceOf(_msgSender()) < price || _lfg.allowance(_msgSender(), address(this)) < price) {
+      if (_lfg.balanceOf(_msgSender()) < price) {
         if (revertOnFailure) {
-          if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds();
-          else revert InsufficientAllowance();
+          if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds(); 
           // during batch we just skip the bid
         } else {
           // we prefer to revert the change than setting the values after the external calls
@@ -319,6 +317,13 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     if (tokenAddresses.length != tokenIds.length || tokenAddresses.length != expectedSpendings.length) {
       revert InvalidInput();
     }
+
+    uint256 allowance = 0;
+    for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      allowance += getNextPrice(tokenAddresses[i], tokenIds[i]);
+    }
+    _lfg.approve(address(this), allowance);
+
     uint256 remaining = msg.value;
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
       // avoiding double bidding, which would break the way
