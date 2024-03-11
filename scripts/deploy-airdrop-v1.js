@@ -9,20 +9,20 @@ async function main() {
   console.log("getGasPrice:", await ethers.provider.getGasPrice());
   console.log("getFeeData:", await ethers.provider.getFeeData());
 
-  let lfgAddress = "0x2aA9B551929d55fa8ecf6e3b009E13bde9E79bA8";  // test mumbai
-  
-  const factory = await ethers.getContractFactory("LFGAirdropV1"); 
-  let airdrop = await upgrades.deployProxy(factory); 
+  let lfgAddress = "0x2aA9B551929d55fa8ecf6e3b009E13bde9E79bA8"; // test mumbai
+
+  const factory = await ethers.getContractFactory("LFGAirdropV1");
+  let airdrop = await upgrades.deployProxy(factory);
   console.debug("Tx:", airdrop.deployTransaction.hash);
   await airdrop.deployed();
   console.debug("Deployed at", airdrop.address);
-  
+
   let tx = await airdrop.setLfgToken(lfgAddress);
   await tx.wait();
 
   tx = await airdrop.setFundDestination(deployer.address);
   await tx.wait();
-  
+
   tx = await airdrop.setMaxLfgPerMember(ethers.utils.parseEther("10000"));
   await tx.wait();
 

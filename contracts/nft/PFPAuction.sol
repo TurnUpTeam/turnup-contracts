@@ -276,7 +276,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       // successful bid even if the price has increased in the meantime.
       if (_lfg.balanceOf(_msgSender()) < price) {
         if (revertOnFailure) {
-          if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds(); 
+          if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds();
           // during batch we just skip the bid
         } else {
           // we prefer to revert the change than setting the values after the external calls

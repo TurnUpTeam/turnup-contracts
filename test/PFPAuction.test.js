@@ -239,7 +239,9 @@ describe("PFPAuction", function () {
     await expect(auction.connect(bob).bid(owls.address, 200, owlsInitialPrice)).to.be.revertedWith("ERC721: invalid token ID");
 
     // unapproved bid
-    await expect(auction.connect(bob).bid(owls.address, id, owlsInitialPrice)).to.be.revertedWith("InsufficientAllowance");
+    await expect(auction.connect(bob).bid(owls.address, id, owlsInitialPrice)).to.be.revertedWith(
+      "ERC20: insufficient allowance"
+    );
 
     // bob approves LFG
     await expect(lfg.connect(bob).approve(auction.address, owlsInitialPrice))
