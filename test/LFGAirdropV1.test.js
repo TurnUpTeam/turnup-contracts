@@ -5,7 +5,7 @@ const DeployUtils = require("eth-deploy-utils");
 
 const {getTimestamp, increaseBlockTimestampBy} = require("./helpers");
 
-describe("Lottery", function () {
+describe("LFG Airdrop", function () {
   let lfg;
   let airdrop;
   let owner, bob, alice, fred, jim, jane, tokenHolder;
