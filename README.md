@@ -71,7 +71,7 @@ Notice that the ABI is exported anyway during the pre-commit hook.
 ## Test coverage
 
 ```
-  103 passing (29s)
+  103 passing (25s)
   2 pending
 
 -----------------------------|----------|----------|----------|----------|----------------|

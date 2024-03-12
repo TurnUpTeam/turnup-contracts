@@ -461,6 +461,8 @@ describe("PFPAuction", function () {
       .to.emit(auction, "BidFailed")
       .withArgs(rats.address, id, nextPrice, alice.address, BidError.ExcessiveSlippage);
 
+    await expect(auction.connect(fred).bid(rats.address, id, seenPrice, 60, {value: seenPrice.mul(2)})).to.emit(auction, "Bid");
+
     // an hour passes
     await increaseBlockTimestampBy(3600 * 10);
 
