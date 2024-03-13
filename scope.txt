@@ -1,0 +1,15 @@
+contracts/airdrop/LFGAirdropV1.sol
+contracts/lottery/Lottery.sol
+contracts/nft/PFPAsset.sol
+contracts/nft/PFPAuction.sol
+contracts/nft/TurnUPNFT.sol
+contracts/pool/CorePool.sol
+contracts/pool/ICorePool.sol
+contracts/pool/Rewards.sol
+contracts/pool/SharesPool.sol
+contracts/shares/TurnupSharesV4.sol
+contracts/shares/TurnupSharesV4c.sol
+contracts/token/LFGFactory.sol
+contracts/token/LFGToken.sol
+contracts/utils/IERC4906.sol
+contracts/utils/ValidatableUpgradeable.sol
