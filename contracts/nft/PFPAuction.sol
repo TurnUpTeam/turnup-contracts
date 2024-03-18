@@ -42,7 +42,13 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint256 previousBidderRefund
   );
   event Claim(address indexed tokenAddress, uint256 indexed tokenId, address indexed winner, uint256 price);
-  event BidFailed(address indexed tokenAddress, uint256 indexed tokenId, uint256 price, address indexed bidder);
+  event BidFailed(
+    address indexed tokenAddress,
+    uint256 indexed tokenId,
+    uint256 price,
+    address indexed bidder,
+    BidError _error
+  );
 
   error UnableToTransferFunds();
   error ZeroAddress();
@@ -59,7 +65,7 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
   error ItemPriceTypeNotIdentical();
   error CannotBatchBidSameItemTwice();
   error AuctionNotStarted();
-  error PriceChanged();
+  error ExcessiveSlippage(uint256 slippage);
 
   // Optimized to reduce storage consumption
   struct Item {
@@ -72,6 +78,17 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     uint32 deferredDuration;
     uint32 bidAt;
     bool native;
+  }
+
+  enum BidError {
+    None,
+    AuctionNotStarted,
+    AssetNotFound,
+    AuctionIsOver,
+    ExcessiveSlippage,
+    InsufficientFunds,
+    InvalidExpectedPrice,
+    InsufficientAllowance
   }
 
   LFGToken internal _lfg;
@@ -160,6 +177,10 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     return price;
   }
 
+  function getLastPrice(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
+    return _items[tokenAddress][tokenId].price;
+  }
+
   function getNextPriceBatch(address[] memory tokenAddresses, uint256[] memory tokenIds) public view virtual returns (uint256) {
     if (tokenAddresses.length != tokenIds.length) {
       revert InvalidInput();
@@ -206,60 +227,45 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
     return block.timestamp > auctionEndTime(tokenAddress, tokenId);
   }
 
-  function bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending) external payable nonReentrant {
-    _bid(tokenAddress, tokenId, expectedSpending, true);
-  }
-
-  function _bid(address tokenAddress, uint256 tokenId, uint256 expectedSpending, bool revertOnFailure) internal returns (bool) {
+  function _canBid(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 expectedPrice,
+    uint256 slippage
+  ) internal view returns (BidError, uint256) {
     Item storage _item = _items[tokenAddress][tokenId];
-    if (_item.startTime > block.timestamp) revert AuctionNotStarted();
-    Item memory oldItem = _item;
+    uint256 price = getNextPrice(tokenAddress, tokenId);
+    if (_item.startTime > block.timestamp) {
+      return (BidError.AuctionNotStarted, price);
+    }
     if (PFPAsset(tokenAddress).ownerOf(tokenId) != address(this)) {
-      // the auction must own the asset
-      if (revertOnFailure) revert AssetNotFound();
-      // during batch we just skip the bid
-      else return false;
+      return (BidError.AssetNotFound, price);
     }
     if (isAuctionOver(tokenAddress, tokenId)) {
-      if (revertOnFailure) revert AuctionIsOver();
-      else return false;
+      return (BidError.AuctionIsOver, price);
     }
-    uint256 price = getNextPrice(tokenAddress, tokenId);
-    if (price != expectedSpending) {
-      if (revertOnFailure) revert PriceChanged();
-      else return false;
+    if (expectedPrice == 0) {
+      return (BidError.InvalidExpectedPrice, price);
     }
+    uint256 _slippage;
+    if (price > expectedPrice) {
+      _slippage = (100 * (price - expectedPrice)) / expectedPrice;
+    }
+    if (_slippage > slippage) {
+      return (BidError.ExcessiveSlippage, price);
+    }
+    return (BidError.None, price);
+  }
+
+  function _bid(address tokenAddress, uint256 tokenId, uint256 price, uint256 remainingValue) internal returns (BidError) {
+    Item storage _item = _items[tokenAddress][tokenId];
+    Item memory oldItem = _item;
     uint256 fee = getFee(tokenAddress, tokenId);
-    _item.price = uint96(price);
-    _item.bidAt = uint32(block.timestamp);
-    _item.bidder = _msgSender();
     if (_item.native) {
-      nativeFees += fee;
-    } else {
-      lfgFees += fee;
-    }
-    if (_item.native) {
-      uint256 value = revertOnFailure ? msg.value : expectedSpending;
-      if (value < price) {
-        if (revertOnFailure) revert InsufficientFunds();
-        // during batch we just skip the bid
-        else {
-          // we prefer to revert the change than setting the values after the external calls
-          // to avoid potential reentrancy issues
-          _item.price = oldItem.price;
-          _item.bidAt = oldItem.bidAt;
-          _item.bidder = oldItem.bidder;
-          nativeFees -= fee;
-          return false;
-        }
-      } else {
-        // The user may send more than the current price to be sure that
-        // the transaction will not fail if the price has increased in the meantime.
-        // If there is a surplus (during single bid) we send it back to the user:
-        (bool success, ) = _msgSender().call{value: value - price}("");
-        if (!success) revert UnableToTransferFunds();
-        // ^ In this case we reverts to try to anticipate further issues later
+      if (remainingValue < price) {
+        return BidError.InsufficientFunds;
       }
+      nativeFees += fee;
       if (oldItem.bidder != address(0)) {
         // Not the first bid.
         (bool success, ) = oldItem.bidder.call{value: price - fee}("");
@@ -270,23 +276,13 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
         }
       }
     } else {
-      // If the user approves more than strictly required, they can be able to make a
-      // successful bid even if the price has increased in the meantime.
-      if (_lfg.balanceOf(_msgSender()) < price || _lfg.allowance(_msgSender(), address(this)) < price) {
-        if (revertOnFailure) {
-          if (_lfg.balanceOf(_msgSender()) < price) revert InsufficientFunds();
-          else revert InsufficientAllowance();
-          // during batch we just skip the bid
-        } else {
-          // we prefer to revert the change than setting the values after the external calls
-          // to avoid potential reentrancy issues
-          _item.price = oldItem.price;
-          _item.bidAt = oldItem.bidAt;
-          _item.bidder = oldItem.bidder;
-          lfgFees -= fee;
-          return false;
-        }
+      if (_lfg.balanceOf(_msgSender()) < price) {
+        return BidError.InsufficientFunds;
       }
+      if (_lfg.allowance(_msgSender(), address(this)) < price) {
+        return BidError.InsufficientAllowance;
+      }
+      lfgFees += fee;
       _lfg.safeTransferFrom(_msgSender(), address(this), price);
       if (oldItem.bidder != address(0)) {
         // Not the first bid.
@@ -294,6 +290,9 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
         // ^ We use transfer to ignore the failure for the same reasons as above
       }
     }
+    _item.bidder = _msgSender();
+    _item.bidAt = uint32(block.timestamp);
+    _item.price = uint96(price);
     emit Bid(
       tokenAddress,
       tokenId,
@@ -305,50 +304,68 @@ contract PFPAuction is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Re
       oldItem.bidder,
       price - fee
     );
-    return true;
+    return BidError.None;
+  }
+
+  function bid(address tokenAddress, uint256 tokenId, uint256 expectedPrice, uint256 slippage) external payable nonReentrant {
+    address[] memory tokenAddresses = new address[](1);
+    tokenAddresses[0] = tokenAddress;
+    uint256[] memory tokenIds = new uint256[](1);
+    tokenIds[0] = tokenId;
+    uint256[] memory expectedPrices = new uint256[](1);
+    expectedPrices[0] = expectedPrice;
+    _bidBatch(tokenAddresses, tokenIds, expectedPrices, slippage);
   }
 
   function bidBatch(
     address[] memory tokenAddresses,
     uint256[] memory tokenIds,
-    uint256[] memory expectedSpendings
+    uint256[] memory expectedPrices,
+    uint256 slippage
   ) external payable nonReentrant {
-    if (tokenAddresses.length != tokenIds.length || tokenAddresses.length != expectedSpendings.length) {
+    _bidBatch(tokenAddresses, tokenIds, expectedPrices, slippage);
+  }
+
+  function _bidBatch(
+    address[] memory tokenAddresses,
+    uint256[] memory tokenIds,
+    uint256[] memory expectedPrices,
+    uint256 slippage
+  ) internal {
+    if (tokenAddresses.length != tokenIds.length || tokenAddresses.length != expectedPrices.length) {
       revert InvalidInput();
     }
-    uint256 remaining = msg.value;
+    uint256 remainingValue = msg.value;
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
-      // avoiding double bidding, which would break the way
-      // getNextPriceBatch is built
+      uint256 expectedPrice = expectedPrices[i];
+
+      // avoiding double bidding
       if (_checked[tokenAddresses[i]][tokenIds[i]]) {
+        delete _checked[tokenAddresses[i]][tokenIds[i]];
         revert CannotBatchBidSameItemTwice();
       }
+      _checked[tokenAddresses[i]][tokenIds[i]] = true;
 
-      // the expected spending must be > 0 during batch bidding
-      if (expectedSpendings[i] == 0) continue;
-      uint256 expectedSpending = expectedSpendings[i];
-      if (_items[tokenAddresses[i]][tokenIds[i]].native && expectedSpending > remaining) {
-        // most likely it will fail later
-        expectedSpending = remaining;
+      (BidError _error, uint256 _price) = _canBid(tokenAddresses[i], tokenIds[i], expectedPrice, slippage);
+      if (_error == BidError.None) {
+        _error = _bid(tokenAddresses[i], tokenIds[i], _price, remainingValue);
       }
-      if (_bid(tokenAddresses[i], tokenIds[i], expectedSpending, false)) {
+      if (_error == BidError.None) {
         if (_items[tokenAddresses[i]][tokenIds[i]].native) {
-          remaining -= expectedSpending;
+          remainingValue -= _price;
         }
       } else {
-        emit BidFailed(tokenAddresses[i], tokenIds[i], _items[tokenAddresses[i]][tokenIds[i]].price, _msgSender());
+        emit BidFailed(tokenAddresses[i], tokenIds[i], _price, _msgSender(), _error);
       }
-      _checked[tokenAddresses[i]][tokenIds[i]] = true;
     }
     // cleaning up
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
       delete _checked[tokenAddresses[i]][tokenIds[i]];
     }
-
     // if there are unused funds, we refund them
-    if (remaining > 0) {
+    if (remainingValue > 0) {
       // all funds used. Refunding the remaining
-      (bool success, ) = _msgSender().call{value: remaining}("");
+      (bool success, ) = _msgSender().call{value: remainingValue}("");
       if (!success) revert UnableToTransferFunds();
     }
   }
