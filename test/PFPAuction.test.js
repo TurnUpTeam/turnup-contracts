@@ -196,6 +196,12 @@ describe("PFPAuction", function () {
     balanceAfter = await ethers.provider.getBalance(fred.address);
 
     expect(balanceBefore.sub(balanceAfter).div(dec)).to.equal(dogsPrice.div(dec));
+
+    await increaseBlockTimestampBy(3600 * 18);
+
+    await expect(auction.connect(fred).claimBatch([rats.address, dogs.address], [id2, id3]))
+      .to.be.to.emit(auction, "Claim")
+      .emit(auction, "Claim");
   });
 
   it("should make many batch bid without going out of gas", async function () {
