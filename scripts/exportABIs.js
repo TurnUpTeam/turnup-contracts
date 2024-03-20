@@ -18,6 +18,9 @@ async function main() {
   abi("LFGToken", "contracts/token");
   abi("LFGFactory", "contracts/token");
   abi("Lottery", "contracts/lottery");
+  abi("TurnUPNFT", "contracts/nft");
+  abi("PFPAuction", "contracts/nft");
+  abi("LFGAirdropV1", "contracts/airdrop");
 
   await fs.writeFile(path.resolve(__dirname, "../export/ABIs.json"), JSON.stringify(ABIs, null, 2));
 }

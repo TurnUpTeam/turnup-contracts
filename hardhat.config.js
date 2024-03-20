@@ -55,6 +55,7 @@ module.exports = {
       url: "https://polygon-mainnet.infura.io/v3/" + process.env.INFURA_KEY,
       accounts: [process.env.FOR_POLYGON],
       chainId: 137,
+      gasPrice: 200000000000,
     },
     mumbai: {
       url: "https://polygon-mumbai.infura.io/v3/" + process.env.INFURA_KEY,
