@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 const implName = "PFPAuction";
-const proxyAddress = "0x1d43aE42a2801854aED722009780832e773C6632";    // publish, pfpauction
+const proxyAddress = "0x1d43aE42a2801854aED722009780832e773C6632"; // publish, pfpauction
 
 async function main() {
   console.log("proxy address", proxyAddress);
