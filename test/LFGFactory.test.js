@@ -66,6 +66,7 @@ describe("LFGFactory", function () {
       amountReservedToPool,
       amountReservedToSharesPool
     );
+    expect(await lfg.name()).to.equal("LFG");
 
     const maxDaily = (await lfg.amountReservedToPool()).div(365);
 
