@@ -108,4 +108,8 @@ contract LFGToken is OwnableUpgradeable, ERC20Upgradeable, ERC20BurnableUpgradea
     // Will revert if trying to burn more than the reserved amount
     amountReservedToFactory -= amount;
   }
+
+  function name() public view virtual override returns (string memory) {
+    return "LFG";
+  }
 }
