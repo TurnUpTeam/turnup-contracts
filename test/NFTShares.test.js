@@ -45,6 +45,12 @@ describe("NFTShares", function () {
     let feePercent = ethers.utils.parseEther("0.05")
     expect(await shares.protocolFeePercent()).to.equal(feePercent);
     expect(await shares.subjectFeePercent()).to.equal(feePercent);
+
+    for (let i = 0; i < 500; i += 23) {
+      expect(await shares.isActive(bob.address, i)).to.be.false;
+      expect(await shares.getSupply(bob.address, i)).to.equal(0);
+      expect(await shares.balanceOf(bob.address, i, alice.address)).to.equal(0);
+    }
   });
  
   it("should net set called by not owner", async function () {
