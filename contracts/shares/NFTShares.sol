@@ -12,7 +12,7 @@ import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ER
 import {PFPAsset} from "../nft/PFPAsset.sol";
 import {LFGToken} from "../token/LFGToken.sol";
 
-contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
   error ProtocolFeeDestinationNotSet();
@@ -21,11 +21,10 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
   error InvalidAmount();
   error LFGTokenNotSet();
   error AssetNotFound();
-  error OnlyKeysOwnerCanBuyFirstKey();
+  error AssetNotActive();
   error TransactionFailedDueToPrice();
   error InsufficientToken();
-  error UnableToSendFunds();
-  error CannotSellLastNftKey();
+  error UnableToSendFunds(); 
   error Forbidden();
 
   event SubjectFeePercentUpdate(uint256 feePercent);
@@ -55,24 +54,23 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
 
   uint256 public protocolFees;
 
+  // token address => (TokenId => true|false)
+  mapping(address => mapping(uint256 => bool)) public sharesActive;
+
   // token address => (TokenId => supply)
   mapping(address => mapping(uint256 => uint256)) public sharesSupply;
 
   struct AssetHoldInfo {
      mapping(address => uint256) holders;
   }
+  // token address => (TokenId => (holder address => hold number))
   mapping(address => mapping(uint256 => AssetHoldInfo)) internal _balanceOf;
 
-  function initialize( 
-    uint256 subjectFeePercent_,
-    uint256 protocolFeePercent_,
-    address protocolFeeDestination_,
-    address lfg_
-  ) public initializer {
+  function initialize(address protocolFeeDestination_, address lfg_) public initializer {
     __Ownable_init();
     __Pausable_init();
-    setSubjectFeePercent(subjectFeePercent_);
-    setProtocolFeePercent(protocolFeePercent_);
+    setSubjectFeePercent(5 ether / 100);  
+    setProtocolFeePercent(5 ether / 100); 
     setProtocolFeeDestination(protocolFeeDestination_);
     setLFGToken(lfg_);
   }
@@ -113,6 +111,10 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     emit LFGTokenUpdate(address(lfg));
   }
 
+  function isActive(address tokenAddress, uint256 tokenId) public view virtual returns(bool) {
+    return sharesActive[tokenAddress][tokenId];
+  }
+
   function getSupply(address tokenAddress, uint256 tokenId) public view virtual returns(uint256) {
     return sharesSupply[tokenAddress][tokenId];
   }
@@ -131,8 +133,10 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
   }
 
   function getPrice(uint256 supply, uint256 amount) public pure virtual returns(uint256) {
-    // TODO
-    return supply + amount;
+    uint256 sum1 = (supply )* (supply + 1) * (2 * (supply) + 1) / 6;
+    uint256 sum2 = (supply + amount) * (supply + 1 + amount) * (2 * (supply + amount) + 1) / 6;
+    uint256 summation = sum2 - sum1;
+    return summation * 1 ether * 5;
   }
 
   function getBuyPrice(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns(uint256) {
@@ -165,7 +169,7 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     address tokenOwner = PFPAsset(tokenAddress).ownerOf(tokenId);
     if (tokenOwner == address(0)) revert AssetNotFound();
     uint256 supply = getSupply(tokenAddress, tokenId);
-    if (supply == 0 && tokenOwner != _msgSender()) revert OnlyKeysOwnerCanBuyFirstKey();
+    if (supply == 0 && !isActive(tokenAddress, tokenId)) revert AssetNotActive();
     
     uint256 priceBase = getPrice(supply, amount);
     uint256 protocolFee = getProtocolFee(priceBase);
@@ -174,7 +178,6 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     if (expectedPrice < priceTotal) revert TransactionFailedDueToPrice();
     if (lfg.balanceOf(_msgSender()) < priceTotal) revert InsufficientToken();
 
-    lfg.approve(_msgSender(), priceTotal);
     lfg.safeTransferFrom(_msgSender(), address(this), priceTotal);
     
     // ^ We ignore failures. If not, a trader can use a smart contract to buy without
@@ -184,9 +187,13 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
  
     protocolFees += protocolFee;
 
+    sharesSupply[tokenAddress][tokenId] += amount;
+
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
     hi.holders[_msgSender()] += amount;
     
+    sharesActive[tokenAddress][tokenId] = true;
+
     emit NFTSharesTrade(
       _msgSender(), 
       tokenOwner, 
@@ -207,8 +214,7 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     address tokenOwner = PFPAsset(tokenAddress).ownerOf(tokenId);
     if (tokenOwner == address(0)) revert AssetNotFound(); 
     uint256 holdAmount = balanceOf(tokenAddress, tokenId, _msgSender());
-    if (amount > holdAmount) revert InvalidAmount();
-    if (tokenOwner == _msgSender() && amount == holdAmount) revert CannotSellLastNftKey();
+    if (amount > holdAmount) revert InvalidAmount(); 
 
     uint256 supply = getSupply(tokenAddress, tokenId);
     uint256 priceBase = getPrice(supply, amount);
@@ -223,10 +229,12 @@ contract TurnupSharesV4c is Initializable, OwnableUpgradeable, PausableUpgradeab
     lfg.transfer(tokenOwner, subjectFee);
 
     protocolFees += protocolFee;
-
+    
+    sharesSupply[tokenAddress][tokenId] -= amount;
+    
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
     hi.holders[_msgSender()] = holdAmount - amount;
-
+    
     emit NFTSharesTrade(
       _msgSender(), 
       tokenOwner, 
