@@ -192,7 +192,9 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
     hi.holders[_msgSender()] += amount;
     
-    sharesActive[tokenAddress][tokenId] = true;
+    if (!isActive(tokenAddress, tokenId)) {
+      sharesActive[tokenAddress][tokenId] = true;
+    }
 
     emit NFTSharesTrade(
       _msgSender(), 
