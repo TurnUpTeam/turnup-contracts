@@ -13,6 +13,7 @@ async function main() {
   }
   abi("TurnupSharesV4", "contracts/shares");
   abi("TurnupSharesV4c", "contracts/shares");
+  abi("NFTShares", "contracts/shares");
   abi("CorePool", "contracts/pool");
   abi("SharesPool", "contracts/pool");
   abi("LFGToken", "contracts/token");
