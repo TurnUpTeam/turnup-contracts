@@ -169,7 +169,7 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     address tokenOwner = PFPAsset(tokenAddress).ownerOf(tokenId);
     if (tokenOwner == address(0)) revert AssetNotFound();
     uint256 supply = getSupply(tokenAddress, tokenId);
-    if (supply == 0 && !isActive(tokenAddress, tokenId)) revert AssetNotActive();
+    if (!isActive(tokenAddress, tokenId) && supply == 0 && _msgSender() != tokenOwner) revert AssetNotActive();
     
     uint256 priceBase = getPrice(supply, amount);
     uint256 protocolFee = getProtocolFee(priceBase);
@@ -219,7 +219,7 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     if (amount > holdAmount) revert InvalidAmount(); 
 
     uint256 supply = getSupply(tokenAddress, tokenId);
-    uint256 priceBase = getPrice(supply, amount);
+    uint256 priceBase = getPrice(supply - amount, amount);
     uint256 protocolFee = getProtocolFee(priceBase);
     uint256 subjectFee = getSubjectFee(priceBase);
 
