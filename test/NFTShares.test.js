@@ -255,8 +255,117 @@ describe("NFTShares", function () {
     expect(await shares.getSupply(nft.address, 1)).to.equal(0)
     expect(await shares.isActive(nft.address, 1)).to.be.true;
 
-    await expect(shares.buyShares(nft.address, 1, 1, tooManyEther)).to.emit(shares, "NFTSharesTrade")
-    await expect(shares.connect(bob).buyShares(nft.address, 1, 1, tooManyEther)).to.emit(shares, "NFTSharesTrade")
+    await expect(shares.buyShares(nft.address, 1, 5, tooManyEther)).to.emit(shares, "NFTSharesTrade")
+    expect(await shares.balanceOf(nft.address, 1, owner.address)).to.equal(5)
+    expect(await shares.getSupply(nft.address, 1)).to.equal(5)
+
+    await expect(shares.connect(bob).buyShares(nft.address, 1, 10, tooManyEther)).to.emit(shares, "NFTSharesTrade")
+    expect(await shares.balanceOf(nft.address, 1, bob.address)).to.equal(10)
+    expect(await shares.getSupply(nft.address, 1)).to.equal(15)
   });
 
+  it("should be sell shares (about fees)", async function () {
+    await nft.preMint(owner.address, 10);
+
+    await lfg.connect(tokenHolder).transfer(owner.address, millionEther); 
+    await lfg.connect(tokenHolder).transfer(bob.address, millionEther); 
+    await lfg.connect(owner).approve(shares.address, tooManyEther);
+    await lfg.connect(bob).approve(shares.address, tooManyEther);
+     
+    let price = await shares.getBuyPrice(nft.address, 1, 10)
+    let priceAfterFee = await shares.getBuyPriceAfterFee(nft.address, 1, 10)
+    let subjectFee = await shares.getSubjectFee(price)
+    let protocolFee = await shares.getProtocolFee(price)
+    expect(priceAfterFee).to.equal(price.add(subjectFee).add(protocolFee))
+    await expect(shares.buyShares(nft.address, 1, 10, priceAfterFee)).to.emit(shares, "NFTSharesTrade")
+    expect(await lfg.balanceOf(owner.address)).to.equal(millionEther.sub(priceAfterFee).add(subjectFee))
+    expect(await shares.protocolFees()).to.equal(protocolFee)
+    
+    let balanceBefore = await lfg.balanceOf(owner.address)
+    let protocolFeesBefore = await shares.protocolFees()
+
+    price = await shares.getBuyPrice(nft.address, 1, 5)
+    priceAfterFee = await shares.getBuyPriceAfterFee(nft.address, 1, 5)
+    subjectFee = await shares.getSubjectFee(price)
+    protocolFee = await shares.getProtocolFee(price)
+    expect(priceAfterFee).to.equal(price.add(subjectFee).add(protocolFee))
+    await expect(shares.connect(bob).buyShares(nft.address, 1, 5, priceAfterFee)).to.emit(shares, "NFTSharesTrade")
+    expect(await lfg.balanceOf(bob.address)).to.equal(millionEther.sub(priceAfterFee))
+    expect(await lfg.balanceOf(owner.address)).to.equal(balanceBefore.add(subjectFee))
+    expect(await shares.protocolFees()).to.equal(protocolFeesBefore.add(protocolFee))
+
+    let balanceOfBobBefore = await lfg.balanceOf(bob.address)
+    let balanceOfOwnerBefore = await lfg.balanceOf(owner.address) 
+    protocolFeesBefore = await shares.protocolFees()
+
+    price = await shares.getSellPrice(nft.address, 1, 3)
+    priceAfterFee = await shares.getSellPriceAfterFee(nft.address, 1, 3)
+    subjectFee = await shares.getSubjectFee(price)
+    protocolFee = await shares.getProtocolFee(price)
+    expect(price).to.equal(priceAfterFee.add(subjectFee).add(protocolFee))
+    await expect(shares.connect(bob).sellShares(nft.address, 1, 3)).to.emit(shares, "NFTSharesTrade")
+    expect(await lfg.balanceOf(bob.address)).to.equal(balanceOfBobBefore.add(priceAfterFee))
+    expect(await lfg.balanceOf(owner.address)).to.equal(balanceOfOwnerBefore.add(subjectFee))
+    expect(await shares.protocolFees()).to.equal(protocolFeesBefore.add(protocolFee)) 
+ 
+    await expect(shares.connect(bob).sellShares(nft.address, 1, 3)).to.be.revertedWith("InvalidAmount()");
+    await expect(shares.connect(bob).sellShares(nft.address, 1, 1)).to.emit(shares, "NFTSharesTrade")
+    await expect(shares.connect(bob).sellShares(nft.address, 1, 1)).to.emit(shares, "NFTSharesTrade")
+
+    await expect(shares.sellShares(nft.address, 1, 2)).to.emit(shares, "NFTSharesTrade")
+    await expect(shares.sellShares(nft.address, 1, 3)).to.emit(shares, "NFTSharesTrade")
+    await expect(shares.sellShares(nft.address, 1, 5)).to.emit(shares, "NFTSharesTrade")
+
+    expect(await shares.balanceOf(nft.address, 1, owner.address)).to.equal(0)
+    expect(await shares.balanceOf(nft.address, 1, bob.address)).to.equal(0)
+    expect(await shares.getSupply(nft.address, 1)).to.equal(0)
+
+    expect(await shares.isActive(nft.address, 1)).to.be.true;
+  });
+
+  it("should be withdraw protocol fees", async function () {
+    await nft.preMint(owner.address, 10);
+
+    await lfg.connect(tokenHolder).transfer(owner.address, millionEther); 
+    await lfg.connect(owner).approve(shares.address, tooManyEther);
+
+    expect(await shares.protocolFees()).to.equal(0) 
+ 
+    await expect(shares.withdrawProtocolFees(1)).to.be.revertedWith("InvalidAmount()")
+    await expect(shares.withdrawProtocolFees(0)).to.be.revertedWith("Forbidden()")
+
+    let price = await shares.getBuyPrice(nft.address, 1, 10)
+    let priceAfterFee = await shares.getBuyPriceAfterFee(nft.address, 1, 10)
+    await expect(shares.buyShares(nft.address, 1, 10, priceAfterFee)).to.emit(shares, "NFTSharesTrade")
+    
+    await expect(shares.withdrawProtocolFees(1)).to.be.revertedWith("Forbidden()")
+    
+    let fees = await shares.protocolFees()
+
+    let feesShare = shares.connect(protocolFeeDestination)
+    await feesShare.withdrawProtocolFees(oneEther)
+    expect(await feesShare.protocolFees()).to.equal(fees.sub(oneEther))
+    expect(await lfg.balanceOf(protocolFeeDestination.address)).to.equal(oneEther)
+
+    await feesShare.withdrawProtocolFees(0)
+    expect(await feesShare.protocolFees()).to.equal(0)
+    expect(await lfg.balanceOf(protocolFeeDestination.address)).to.equal(fees)
+
+    expect(await lfg.balanceOf(feesShare.address)).to.equal(price)
+  });
+
+  it("should be paused", async function () {
+    await nft.preMint(owner.address, 10);
+
+    await lfg.connect(tokenHolder).transfer(owner.address, millionEther); 
+    await lfg.connect(owner).approve(shares.address, tooManyEther);
+ 
+    await expect(shares.buyShares(nft.address, 1, 10, tooManyEther)).to.emit(shares, "NFTSharesTrade")
+
+    await shares.pause()
+    await expect(shares.buyShares(nft.address, 1, 10, tooManyEther)).to.be.revertedWith("Pausable: paused")
+
+    await shares.unpause()
+    await expect(shares.buyShares(nft.address, 1, 10, tooManyEther)).to.emit(shares, "NFTSharesTrade")
+  });
 });

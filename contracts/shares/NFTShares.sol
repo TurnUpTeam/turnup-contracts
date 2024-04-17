@@ -158,7 +158,7 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
   }
 
   function getSellPriceAfterFee(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns(uint256) {
-    uint256 price = getBuyPrice(tokenAddress, tokenId, amount);
+    uint256 price = getSellPrice(tokenAddress, tokenId, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     return price - protocolFee - subjectFee;
@@ -257,8 +257,7 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     if (amount > protocolFees) revert InvalidAmount();
     if (_msgSender() != protocolFeeDestination || protocolFees == 0) revert Forbidden();
     protocolFees -= amount;
-    (bool success, ) = protocolFeeDestination.call{value: amount}("");
-    if (!success) revert UnableToSendFunds();
+    lfg.safeTransfer(protocolFeeDestination, amount);
   }
 
   // @dev This empty reserved space is put in place to allow future versions to add new
