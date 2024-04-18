@@ -57,17 +57,31 @@ module.exports = {
       chainId: 137,
       gasPrice: 200000000000,
     },
-    mumbai: {
-      url: "https://polygon-mumbai.infura.io/v3/" + process.env.INFURA_KEY,
+    amoy: {
+      url: "https://polygon-amoy.infura.io/v3/d8a840b52ce24a7da3550a33036cb126",  // + process.env.INFURA_KEY,
       accounts: [process.env.FOR_TESTNET],
-      chainId: 80001,
+      chainId: 80002,
     },
   },
   etherscan: {
     apiKey: {
       polygonMumbai: process.env.POLYGON_SCAN_API,
       polygon: process.env.POLYGON_SCAN_API,
+      amoy: process.env.POLYGON_SCAN_API,
     },
+    customChains: [
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com/",
+        },
+      },
+    ],
+  },
+  sourcify: {
+    enabled: false,
   },
   gasReporter: {
     enabled: true,
