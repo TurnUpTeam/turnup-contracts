@@ -9,8 +9,7 @@ import {ERC721Lockable} from "@ndujalabs/erc721lockable/ERC721Lockable.sol";
 import {ERC721Burnable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 
 contract MemeNft is IERC4906, ERC721Lockable, ERC721Burnable {
-  
-  error InvalidMaxSupply();
+   
   error InvalidTokenId();
   error NotAuthorized();
   error IsBanTransfer();
@@ -18,7 +17,6 @@ contract MemeNft is IERC4906, ERC721Lockable, ERC721Burnable {
   event TokenURIUpdated(string uri);
 
   string public baseTokenURI;
-  uint256 public maxSupply;
   uint256 public lastTokenId;
   address public factory;
   bool public isBanTransfer;
@@ -68,17 +66,7 @@ contract MemeNft is IERC4906, ERC721Lockable, ERC721Burnable {
   function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Lockable, ERC721, IERC165) returns (bool) {
     return interfaceId == type(IERC4906).interfaceId || super.supportsInterface(interfaceId);
   }
-
-  function setMaxSupply(uint256 maxSupply_) external onlyFactory {
-    if (maxSupply_ == 0) {
-      maxSupply = totalSupply();
-    } else if (maxSupply_ > totalSupply()) {
-      maxSupply = maxSupply_;
-    } else {
-      revert InvalidMaxSupply();
-    } 
-  }
- 
+  
   function onMetaDataUpdate() public onlyFactory {
     if (lastTokenId > 0) {
       emit BatchMetadataUpdate(1, lastTokenId);
@@ -87,9 +75,7 @@ contract MemeNft is IERC4906, ERC721Lockable, ERC721Burnable {
 
   function updateTokenURI(string memory uri) external virtual onlyFactory { 
     baseTokenURI = uri;
-    if (maxSupply > 0) {
-      onMetaDataUpdate();
-    }
+    onMetaDataUpdate(); 
     emit TokenURIUpdated(uri);
   }
 
@@ -100,8 +86,7 @@ contract MemeNft is IERC4906, ERC721Lockable, ERC721Burnable {
   function safeMint(address recipient, uint256 amount) external onlyFactory {
     uint256 tokenId = lastTokenId;
     for (uint256 i = 0; i < amount; i++) {
-      _safeMint(recipient, ++tokenId);
-      if (maxSupply > 0 && tokenId > maxSupply) revert InvalidTokenId();
+      _safeMint(recipient, ++tokenId); 
     }
     lastTokenId = tokenId;
   }
