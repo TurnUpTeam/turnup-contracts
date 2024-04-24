@@ -24,7 +24,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error UnableToSendFunds();
   
   event LfgTokenUpdate(address lfgToken_);
-  event MemeClubCreated(uint256 clubId, address nftAddress);
+  event MemeClubCreated(uint256 callId, uint256 clubId, address nftAddress);
   event MemeClubTrade(uint256 clubId, uint256 tokenId, bool isBuy, uint256 supply);
 
   enum PriceFormulaType {
@@ -45,7 +45,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 supply;
     uint256 funds;
     PriceFormulaType priceType;
-    PriceFormulaArgs priceArgs;
+    PriceFormulaArgs priceArgs; 
   }
 
   uint256 public baseClubId;
@@ -88,6 +88,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function newMemeClub( 
+    uint256 callId,
     string memory name_,
     string memory symbol_,
     string memory tokenUri_,
@@ -109,7 +110,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       priceType: priceType_,
       priceArgs: priceArgs_
     });
-    emit MemeClubCreated(clubId, address(nft));
+    emit MemeClubCreated(callId, clubId, address(nft));
   }
 
   function getPrice(
