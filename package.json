@@ -58,6 +58,7 @@
     "*.{js,css,md}": "prettier --write"
   },
   "dependencies": {
-    "@ndujalabs/erc721lockable": "^0.13.0"
+    "@ndujalabs/erc721lockable": "^0.13.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.6"
   }
 }

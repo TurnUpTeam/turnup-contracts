@@ -71,16 +71,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     lfgToken = LFGToken(lfgToken_);
     emit LfgTokenUpdate(lfgToken_);
   }
-
-  function checkPriceFormulaArgs(PriceFormulaType priceType_, PriceFormulaArgs memory priceArgs_) public pure returns(bool) {
-    if (priceType_ == PriceFormulaType.QuadCurve) {
-      if (priceArgs_.quadCurveA <= 0) return false;
-    } else {
-      return false;
-    }
-    return true;
-  }
-
+  
   function _nextClubId() internal returns(uint256) {
     uint256 max = 1000000;
     ++baseClubId;
@@ -88,19 +79,23 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     return block.chainid * max + baseClubId;
   }
 
-  function newMemeClub( 
+  function getMemeClub(uint256 clubId) public view returns(MemeClub memory) {
+    return memeClubs[clubId];
+  }
+
+  function newMemeClubWithQuadCurve( 
     uint256 callId,
     string memory name_,
     string memory symbol_,
     string memory tokenUri_,
     bool isNative_,
-    PriceFormulaType priceType_, 
-    PriceFormulaArgs memory priceArgs_
+    uint256 quadCurveA
   ) external onlyOwner whenNotPaused nonReentrant {
     if (!isNative_ && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
-    if (!checkPriceFormulaArgs(priceType_, priceArgs_)) revert MemeClubPriceArgs();
+    if (quadCurveA <= 0) revert MemeClubPriceArgs();
     uint256 clubId = _nextClubId();
-    MemeNft nft = new MemeNft(name_, symbol_, tokenUri_);
+    MemeNft nft = new MemeNft(name_, symbol_, tokenUri_); 
+    nft.setFactory(address(this));
     memeClubs[clubId] = MemeClub({
       clubId: clubId,
       isNative: isNative_,
@@ -109,8 +104,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       memeAddress: address(0),
       supply: 0,
       funds: 0,
-      priceType: priceType_,
-      priceArgs: priceArgs_
+      priceType: PriceFormulaType.QuadCurve,
+      priceArgs: PriceFormulaArgs({quadCurveA: quadCurveA})
     });
     emit MemeClubCreated(callId, clubId, address(nft));
   }
@@ -125,13 +120,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (priceType == PriceFormulaType.QuadCurve) {
       for (uint256 i = 0; i < amount; i++) {
         uint256 quadCurveA = priceArgs.quadCurveA;
-        price += (price + 1 + i) * (supply + 1 + i) * 1 ether / quadCurveA;
+        price += (supply + 1 + i) * (supply + 1 + i) * 1 ether / quadCurveA;
       }
     } 
     return price;
   }
 
-  function getBuyPrice(uint256 clubId, uint256 amount)  public view returns(uint256) {
+  function getBuyPrice(uint256 clubId, uint256 amount) public view returns(uint256) {
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
@@ -143,11 +138,11 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
-    uint256 price = getPrice(supply, priceType, priceArgs, supply - amount);
+    uint256 price = getPrice(supply - amount, priceType, priceArgs, amount);
     return price;
   }
 
-  function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable onlyOwner whenNotPaused nonReentrant {
+  function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
     if (amount == 0) revert InvalidAmount();
     MemeClub storage club = memeClubs[clubId];
     if (club.nftAddress == address(0)) revert MemeClubNotFound();
@@ -176,7 +171,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     club.supply += amount;
   }
 
-  function sellCard(uint256 clubId, uint256[] memory tokenIds) external onlyOwner whenNotPaused nonReentrant {
+  function sellCard(uint256 clubId, uint256[] memory tokenIds) external whenNotPaused nonReentrant {
     if (tokenIds.length == 0) revert InvalidAmount();
     MemeClub storage club = memeClubs[clubId];
     if (club.nftAddress == address(0)) revert MemeClubNotFound();
@@ -185,7 +180,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 amount = 0;
     for (uint256 i = 0; i < tokenIds.length; i++) {
       uint256 tokenId = tokenIds[i];
-      if (MemeNft(club.nftAddress).ownerOf(tokenId) != _msgSender()) {
+      if (MemeNft(club.nftAddress).ownerOf(tokenId) == _msgSender()) {
         if (!_checked[tokenId]) {
           amount++;
           _checked[tokenId] = true;
@@ -204,9 +199,15 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     club.funds -= actualPrice;
     club.supply -= amount;
 
-    for (uint256 i = tokenIds.length - 1; i >= 0; i++) {
-      emit MemeClubTrade(clubId, tokenIds[i], false, club.supply + i);
-      delete _checked[tokenIds[i]]; 
+    uint256 seqNo = 0;
+    
+    for (uint256 i = 0; i < tokenIds.length; i++) {
+      uint256 tokenId = tokenIds[i];
+	  if (_checked[tokenId]) {
+	    seqNo++;
+	    emit MemeClubTrade(clubId, tokenId, false, club.supply + amount - seqNo);
+	    delete _checked[tokenIds[i]];   
+	  }
     }
   }
  
@@ -215,6 +216,10 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       (bool success,) = _msgSender().call{value: amount}("");
       if (!success) revert UnableToSendFunds();
     }
+  }
+
+  function ownerOf(address nftAddress, uint256 tokenId) public view returns(address) {
+    return MemeNft(nftAddress).ownerOf(tokenId);
   }
 
   function pause() external onlyOwner {
