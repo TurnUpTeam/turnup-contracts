@@ -17,6 +17,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error MemeClubIsLocked();
   error MemeClubPriceArgs();
   error MemeClubTooMany();
+  error MemeClubLFGUnsupported();
   error InvalidAmount();
   error InvalidFunds();
   error InsufficientFunds();
@@ -96,6 +97,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     PriceFormulaType priceType_, 
     PriceFormulaArgs memory priceArgs_
   ) external onlyOwner whenNotPaused nonReentrant {
+    if (!isNative_ && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
     if (!checkPriceFormulaArgs(priceType_, priceArgs_)) revert MemeClubPriceArgs();
     uint256 clubId = _nextClubId();
     MemeNft nft = new MemeNft(name_, symbol_, tokenUri_);
