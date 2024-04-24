@@ -9374,32 +9374,6 @@
       {
         "inputs": [
           {
-            "internalType": "uint256",
-            "name": "fees",
-            "type": "uint256"
-          }
-        ],
-        "name": "setLfgFees",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "fees",
-            "type": "uint256"
-          }
-        ],
-        "name": "setNativeFees",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
             "internalType": "address",
             "name": "newOwner",
             "type": "address"
@@ -9760,6 +9734,745 @@
           }
         ],
         "name": "withdrawFunds",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ],
+    "MemeFactory": [
+      {
+        "inputs": [],
+        "name": "InsufficientFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InsufficientLFG",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidAmount",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidSignature",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MemeClubIsLocked",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MemeClubLFGUnsupported",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MemeClubNotFound",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MemeClubPriceArgs",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MemeClubTooMany",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "NoZeroAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "TooManyValidators",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "UnableToSendFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "validator",
+            "type": "address"
+          }
+        ],
+        "name": "ValidatorAlreadySet",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "validator",
+            "type": "address"
+          }
+        ],
+        "name": "ValidatorNotFound",
+        "type": "error"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint8",
+            "name": "version",
+            "type": "uint8"
+          }
+        ],
+        "name": "Initialized",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "lfgToken_",
+            "type": "address"
+          }
+        ],
+        "name": "LfgTokenUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "nftAddress",
+            "type": "address"
+          }
+        ],
+        "name": "MemeClubCreated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "isBuy",
+            "type": "bool"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "supply",
+            "type": "uint256"
+          }
+        ],
+        "name": "MemeClubTrade",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "previousOwner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "Paused",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "Unpaused",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "validator",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "active",
+            "type": "bool"
+          }
+        ],
+        "name": "ValidatorUpdated",
+        "type": "event"
+      },
+      {
+        "inputs": [],
+        "name": "baseClubId",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expectedPrice",
+            "type": "uint256"
+          }
+        ],
+        "name": "buyCard",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "getBuyPrice",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          }
+        ],
+        "name": "getMemeClub",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "clubId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isNative",
+                "type": "bool"
+              },
+              {
+                "internalType": "bool",
+                "name": "isLocked",
+                "type": "bool"
+              },
+              {
+                "internalType": "address",
+                "name": "nftAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "memeAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "supply",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "funds",
+                "type": "uint256"
+              },
+              {
+                "internalType": "enum MemeFactory.PriceFormulaType",
+                "name": "priceType",
+                "type": "uint8"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint256",
+                    "name": "quadCurveA",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct MemeFactory.PriceFormulaArgs",
+                "name": "priceArgs",
+                "type": "tuple"
+              }
+            ],
+            "internalType": "struct MemeFactory.MemeClub",
+            "name": "",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "supply",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "enum MemeFactory.PriceFormulaType",
+            "name": "priceType",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "quadCurveA",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct MemeFactory.PriceFormulaArgs",
+            "name": "priceArgs",
+            "type": "tuple"
+          }
+        ],
+        "name": "getPrice",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "getSellPrice",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "validator",
+            "type": "address"
+          }
+        ],
+        "name": "indexOfValidator",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address[]",
+            "name": "validators_",
+            "type": "address[]"
+          }
+        ],
+        "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "lfgToken",
+        "outputs": [
+          {
+            "internalType": "contract LFGToken",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "name": "memeClubs",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isNative",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "isLocked",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "nftAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "memeAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "supply",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "funds",
+            "type": "uint256"
+          },
+          {
+            "internalType": "enum MemeFactory.PriceFormulaType",
+            "name": "priceType",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "quadCurveA",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct MemeFactory.PriceFormulaArgs",
+            "name": "priceArgs",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "name_",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "symbol_",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "tokenUri_",
+            "type": "string"
+          },
+          {
+            "internalType": "bool",
+            "name": "isNative_",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "quadCurveA",
+            "type": "uint256"
+          }
+        ],
+        "name": "newMemeClubWithQuadCurve",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "nftAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "ownerOf",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "pause",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "paused",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "tokenIds",
+            "type": "uint256[]"
+          }
+        ],
+        "name": "sellCard",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "lfgToken_",
+            "type": "address"
+          }
+        ],
+        "name": "setLFGToken",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "hash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          }
+        ],
+        "name": "signedByValidator",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "unpause",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "validator",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "active",
+            "type": "bool"
+          }
+        ],
+        "name": "updateValidator",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
