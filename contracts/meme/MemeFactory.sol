@@ -84,7 +84,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 max = 1000000;
     ++baseClubId;
     if (baseClubId >= max) revert MemeClubTooMany(); 
-    return  block.chainid * max + baseClubId;
+    return block.chainid * max + baseClubId;
   }
 
   function newMemeClub( 
@@ -201,7 +201,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     club.funds -= actualPrice;
     club.supply -= amount;
 
-    for (uint256 i = 0; i < tokenIds.length; i++) {
+    for (uint256 i = tokenIds.length - 1; i >= 0; i++) {
       emit MemeClubTrade(clubId, tokenIds[i], false, club.supply + i);
       delete _checked[tokenIds[i]]; 
     }
