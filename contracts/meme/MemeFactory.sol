@@ -193,7 +193,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.isNative) {
       _sendNativeFunds(actualPrice);
     } else {  // $LFG
-      lfgToken.safeTransferFrom(address(this), _msgSender(), actualPrice);
+      lfgToken.transfer(_msgSender(), actualPrice);
     }
 
     club.funds -= actualPrice;
