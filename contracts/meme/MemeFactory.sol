@@ -112,9 +112,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   function getPrice(
     uint256 supply, 
+    uint256 amount,
     PriceFormulaType priceType,
-    PriceFormulaArgs memory priceArgs,
-    uint256 amount
+    PriceFormulaArgs memory priceArgs
   ) public pure returns(uint256) { 
     uint256 price = 0;
     if (priceType == PriceFormulaType.QuadCurve) {
@@ -130,7 +130,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
-    uint256 price = getPrice(supply, priceType, priceArgs, amount);
+    uint256 price = getPrice(supply, amount, priceType, priceArgs);
     return price;
   }
 
@@ -138,7 +138,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
-    uint256 price = getPrice(supply - amount, priceType, priceArgs, amount);
+    uint256 price = getPrice(supply - amount, amount, priceType, priceArgs);
     return price;
   }
 
