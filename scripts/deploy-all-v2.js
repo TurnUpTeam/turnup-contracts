@@ -145,9 +145,15 @@ async function deployLottery(lfgAddress, sharesAddress) {
   return lottery
 }
 
+async function deployMemeFactory() {
+  let memeFactory = await deployProxy("MemeFactory", [])
+  return memeFactory 
+}
+
 async function main() { 
   console.log("start...")
 
+  /*
   let turnup = await deployTurnupShares()
 
   let lfgContracts = await deployLFGToken()
@@ -171,6 +177,10 @@ async function main() {
   console.log("Lottery address:", lottery.address)
   console.log("PFPAuction address:", auction.address)
   console.log("TurnUPNFT address:", nft.address) 
+  */
+
+  let memeFactory = await deployMemeFactory()
+  console.log("MemeFactory address:", memeFactory.address)
 
   console.log("end...")
 }
