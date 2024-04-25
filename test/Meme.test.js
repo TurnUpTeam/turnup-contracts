@@ -97,7 +97,7 @@ describe("Meme", function () {
     await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, 10))
       .to.emit(memeFactory, "MemeClubCreated")
       .withArgs(1, expectedClubId, anyValue)
-    await expect(memeFactory.newMemeClubWithQuadCurve(2, "name", "symbol", "tokenUri", false, 10))
+    await expect(memeFactory.connect(bob).newMemeClubWithQuadCurve(2, "name", "symbol", "tokenUri", false, 10))
       .to.emit(memeFactory, "MemeClubCreated")
       .withArgs(2, expectedClubId + 1, anyValue)
 
