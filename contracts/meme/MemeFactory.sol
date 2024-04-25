@@ -90,7 +90,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     string memory tokenUri_,
     bool isNative_,
     uint256 quadCurveA
-  ) external onlyOwner whenNotPaused nonReentrant {
+  ) external whenNotPaused nonReentrant {
     if (!isNative_ && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
     if (quadCurveA <= 0) revert MemeClubPriceArgs();
     uint256 clubId = _nextClubId();
