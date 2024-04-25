@@ -74,7 +74,7 @@ module.exports = {
         network: "amoy",
         chainId: 80002,
         urls: {
-          apiURL: "https://amoy.polygonscan.com/api",
+          apiURL: "https://api-amoy.polygonscan.com/api",
           browserURL: "https://amoy.polygonscan.com/",
         },
       },
