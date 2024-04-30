@@ -2,7 +2,7 @@
 
 // for security it is better to lock the version
 pragma solidity 0.8.20;
- 
+
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -24,7 +24,7 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
   error AssetNotActive();
   error TransactionFailedDueToPrice();
   error InsufficientToken();
-  error UnableToSendFunds(); 
+  error UnableToSendFunds();
   error Forbidden();
 
   event SubjectFeePercentUpdate(uint256 feePercent);
@@ -61,7 +61,7 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
   mapping(address => mapping(uint256 => uint256)) public sharesSupply;
 
   struct AssetHoldInfo {
-     mapping(address => uint256) holders;
+    mapping(address => uint256) holders;
   }
   // token address => (TokenId => (holder address => hold number))
   mapping(address => mapping(uint256 => AssetHoldInfo)) internal _balanceOf;
@@ -69,8 +69,8 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
   function initialize(address protocolFeeDestination_, address lfg_) public initializer {
     __Ownable_init();
     __Pausable_init();
-    setSubjectFeePercent(5 ether / 100);  
-    setProtocolFeePercent(5 ether / 100); 
+    setSubjectFeePercent(5 ether / 100);
+    setProtocolFeePercent(5 ether / 100);
     setProtocolFeeDestination(protocolFeeDestination_);
     setLFGToken(lfg_);
   }
@@ -94,12 +94,12 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
   function setSubjectFeePercent(uint256 feePercent_) public virtual onlyOwner {
     subjectFeePercent = feePercent_;
     emit SubjectFeePercentUpdate(subjectFeePercent);
-  } 
+  }
 
   function setProtocolFeePercent(uint256 feePercent_) public virtual onlyOwner {
     protocolFeePercent = feePercent_;
     emit ProtocolFeePercentUpdate(protocolFeePercent);
-  } 
+  }
 
   function setProtocolFeeDestination(address feeDestination_) public virtual onlyOwner {
     protocolFeeDestination = feeDestination_;
@@ -111,15 +111,15 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     emit LFGTokenUpdate(address(lfg));
   }
 
-  function isActive(address tokenAddress, uint256 tokenId) public view virtual returns(bool) {
+  function isActive(address tokenAddress, uint256 tokenId) public view virtual returns (bool) {
     return sharesActive[tokenAddress][tokenId];
   }
 
-  function getSupply(address tokenAddress, uint256 tokenId) public view virtual returns(uint256) {
+  function getSupply(address tokenAddress, uint256 tokenId) public view virtual returns (uint256) {
     return sharesSupply[tokenAddress][tokenId];
   }
 
-  function balanceOf(address tokenAddress, uint256 tokenId, address user) public view returns(uint256) {
+  function balanceOf(address tokenAddress, uint256 tokenId, address user) public view returns (uint256) {
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
     return hi.holders[user];
   }
@@ -132,45 +132,50 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     return (price * subjectFeePercent) / 1 ether;
   }
 
-  function getPrice(uint256 supply, uint256 amount) public pure virtual returns(uint256) {
-    uint256 sum1 = (supply )* (supply + 1) * (2 * (supply) + 1) / 6;
-    uint256 sum2 = (supply + amount) * (supply + 1 + amount) * (2 * (supply + amount) + 1) / 6;
+  function getPrice(uint256 supply, uint256 amount) public pure virtual returns (uint256) {
+    uint256 sum1 = ((supply) * (supply + 1) * (2 * (supply) + 1)) / 6;
+    uint256 sum2 = ((supply + amount) * (supply + 1 + amount) * (2 * (supply + amount) + 1)) / 6;
     uint256 summation = sum2 - sum1;
     return summation * 1 ether * 5;
   }
 
-  function getBuyPrice(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns(uint256) {
+  function getBuyPrice(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns (uint256) {
     uint256 supply = getSupply(tokenAddress, tokenId);
     return getPrice(supply, amount);
   }
 
-  function getBuyPriceAfterFee(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns(uint256) {
+  function getBuyPriceAfterFee(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns (uint256) {
     uint256 price = getBuyPrice(tokenAddress, tokenId, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     return price + protocolFee + subjectFee;
   }
 
-  function getSellPrice(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns(uint256) {
+  function getSellPrice(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns (uint256) {
     uint256 supply = getSupply(tokenAddress, tokenId);
     if (supply < amount) revert InvalidAmount();
     return getPrice(supply - amount, amount);
   }
 
-  function getSellPriceAfterFee(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns(uint256) {
+  function getSellPriceAfterFee(address tokenAddress, uint256 tokenId, uint256 amount) public view virtual returns (uint256) {
     uint256 price = getSellPrice(tokenAddress, tokenId, amount);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     return price - protocolFee - subjectFee;
   }
 
-  function buyShares(address tokenAddress, uint256 tokenId, uint256 amount, uint256 expectedPrice) public payable virtual onlyIfSetUp nonReentrant whenNotPaused {
+  function buyShares(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 amount,
+    uint256 expectedPrice
+  ) public payable virtual onlyIfSetUp nonReentrant whenNotPaused {
     if (amount == 0) revert InvalidAmount();
     address tokenOwner = PFPAsset(tokenAddress).ownerOf(tokenId);
     if (tokenOwner == address(0)) revert AssetNotFound();
     uint256 supply = getSupply(tokenAddress, tokenId);
     if (!isActive(tokenAddress, tokenId) && _msgSender() != tokenOwner) revert AssetNotActive();
-    
+
     uint256 priceBase = getPrice(supply, amount);
     uint256 protocolFee = getProtocolFee(priceBase);
     uint256 subjectFee = getSubjectFee(priceBase);
@@ -179,44 +184,48 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     if (lfg.balanceOf(_msgSender()) < priceTotal) revert InsufficientToken();
 
     lfg.safeTransferFrom(_msgSender(), address(this), priceTotal);
-    
+
     // ^ We ignore failures. If not, a trader can use a smart contract to buy without
     // implementing a receive function. That would cause the call to fail, making impossible
     // for any other to buy over the asset
     lfg.transfer(tokenOwner, subjectFee);
- 
+
     protocolFees += protocolFee;
 
     sharesSupply[tokenAddress][tokenId] += amount;
 
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
     hi.holders[_msgSender()] += amount;
-    
+
     if (!isActive(tokenAddress, tokenId)) {
       sharesActive[tokenAddress][tokenId] = true;
     }
 
     emit NFTSharesTrade(
-      _msgSender(), 
-      tokenOwner, 
+      _msgSender(),
+      tokenOwner,
       tokenAddress,
       tokenId,
-      supply + amount, 
+      supply + amount,
       hi.holders[_msgSender()],
-      amount, 
-      priceBase, 
-      protocolFee, 
+      amount,
+      priceBase,
+      protocolFee,
       subjectFee,
       true
     );
-  } 
+  }
 
-  function sellShares(address tokenAddress, uint256 tokenId, uint256 amount) public payable virtual onlyIfSetUp nonReentrant whenNotPaused {
+  function sellShares(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 amount
+  ) public payable virtual onlyIfSetUp nonReentrant whenNotPaused {
     if (amount == 0) revert InvalidAmount();
     address tokenOwner = PFPAsset(tokenAddress).ownerOf(tokenId);
-    if (tokenOwner == address(0)) revert AssetNotFound(); 
+    if (tokenOwner == address(0)) revert AssetNotFound();
     uint256 holdAmount = balanceOf(tokenAddress, tokenId, _msgSender());
-    if (amount > holdAmount) revert InvalidAmount(); 
+    if (amount > holdAmount) revert InvalidAmount();
 
     uint256 supply = getSupply(tokenAddress, tokenId);
     uint256 priceBase = getPrice(supply - amount, amount);
@@ -224,29 +233,29 @@ contract NFTShares is Initializable, OwnableUpgradeable, PausableUpgradeable, Re
     uint256 subjectFee = getSubjectFee(priceBase);
 
     lfg.safeTransfer(_msgSender(), priceBase - protocolFee - subjectFee);
-    
+
     // ^ We ignore failures. If not, a trader can use a smart contract to sell without
     // implementing a receive function. That would cause the call to fail, making impossible
     // for any other to sell over the asset
     lfg.transfer(tokenOwner, subjectFee);
 
     protocolFees += protocolFee;
-    
+
     sharesSupply[tokenAddress][tokenId] -= amount;
-    
+
     AssetHoldInfo storage hi = _balanceOf[tokenAddress][tokenId];
     hi.holders[_msgSender()] = holdAmount - amount;
-    
+
     emit NFTSharesTrade(
-      _msgSender(), 
-      tokenOwner, 
+      _msgSender(),
+      tokenOwner,
       tokenAddress,
       tokenId,
-      supply - amount, 
+      supply - amount,
       holdAmount - amount,
-      amount, 
-      priceBase, 
-      protocolFee, 
+      amount,
+      priceBase,
+      protocolFee,
       subjectFee,
       false
     );

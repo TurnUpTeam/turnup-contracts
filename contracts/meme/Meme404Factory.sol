@@ -7,14 +7,10 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "../token/LFGToken.sol";
-import {Meme404} from "../meme/Meme404.sol";
+import {Meme404} from "./Meme404.sol";
+import {Meme404Proxy} from "./Meme404Proxy.sol";
 
-contract Meme404Factory is 
-  Initializable, 
-  ValidatableUpgradeable, 
-  PausableUpgradeable, 
-  ReentrancyGuardUpgradeable 
-{
+contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
   error ZeroAmount();
@@ -35,7 +31,7 @@ contract Meme404Factory is
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed();
-  
+
   event LfgTokenUpdate(address lfgToken_);
   event SubjectFeePercentUpdate(uint256 feePercent);
   event ProtocolFeePercentUpdate(uint256 feePercent);
@@ -44,28 +40,23 @@ contract Meme404Factory is
   event Meme404Created(uint256 callId, uint256 clubId, address creator);
 
   event MemeClubTrade(
-    uint256 clubId, 
-    address trader,  
-    uint256 supply, 
+    uint256 clubId,
+    address trader,
+    uint256 supply,
     bool isLocked,
-    bool isBuy, 
-    uint256 tradeAmount, 
+    bool isBuy,
+    uint256 tradeAmount,
     uint256 holdingAmount,
     uint256 priceAfterFee,
     uint256 protocolFee,
     uint256 subjectFee
   );
 
-  event Meme404Mint(
-    uint256 callId, 
-    uint256 clubId, 
-    address minter, 
-    uint256 amount
-  );
+  event Meme404Mint(uint256 callId, uint256 clubId, address minter, uint256 amount);
 
   enum PriceFormulaType {
     Min,
-    QuadCurve     // (supply+1)^2 / A
+    QuadCurve // (supply+1)^2 / A
   }
 
   struct PriceFormulaArgs {
@@ -75,21 +66,21 @@ contract Meme404Factory is
   struct MemeClub {
     uint256 clubId;
     uint256 maxSupply;
-    bool isNative;      // native or $LFG
+    bool isNative; // native or $LFG
     bool isLocked;
     address subjectAddress;
     address memeAddress;
     uint256 supply;
     uint256 funds;
     PriceFormulaType priceType;
-    PriceFormulaArgs priceArgs; 
+    PriceFormulaArgs priceArgs;
   }
 
   mapping(bytes32 => bool) private _usedSignatures;
 
   uint256 public baseClubId;
   LFGToken public lfgToken;
-  
+
   // used to avoid double sell during batch sell
   mapping(uint256 => bool) private _checked;
 
@@ -97,23 +88,27 @@ contract Meme404Factory is
   mapping(uint256 => mapping(address => uint256)) public balanceOf;
 
   address public protocolFeeDestination;
-  uint256 public protocolFeePercent; 
+  uint256 public protocolFeePercent;
   uint256 public subjectFeePercent;
   uint256 public protocolLFGFees;
   uint256 public protocolNativeFees;
 
+  address public memeImplementation;
+
   function initialize(
     address protocolFeeDestination_,
-    address[] memory validators_
+    address[] memory validators_,
+    address memeImplementation_
   ) public initializer {
     __Validatable_init();
     __Pausable_init();
     for (uint256 i = 0; i < validators_.length; i++) {
       updateValidator(validators_[i], true);
     }
-    setSubjectFeePercent(0 ether / 100); 
-    setProtocolFeePercent(5 ether / 100); 
+    setSubjectFeePercent(0 ether / 100);
+    setProtocolFeePercent(5 ether / 100);
     setProtocolFeeDestination(protocolFeeDestination_);
+    memeImplementation = memeImplementation_;
   }
 
   function setLFGToken(address lfgToken_) public onlyOwner {
@@ -124,50 +119,45 @@ contract Meme404Factory is
   function setSubjectFeePercent(uint256 feePercent_) public virtual onlyOwner {
     subjectFeePercent = feePercent_;
     emit SubjectFeePercentUpdate(subjectFeePercent);
-  } 
+  }
 
   function setProtocolFeePercent(uint256 feePercent_) public virtual onlyOwner {
     protocolFeePercent = feePercent_;
     emit ProtocolFeePercentUpdate(protocolFeePercent);
-  } 
+  }
 
   function setProtocolFeeDestination(address feeDestination_) public virtual onlyOwner {
     protocolFeeDestination = feeDestination_;
     emit ProtocolFeeDestinationUpdate(protocolFeeDestination);
   }
 
-  function _nextClubId() internal returns(uint256) {
+  function _nextClubId() internal returns (uint256) {
     uint256 max = 10000000;
     ++baseClubId;
-    if (baseClubId >= max) revert MemeClubTooMany(); 
+    if (baseClubId >= max) revert MemeClubTooMany();
     return block.chainid * max + baseClubId;
   }
 
-  function getMemeClub(uint256 clubId) public view returns(MemeClub memory) {
+  function getMemeClub(uint256 clubId) public view returns (MemeClub memory) {
     return memeClubs[clubId];
   }
 
-  function getSupply(uint256 clubId) public view returns(uint256) {
+  function getSupply(uint256 clubId) public view returns (uint256) {
     return memeClubs[clubId].supply;
   }
 
-  function getBalanceOf(uint256 clubId, address user) public view returns(uint256) {
+  function getBalanceOf(uint256 clubId, address user) public view returns (uint256) {
     return balanceOf[clubId][user];
   }
 
-  function newMemeClubWithQuadCurve( 
+  function newMemeClubWithQuadCurve(
     uint256 callId_,
     uint256 maxSupply_,
     bool isNative_,
     uint256 quadCurveA,
     bytes calldata signature
   ) external whenNotPaused nonReentrant {
-    _validateSignature(
-      block.timestamp, 
-      0, 
-      hashForNewMemeClub(callId_, maxSupply_, isNative_, _msgSender()),
-      signature
-    );
+    _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, maxSupply_, isNative_, _msgSender()), signature);
 
     if (!isNative_ && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
     if (quadCurveA <= 0) revert MemeClubPriceArgs();
@@ -202,10 +192,12 @@ contract Meme404Factory is
     _validateSignature(block.timestamp, 0, hashValue, signature);
     MemeClub storage club = memeClubs[clubId];
     if (club.clubId == 0) revert MemeClubNotFound();
-    if (!club.isLocked)  revert MemeClubUnlocked();
+    if (!club.isLocked) revert MemeClubUnlocked();
     if (club.memeAddress != address(0)) revert Meme404NewDuplidate();
 
-    Meme404 meme = new Meme404(name, symbol, baseURI, baseUnit, 0, address(this));
+    Meme404Proxy memeProxy = new Meme404Proxy(memeImplementation);
+    Meme404 meme = Meme404(payable(address(memeProxy)));
+    meme.init(name, symbol, baseURI, baseUnit, 0, address(this));
     club.memeAddress = address(meme);
 
     emit Meme404Created(callId, clubId, _msgSender());
@@ -220,8 +212,8 @@ contract Meme404Factory is
     bytes calldata signature
   ) external payable whenNotPaused nonReentrant {
     _validateSignature(
-      timestamp, 
-      validFor, 
+      timestamp,
+      validFor,
       hashForMintMeme404(callId, clubId, _msgSender(), amount, timestamp, validFor),
       signature
     );
@@ -235,30 +227,30 @@ contract Meme404Factory is
   }
 
   function getPrice(
-    uint256 supply, 
+    uint256 supply,
     uint256 amount,
     PriceFormulaType priceType,
     PriceFormulaArgs memory priceArgs
-  ) public pure returns(uint256) { 
+  ) public pure returns (uint256) {
     uint256 price = 0;
     if (priceType == PriceFormulaType.QuadCurve) {
       for (uint256 i = 0; i < amount; i++) {
         uint256 quadCurveA = priceArgs.quadCurveA;
-        price += (supply + 1 + i) * (supply + 1 + i) * 1 ether / quadCurveA;
+        price += ((supply + 1 + i) * (supply + 1 + i) * 1 ether) / quadCurveA;
       }
-    } 
+    }
     return price;
   }
 
-  function getProtocolFee(uint256 price) public view virtual returns(uint256) {
-    return price * protocolFeePercent / 1 ether;
+  function getProtocolFee(uint256 price) public view virtual returns (uint256) {
+    return (price * protocolFeePercent) / 1 ether;
   }
 
-  function getSubjectFee(uint256 price) public view virtual returns(uint256) {
-    return price * subjectFeePercent / 1 ether;
+  function getSubjectFee(uint256 price) public view virtual returns (uint256) {
+    return (price * subjectFeePercent) / 1 ether;
   }
-   
-  function getBuyPrice(uint256 clubId, uint256 amount) public view returns(uint256) {
+
+  function getBuyPrice(uint256 clubId, uint256 amount) public view returns (uint256) {
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
@@ -266,7 +258,7 @@ contract Meme404Factory is
     return price;
   }
 
-  function getBuyPriceAfterFee(uint256 clubId, uint256 amount) public view returns(uint256) {
+  function getBuyPriceAfterFee(uint256 clubId, uint256 amount) public view returns (uint256) {
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
@@ -276,7 +268,7 @@ contract Meme404Factory is
     return price + protocolFee + subjectFee;
   }
 
-  function getSellPrice(uint256 clubId, uint256 amount) public view returns(uint256) {
+  function getSellPrice(uint256 clubId, uint256 amount) public view returns (uint256) {
     uint256 supply = memeClubs[clubId].supply;
     PriceFormulaType priceType = memeClubs[clubId].priceType;
     PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
@@ -288,7 +280,7 @@ contract Meme404Factory is
 
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
     if (amount == 0) revert InvalidAmount();
-    MemeClub storage club = memeClubs[clubId];    
+    MemeClub storage club = memeClubs[clubId];
     if (club.isLocked) revert MemeClubIsLocked();
 
     uint256 actualPrice = getBuyPrice(clubId, amount);
@@ -300,7 +292,8 @@ contract Meme404Factory is
       _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
       _sendNativeFunds(club.subjectAddress, subjectFee);
       protocolNativeFees += protocolFee;
-    } else {    // $LFG
+    } else {
+      // $LFG
       if (msg.value != 0) revert InvalidFunds();
       if (priceAfterFee > expectedPrice) revert InsufficientFunds();
       if (lfgToken.balanceOf(_msgSender()) < priceAfterFee) revert InsufficientLFG();
@@ -311,32 +304,32 @@ contract Meme404Factory is
 
     club.funds += actualPrice;
     club.supply += amount;
-    
+
     uint256 holdingAmount = balanceOf[clubId][_msgSender()];
     balanceOf[clubId][_msgSender()] = holdingAmount + amount;
 
     emit MemeClubTrade(
-      clubId, 
-      _msgSender(),  
-      club.supply, 
+      clubId,
+      _msgSender(),
+      club.supply,
       club.isLocked,
-      true, 
-      amount, 
+      true,
+      amount,
       holdingAmount + amount,
-      priceAfterFee, 
+      priceAfterFee,
       protocolFee,
       subjectFee
-    ); 
+    );
   }
 
   function sellCard(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
     if (amount == 0) revert InvalidAmount();
-    MemeClub storage club = memeClubs[clubId]; 
+    MemeClub storage club = memeClubs[clubId];
     if (club.isLocked) revert MemeClubIsLocked();
- 
+
     uint256 holdingAmount = balanceOf[clubId][_msgSender()];
     if (amount > holdingAmount) revert InvalidAmount();
-   
+
     uint256 actualPrice = getSellPrice(clubId, amount);
     uint256 protocolFee = getProtocolFee(actualPrice);
     uint256 subjectFee = getSubjectFee(actualPrice);
@@ -345,7 +338,8 @@ contract Meme404Factory is
       _sendNativeFunds(_msgSender(), priceAfterFee);
       _sendNativeFunds(club.subjectAddress, subjectFee);
       protocolNativeFees += protocolFee;
-    } else {  // $LFG
+    } else {
+      // $LFG
       lfgToken.transfer(_msgSender(), priceAfterFee);
       lfgToken.transfer(club.subjectAddress, subjectFee);
       protocolLFGFees += protocolFee;
@@ -354,24 +348,24 @@ contract Meme404Factory is
     club.funds -= actualPrice;
     club.supply -= amount;
     balanceOf[clubId][_msgSender()] = holdingAmount - amount;
-	  
+
     emit MemeClubTrade(
-      clubId, 
-      _msgSender(),  
+      clubId,
+      _msgSender(),
       club.supply,
       club.isLocked,
-      true, 
-      amount, 
+      true,
+      amount,
       holdingAmount - amount,
-      priceAfterFee, 
+      priceAfterFee,
       protocolFee,
       subjectFee
-    ); 
+    );
   }
- 
+
   function _sendNativeFunds(address beneficiary, uint256 amount) internal {
     if (beneficiary != address(0) && amount > 0) {
-      (bool success,) = beneficiary.call{value: amount}("");
+      (bool success, ) = beneficiary.call{value: amount}("");
       if (!success) revert UnableToSendFunds();
     }
   }
@@ -431,17 +425,12 @@ contract Meme404Factory is
     _saveSignatureAsUsed(signature);
   }
 
-  function hashForNewMemeClub(
-    uint256 callId, 
-    uint256 maxSupply,
-    bool isNative, 
-    address creator
-  ) public view returns (bytes32) {
+  function hashForNewMemeClub(uint256 callId, uint256 maxSupply, bool isNative, address creator) public view returns (bytes32) {
     return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, maxSupply, isNative, creator));
   }
 
   function hashForNewMeme404(
-    uint256 callId, 
+    uint256 callId,
     uint256 clubId,
     address creator,
     string calldata name,
@@ -453,8 +442,8 @@ contract Meme404Factory is
   }
 
   function hashForMintMeme404(
-    uint256 callId, 
-    uint256 clubId,   
+    uint256 callId,
+    uint256 clubId,
     address applyer,
     uint256 amount,
     uint256 timestamp,
@@ -462,5 +451,4 @@ contract Meme404Factory is
   ) public view returns (bytes32) {
     return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, applyer, amount, timestamp, validFor));
   }
-
 }
