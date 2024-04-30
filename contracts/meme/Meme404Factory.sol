@@ -160,14 +160,12 @@ contract Meme404Factory is
     uint256 maxSupply_,
     bool isNative_,
     uint256 quadCurveA,
-    uint256 timestamp,
-    uint256 validFor,
     bytes calldata signature
   ) external whenNotPaused nonReentrant {
     _validateSignature(
-      timestamp, 
-      validFor, 
-      hashForNewMemeClub(callId_, maxSupply_, isNative_, _msgSender(), timestamp, validFor),
+      block.timestamp, 
+      0, 
+      hashForNewMemeClub(callId_, maxSupply_, isNative_, _msgSender()),
       signature
     );
 
@@ -437,11 +435,9 @@ contract Meme404Factory is
     uint256 callId, 
     uint256 maxSupply,
     bool isNative, 
-    address creator,
-    uint256 timestamp,
-    uint256 validFor
+    address creator
   ) public view returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, maxSupply, isNative, creator, timestamp, validFor));
+    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, maxSupply, isNative, creator));
   }
 
   function hashForNewMeme404(
