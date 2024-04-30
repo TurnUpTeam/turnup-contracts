@@ -84,7 +84,7 @@ contract Meme404 is DN404, Ownable {
     _baseURI = baseURI_;
   }
 
-  function withdraw() public onlyFactory {
-    SafeTransferLib.safeTransferAllETH(msg.sender);
+  function withdraw(address beneficiary) public onlyFactory {
+    SafeTransferLib.safeTransferAllETH(beneficiary);
   } 
 }
