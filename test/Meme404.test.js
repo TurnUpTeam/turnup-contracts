@@ -6,7 +6,7 @@ const DeployUtils = require("eth-deploy-utils");
 describe("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
   let chainId;
-  let owner, bob, alice, fred, jim, jane, tokenHolder;
+  let owner, bob, alice, fred, jim, jane, lfgTokenHolder;
   let protocolFeeDestination;
   let lfg;
   let memeFactory;
@@ -14,7 +14,7 @@ describe("Meme", function () {
   const deployUtils = new DeployUtils();
 
   before(async function () {
-    [owner, bob, alice, fred, jim, jane, tokenHolder, protocolFeeDestination] = await ethers.getSigners();
+    [owner, bob, alice, fred, jim, jane, lfgTokenHolder, protocolFeeDestination] = await ethers.getSigners();
     chainId = network.config.chainId
   });
 
@@ -30,14 +30,15 @@ describe("Meme", function () {
     let amountReservedToSharesPool = ethers.utils.parseEther("200000000");
     lfg = await deployUtils.deployProxy(
       "LFGToken",
-      tokenHolder.address,
+      lfgTokenHolder.address,
       maxSupply,
       initialSupply,
       amountReservedToPool,
       amountReservedToSharesPool
     );
- 
-    memeFactory = await deployUtils.deployProxy("MemeFactory", protocolFeeDestination.address, [bob.address]);
+    console.log("1111")
+    memeFactory = await deployUtils.deployProxy("Meme404Factory", protocolFeeDestination.address, [bob.address]);
+    console.log("222")
   }
 
   beforeEach(async function () {
@@ -224,7 +225,7 @@ describe("Meme", function () {
     await expect(memeFactory.buyCard(clubId, 1, tooManyEther)).to.be.revertedWith("InsufficientLFG()")
 
     await lfg.connect(owner).approve(memeFactory.address, tooManyEther);
-    await lfg.connect(tokenHolder).transfer(owner.address, millionEther); 
+    await lfg.connect(lfgTokenHolder).transfer(owner.address, millionEther); 
 
     for (let i = 0; i < 5; i++) {
       let club = await memeFactory.getMemeClub(clubId)
@@ -256,7 +257,7 @@ describe("Meme", function () {
     let clubId = chainId * 1000000 + 1
 
     await lfg.connect(owner).approve(memeFactory.address, tooManyEther);
-    await lfg.connect(tokenHolder).transfer(owner.address, millionEther); 
+    await lfg.connect(lfgTokenHolder).transfer(owner.address, millionEther); 
 
     await memeFactory.setLFGToken(lfg.address)
     await memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, quadCurveA)
