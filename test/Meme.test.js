@@ -37,7 +37,7 @@ describe("Meme", function () {
       amountReservedToSharesPool
     );
  
-    memeFactory = await deployUtils.deployProxy("MemeFactory", [bob.address]);
+    memeFactory = await deployUtils.deployProxy("MemeFactory", protocolFeeDestination.address, [bob.address]);
   }
 
   beforeEach(async function () {
@@ -47,8 +47,16 @@ describe("Meme", function () {
   it("should be initialized with the correct parameter", async function () {
     expect(await memeFactory.owner()).to.equal(owner.address);
     expect(await memeFactory.owner()).to.not.equal(bob.address);
+    expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination)
     expect(await memeFactory.lfgToken()).to.equal(addr0); 
     expect(await memeFactory.baseClubId()).to.equal(0); 
+
+    let feePercent = ethers.utils.parseEther("0.05")
+    expect(await memeFactory.protocolFeePercent()).to.equal(feePercent); 
+
+    expect(await memeFactory.subjectFeePercent()).to.equal(0); 
+    expect(await memeFactory.protocolLFGFees()).to.equal(0); 
+    expect(await memeFactory.protocolNativeFees()).to.equal(0); 
   });
 
   it("should be update LFGToken", async function () {

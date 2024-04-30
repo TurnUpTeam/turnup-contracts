@@ -59,6 +59,8 @@
   },
   "dependencies": {
     "@ndujalabs/erc721lockable": "^0.13.0",
-    "@nomicfoundation/hardhat-chai-matchers": "^2.0.6"
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
+    "dn404": "^0.0.16",
+    "solady": "^0.0.194"
   }
 }
