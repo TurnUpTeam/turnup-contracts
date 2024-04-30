@@ -5,6 +5,7 @@ require("hardhat-abi-exporter");
 require("@nomiclabs/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
 require("solidity-coverage");
+require("hardhat-contract-sizer");
 
 if (process.env.GAS_REPORT === "yes") {
   require("hardhat-gas-reporter");
@@ -58,7 +59,7 @@ module.exports = {
       gasPrice: 200000000000,
     },
     amoy: {
-      url: "https://polygon-amoy.infura.io/v3/d8a840b52ce24a7da3550a33036cb126",  // + process.env.INFURA_KEY,
+      url: "https://polygon-amoy.infura.io/v3/d8a840b52ce24a7da3550a33036cb126", // + process.env.INFURA_KEY,
       accounts: [process.env.FOR_TESTNET],
       chainId: 80002,
     },
