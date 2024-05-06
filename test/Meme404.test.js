@@ -2,6 +2,15 @@ const {ethers, network} = require("hardhat");
 const {expect} = require("chai");
 const {anyValue} = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const DeployUtils = require("eth-deploy-utils");
+const {
+  signPackedData,
+  privateKeyByWallet,
+  getTimestamp,
+  addr0,
+  increaseBlockTimestampBy,
+  getBlockNumber,
+  cl,
+} = require("./helpers");
 
 describe.only("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
@@ -106,22 +115,30 @@ describe.only("Meme", function () {
     }
   });
 
-  it.skip("should be newMemeClubWithQuadCurve(check arguments)", async function () {
-    await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, 0)).to.be.revertedWith(
+  it("should be newMemeClubWithQuadCurve(check arguments)", async function () {
+    const hash = await memeFactory.hashForNewMemeClub(0, 1, false, 1, bob.address);
+    const signature = await bob.signMessage(hash);
+    await expect(memeFactory.connect(bob).newMemeClubWithQuadCurve(0, 1, false, 1, signature)).to.be.revertedWith(
       "MemeClubLFGUnsupported()"
     );
-    await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", true, 0)).to.be.revertedWith(
+    await expect(memeFactory.connect(bob).newMemeClubWithQuadCurve(0, 1, true, 0, signature)).to.be.revertedWith(
       "MemeClubPriceArgs()"
     );
   });
 
-  it.skip("should be newMemeClubWithQuadCurve($LFG)", async function () {
+  it("should be newMemeClubWithQuadCurve($LFG)", async function () {
     await memeFactory.setLFGToken(lfg.address);
-    let expectedClubId = chainId * 1000000 + 1;
-    await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, 10))
+    let expectedClubId = chainId * 10000000 + 1;
+    const privateKey = privateKeyByWallet[bob.address];
+    const hash = await memeFactory.hashForNewMemeClub(1, 10, false, 10, alice.address);
+    const signature = await signPackedData(hash, privateKey);
+    await expect(memeFactory.connect(alice).newMemeClubWithQuadCurve(1, 10, false, 10, signature))
       .to.emit(memeFactory, "MemeClubCreated")
       .withArgs(1, expectedClubId, anyValue);
-    await expect(memeFactory.connect(bob).newMemeClubWithQuadCurve(2, "name", "symbol", "tokenUri", false, 10))
+
+    const hash2 = await memeFactory.hashForNewMemeClub(2, 10, false, 10, alice.address);
+    const signature2 = await signPackedData(hash2, privateKey);
+    await expect(memeFactory.connect(alice).newMemeClubWithQuadCurve(2, 10, false, 10, signature2))
       .to.emit(memeFactory, "MemeClubCreated")
       .withArgs(2, expectedClubId + 1, anyValue);
 
