@@ -3,7 +3,7 @@ const {expect} = require("chai");
 const {anyValue} = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const DeployUtils = require("eth-deploy-utils");
 
-describe.only("Meme", function () {
+describe("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
   let chainId;
   let owner, bob, alice, fred, jim, jane, tokenHolder;
