@@ -154,12 +154,18 @@ describe.only("Meme", function () {
     expect(club.priceArgs.quadCurveA).to.equal(10);
   });
 
-  it.skip("should be newMemeClubWithQuadCurve(Native)", async function () {
-    let expectedClubId = chainId * 1000000 + 1;
-    await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", true, 10))
+  it("should be newMemeClubWithQuadCurve(Native)", async function () {
+    let expectedClubId = chainId * 10000000 + 1;
+    const privateKey = privateKeyByWallet[bob.address];
+    const hash = await memeFactory.hashForNewMemeClub(1, 10, true, 10, alice.address);
+    const signature = await signPackedData(hash, privateKey);
+    await expect(memeFactory.connect(alice).newMemeClubWithQuadCurve(1, 10, true, 10, signature))
       .to.emit(memeFactory, "MemeClubCreated")
       .withArgs(1, expectedClubId, anyValue);
-    await expect(memeFactory.newMemeClubWithQuadCurve(2, "name", "symbol", "tokenUri", true, 10))
+
+    const hash2 = await memeFactory.hashForNewMemeClub(2, 10, true, 10, alice.address);
+    const signature2 = await signPackedData(hash2, privateKey);
+    await expect(memeFactory.connect(alice).newMemeClubWithQuadCurve(2, 10, true, 10, signature2))
       .to.emit(memeFactory, "MemeClubCreated")
       .withArgs(2, expectedClubId + 1, anyValue);
 
