@@ -3,7 +3,7 @@ const {expect} = require("chai");
 const {anyValue} = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const DeployUtils = require("eth-deploy-utils");
 
-describe("Meme", function () {
+describe.only("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
   let chainId;
   let owner, bob, alice, fred, jim, jane, tokenHolder;
@@ -11,6 +11,7 @@ describe("Meme", function () {
   let lfg;
   let memeFactory;
   let memeImplementation;
+  let mirrorImplementation;
   const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
 
@@ -38,12 +39,14 @@ describe("Meme", function () {
       amountReservedToSharesPool
     );
     memeImplementation = await deployUtils.deploy("Meme404");
+    mirrorImplementation = await deployUtils.deploy("Meme404Mirror", owner.address);
 
     memeFactory = await deployUtils.deployProxy(
       "Meme404Factory",
       protocolFeeDestination.address,
       [bob.address],
-      memeImplementation.address
+      memeImplementation.address,
+      mirrorImplementation.address
     );
   }
 

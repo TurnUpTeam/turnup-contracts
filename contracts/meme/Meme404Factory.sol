@@ -94,11 +94,13 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
   uint256 public protocolNativeFees;
 
   address public memeImplementation;
+  address public mirrorImplementation;
 
   function initialize(
     address protocolFeeDestination_,
     address[] memory validators_,
-    address memeImplementation_
+    address memeImplementation_,
+    address mirrorImplementation_
   ) public initializer {
     __Validatable_init();
     __Pausable_init();
@@ -109,6 +111,7 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     setProtocolFeePercent(5 ether / 100);
     setProtocolFeeDestination(protocolFeeDestination_);
     memeImplementation = memeImplementation_;
+    mirrorImplementation = mirrorImplementation_;
   }
 
   function setLFGToken(address lfgToken_) public onlyOwner {
@@ -204,7 +207,7 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
 
     Meme404Proxy memeProxy = new Meme404Proxy(memeImplementation);
     Meme404 meme = Meme404(payable(address(memeProxy)));
-    meme.init(name, symbol, baseURI, baseUnit, 0, address(this));
+    meme.init(name, symbol, baseURI, baseUnit, 0, address(this), mirrorImplementation);
     club.memeAddress = address(meme);
 
     emit Meme404Created(callId, clubId, _msgSender());

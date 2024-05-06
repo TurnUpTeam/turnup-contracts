@@ -10672,6 +10672,11 @@
             "internalType": "address",
             "name": "memeImplementation_",
             "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "mirrorImplementation_",
+            "type": "address"
           }
         ],
         "name": "initialize",
@@ -10831,6 +10836,19 @@
         "name": "mintMeme404",
         "outputs": [],
         "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "mirrorImplementation",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
