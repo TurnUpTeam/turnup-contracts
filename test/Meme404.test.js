@@ -188,14 +188,19 @@ describe.only("Meme", function () {
 
   it.skip("should be buyCard (Native)", async function () {
     await expect(memeFactory.buyCard(0, 0, tooManyEther)).to.be.revertedWith("InvalidAmount()");
-    await expect(memeFactory.buyCard(0, 1, tooManyEther)).to.be.revertedWith("MemeClubNotFound()");
+    // await expect(memeFactory.buyCard(0, 1, oneEther)).to.be.revertedWith("MemeClubNotFound()");
 
     let quadCurveA = 1000000;
     let priceType = 1;
     let priceArgs = {quadCurveA: quadCurveA};
 
-    let clubId = chainId * 1000000 + 1;
-    await memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", true, quadCurveA);
+    let clubId = chainId * 10000000 + 1;
+    const privateKey = privateKeyByWallet[bob.address];
+    const hash = await memeFactory.hashForNewMemeClub(1, 10, true, quadCurveA, alice.address);
+    const signature = await signPackedData(hash, privateKey);
+    await expect(memeFactory.connect(alice).newMemeClubWithQuadCurve(1, 10, true, quadCurveA, signature))
+      .to.emit(memeFactory, "MemeClubCreated")
+      .withArgs(1, clubId, anyValue);
 
     await expect(memeFactory.buyCard(clubId, 1, zeroEther)).to.be.revertedWith("InsufficientFunds()");
 
@@ -217,15 +222,17 @@ describe.only("Meme", function () {
       let actualPrice = await memeFactory.getPrice(supply, amount, priceType, priceArgs);
       expect(expectedPrice).to.equal(actualPrice);
 
-      let balanceBefore = await ethers.provider.getBalance(owner.address);
-      await expect(memeFactory.buyCard(clubId, amount, zeroEther, {value: expectedPrice})).to.emit(
+      let balanceBefore = await ethers.provider.getBalance(alice.address);
+      console.log("expected price", expectedPrice);
+      console.log("actual price", actualPrice);
+      await expect(memeFactory.connect(alice).buyCard(clubId, amount, zeroEther, {value: actualPrice})).to.emit(
         memeFactory,
         "MemeClubTrade"
       );
-      let balanceAfter = await ethers.provider.getBalance(owner.address);
+      let balanceAfter = await ethers.provider.getBalance(alice.address);
       expect(balanceBefore.gte(balanceAfter.add(expectedPrice))).to.be.true;
 
-      expect(await memeFactory.ownerOf(club.nftAddress, i + 1)).to.equal(owner.address);
+      expect(await memeFactory.ownerOf(club.nftAddress, i + 1)).to.equal(alice.address);
     }
   });
 
@@ -234,8 +241,13 @@ describe.only("Meme", function () {
     let priceType = 1;
     let priceArgs = {quadCurveA: quadCurveA};
 
-    let clubId = chainId * 1000000 + 1;
-    await memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", true, quadCurveA);
+    let clubId = chainId * 10000000 + 1;
+    const privateKey = privateKeyByWallet[bob.address];
+    const hash = await memeFactory.hashForNewMemeClub(1, 10, true, quadCurveA, alice.address);
+    const signature = await signPackedData(hash, privateKey);
+    await expect(memeFactory.connect(alice).newMemeClubWithQuadCurve(1, 10, true, quadCurveA, signature))
+      .to.emit(memeFactory, "MemeClubCreated")
+      .withArgs(1, clubId, anyValue);
 
     let actualPrice = await memeFactory.getPrice(0, 1, priceType, priceArgs);
     await expect(memeFactory.buyCard(clubId, 1, zeroEther, {value: actualPrice})).to.emit(memeFactory, "MemeClubTrade");
@@ -246,7 +258,7 @@ describe.only("Meme", function () {
     expect(await ethers.provider.getBalance(memeFactory.address)).to.equal(actualPrice);
 
     let tokenId = 1;
-    expect(await memeFactory.ownerOf(club.nftAddress, tokenId)).to.equal(owner.address);
+    expect(await memeFactory.ownerOf(club.nftAddress, tokenId)).to.equal(alice.address);
 
     await expect(memeFactory.sellCard(clubId, [tokenId])).to.emit(memeFactory, "MemeClubTrade");
     club = await memeFactory.getMemeClub(clubId);

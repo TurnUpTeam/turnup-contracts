@@ -10,6 +10,8 @@ import {LFGToken} from "../token/LFGToken.sol";
 import {Meme404} from "./Meme404.sol";
 import {Meme404Proxy} from "./Meme404Proxy.sol";
 
+// import {console} from "hardhat/console.sol";
+
 contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
@@ -299,6 +301,8 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 subjectFee = getSubjectFee(actualPrice);
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     if (club.isNative) {
+      // console.log("message value", msg.value);
+      // console.log("price after fee", priceAfterFee);
       if (priceAfterFee > msg.value) revert InsufficientFunds();
     } else {
       // $LFG
