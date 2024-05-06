@@ -9739,7 +9739,12 @@
         "type": "function"
       }
     ],
-    "MemeFactory": [
+    "Meme404Factory": [
+      {
+        "inputs": [],
+        "name": "InsufficientFees",
+        "type": "error"
+      },
       {
         "inputs": [],
         "name": "InsufficientFunds",
@@ -9763,6 +9768,11 @@
       {
         "inputs": [],
         "name": "InvalidSignature",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Meme404NewDuplicate",
         "type": "error"
       },
       {
@@ -9792,7 +9802,22 @@
       },
       {
         "inputs": [],
+        "name": "MemeClubUnlocked",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "NoZeroAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "SignatureAlreadyUsed",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "SignatureExpired",
         "type": "error"
       },
       {
@@ -9803,6 +9828,11 @@
       {
         "inputs": [],
         "name": "UnableToSendFunds",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "UnableToTransferFunds",
         "type": "error"
       },
       {
@@ -9825,6 +9855,16 @@
           }
         ],
         "name": "ValidatorNotFound",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ZeroAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ZeroAmount",
         "type": "error"
       },
       {
@@ -9871,7 +9911,63 @@
           {
             "indexed": false,
             "internalType": "address",
-            "name": "nftAddress",
+            "name": "creator",
+            "type": "address"
+          }
+        ],
+        "name": "Meme404Created",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "Meme404Mint",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "creator",
             "type": "address"
           }
         ],
@@ -9889,9 +9985,21 @@
           },
           {
             "indexed": false,
+            "internalType": "address",
+            "name": "trader",
+            "type": "address"
+          },
+          {
+            "indexed": false,
             "internalType": "uint256",
-            "name": "tokenId",
+            "name": "supply",
             "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "isLocked",
+            "type": "bool"
           },
           {
             "indexed": false,
@@ -9902,7 +10010,31 @@
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "supply",
+            "name": "tradeAmount",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "holdingAmount",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "priceAfterFee",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "protocolFee",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "subjectFee",
             "type": "uint256"
           }
         ],
@@ -9947,6 +10079,45 @@
           {
             "indexed": false,
             "internalType": "address",
+            "name": "feeDestination",
+            "type": "address"
+          }
+        ],
+        "name": "ProtocolFeeDestinationUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "feePercent",
+            "type": "uint256"
+          }
+        ],
+        "name": "ProtocolFeePercentUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "feePercent",
+            "type": "uint256"
+          }
+        ],
+        "name": "SubjectFeePercentUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
             "name": "account",
             "type": "address"
           }
@@ -9972,6 +10143,30 @@
         ],
         "name": "ValidatorUpdated",
         "type": "event"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
       },
       {
         "inputs": [],
@@ -10017,12 +10212,60 @@
             "type": "uint256"
           },
           {
+            "internalType": "address",
+            "name": "user",
+            "type": "address"
+          }
+        ],
+        "name": "getBalanceOf",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
             "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
           }
         ],
         "name": "getBuyPrice",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "getBuyPriceAfterFee",
         "outputs": [
           {
             "internalType": "uint256",
@@ -10051,6 +10294,11 @@
                 "type": "uint256"
               },
               {
+                "internalType": "uint256",
+                "name": "maxSupply",
+                "type": "uint256"
+              },
+              {
                 "internalType": "bool",
                 "name": "isNative",
                 "type": "bool"
@@ -10062,7 +10310,7 @@
               },
               {
                 "internalType": "address",
-                "name": "nftAddress",
+                "name": "subjectAddress",
                 "type": "address"
               },
               {
@@ -10081,7 +10329,7 @@
                 "type": "uint256"
               },
               {
-                "internalType": "enum MemeFactory.PriceFormulaType",
+                "internalType": "enum Meme404Factory.PriceFormulaType",
                 "name": "priceType",
                 "type": "uint8"
               },
@@ -10093,12 +10341,12 @@
                     "type": "uint256"
                   }
                 ],
-                "internalType": "struct MemeFactory.PriceFormulaArgs",
+                "internalType": "struct Meme404Factory.PriceFormulaArgs",
                 "name": "priceArgs",
                 "type": "tuple"
               }
             ],
-            "internalType": "struct MemeFactory.MemeClub",
+            "internalType": "struct Meme404Factory.MemeClub",
             "name": "",
             "type": "tuple"
           }
@@ -10119,7 +10367,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "enum MemeFactory.PriceFormulaType",
+            "internalType": "enum Meme404Factory.PriceFormulaType",
             "name": "priceType",
             "type": "uint8"
           },
@@ -10131,7 +10379,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct MemeFactory.PriceFormulaArgs",
+            "internalType": "struct Meme404Factory.PriceFormulaArgs",
             "name": "priceArgs",
             "type": "tuple"
           }
@@ -10145,6 +10393,54 @@
           }
         ],
         "stateMutability": "pure",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "sellingPrice",
+            "type": "bool"
+          }
+        ],
+        "name": "getPriceByClubId",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          }
+        ],
+        "name": "getProtocolFee",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -10174,6 +10470,176 @@
       {
         "inputs": [
           {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          }
+        ],
+        "name": "getSubjectFee",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          }
+        ],
+        "name": "getSupply",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "applyer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
+          }
+        ],
+        "name": "hashForMintMeme404",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "creator",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "baseURI",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "baseUnit",
+            "type": "uint256"
+          }
+        ],
+        "name": "hashForNewMeme404",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxSupply",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isNative",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "quadCurveA",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "creator",
+            "type": "address"
+          }
+        ],
+        "name": "hashForNewMemeClub",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "address",
             "name": "validator",
             "type": "address"
@@ -10193,14 +10659,43 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "protocolFeeDestination_",
+            "type": "address"
+          },
+          {
             "internalType": "address[]",
             "name": "validators_",
             "type": "address[]"
+          },
+          {
+            "internalType": "address",
+            "name": "memeImplementation_",
+            "type": "address"
           }
         ],
         "name": "initialize",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes",
+            "name": "_signature",
+            "type": "bytes"
+          }
+        ],
+        "name": "isSignatureUsed",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -10232,6 +10727,11 @@
             "type": "uint256"
           },
           {
+            "internalType": "uint256",
+            "name": "maxSupply",
+            "type": "uint256"
+          },
+          {
             "internalType": "bool",
             "name": "isNative",
             "type": "bool"
@@ -10243,7 +10743,7 @@
           },
           {
             "internalType": "address",
-            "name": "nftAddress",
+            "name": "subjectAddress",
             "type": "address"
           },
           {
@@ -10262,7 +10762,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "enum MemeFactory.PriceFormulaType",
+            "internalType": "enum Meme404Factory.PriceFormulaType",
             "name": "priceType",
             "type": "uint8"
           },
@@ -10274,7 +10774,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct MemeFactory.PriceFormulaArgs",
+            "internalType": "struct Meme404Factory.PriceFormulaArgs",
             "name": "priceArgs",
             "type": "tuple"
           }
@@ -10283,46 +10783,8 @@
         "type": "function"
       },
       {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "name_",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "symbol_",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "tokenUri_",
-            "type": "string"
-          },
-          {
-            "internalType": "bool",
-            "name": "isNative_",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint256",
-            "name": "quadCurveA",
-            "type": "uint256"
-          }
-        ],
-        "name": "newMemeClubWithQuadCurve",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
         "inputs": [],
-        "name": "owner",
+        "name": "memeImplementation",
         "outputs": [
           {
             "internalType": "address",
@@ -10336,17 +10798,120 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "nftAddress",
-            "type": "address"
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "tokenId",
+            "name": "clubId",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
           }
         ],
-        "name": "ownerOf",
+        "name": "mintMeme404",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "callId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "baseURI",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "baseUnit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          }
+        ],
+        "name": "newMeme404",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "callId_",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxSupply_",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isNative_",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "quadCurveA",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          }
+        ],
+        "name": "newMemeClubWithQuadCurve",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "owner",
         "outputs": [
           {
             "internalType": "address",
@@ -10379,6 +10944,58 @@
       },
       {
         "inputs": [],
+        "name": "protocolFeeDestination",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "protocolFeePercent",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "protocolLFGFees",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "protocolNativeFees",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
         "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
@@ -10392,9 +11009,9 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint256[]",
-            "name": "tokenIds",
-            "type": "uint256[]"
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
           }
         ],
         "name": "sellCard",
@@ -10418,6 +11035,45 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "feeDestination_",
+            "type": "address"
+          }
+        ],
+        "name": "setProtocolFeeDestination",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "feePercent_",
+            "type": "uint256"
+          }
+        ],
+        "name": "setProtocolFeePercent",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "feePercent_",
+            "type": "uint256"
+          }
+        ],
+        "name": "setSubjectFeePercent",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "bytes32",
             "name": "hash",
             "type": "bytes32"
@@ -10434,6 +11090,19 @@
             "internalType": "bool",
             "name": "",
             "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "subjectFeePercent",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -10473,6 +11142,29 @@
           }
         ],
         "name": "updateValidator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "beneficiary",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "native",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdrawProceeds",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"

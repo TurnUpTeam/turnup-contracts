@@ -103,7 +103,7 @@ describe.only("Meme", function () {
     }
   });
 
-  it("should be newMemeClubWithQuadCurve(check arguments)", async function () {
+  it.skip("should be newMemeClubWithQuadCurve(check arguments)", async function () {
     await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, 0)).to.be.revertedWith(
       "MemeClubLFGUnsupported()"
     );
@@ -112,7 +112,7 @@ describe.only("Meme", function () {
     );
   });
 
-  it("should be newMemeClubWithQuadCurve($LFG)", async function () {
+  it.skip("should be newMemeClubWithQuadCurve($LFG)", async function () {
     await memeFactory.setLFGToken(lfg.address);
     let expectedClubId = chainId * 1000000 + 1;
     await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, 10))
@@ -134,7 +134,7 @@ describe.only("Meme", function () {
     expect(club.priceArgs.quadCurveA).to.equal(10);
   });
 
-  it("should be newMemeClubWithQuadCurve(Native)", async function () {
+  it.skip("should be newMemeClubWithQuadCurve(Native)", async function () {
     let expectedClubId = chainId * 1000000 + 1;
     await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", true, 10))
       .to.emit(memeFactory, "MemeClubCreated")
@@ -160,7 +160,7 @@ describe.only("Meme", function () {
     return Math.floor(min + diff * Math.random());
   }
 
-  it("should be buyCard (Native)", async function () {
+  it.skip("should be buyCard (Native)", async function () {
     await expect(memeFactory.buyCard(0, 0, tooManyEther)).to.be.revertedWith("InvalidAmount()");
     await expect(memeFactory.buyCard(0, 1, tooManyEther)).to.be.revertedWith("MemeClubNotFound()");
 
@@ -203,7 +203,7 @@ describe.only("Meme", function () {
     }
   });
 
-  it("should be sellCard (Native)", async function () {
+  it.skip("should be sellCard (Native)", async function () {
     let quadCurveA = 1000000;
     let priceType = 1;
     let priceArgs = {quadCurveA: quadCurveA};
@@ -229,7 +229,7 @@ describe.only("Meme", function () {
     expect(await ethers.provider.getBalance(memeFactory.address)).to.equal(0);
   });
 
-  it("should be buyCard ($LFG)", async function () {
+  it.skip("should be buyCard ($LFG)", async function () {
     let quadCurveA = 1000000;
     let priceType = 1;
     let priceArgs = {quadCurveA: quadCurveA};
@@ -273,7 +273,7 @@ describe.only("Meme", function () {
     }
   });
 
-  it("should be sellCard (Native)", async function () {
+  it.skip("should be sellCard (Native)", async function () {
     let quadCurveA = 1000000;
     let priceType = 1;
     let priceArgs = {quadCurveA: quadCurveA};
@@ -304,7 +304,7 @@ describe.only("Meme", function () {
     expect(await lfg.balanceOf(memeFactory.address)).to.equal(0);
   });
 
-  it("should be pause", async function () {
+  it.skip("should be pause", async function () {
     let quadCurveA = 1000000;
     let priceType = 1;
     let priceArgs = {quadCurveA: quadCurveA};

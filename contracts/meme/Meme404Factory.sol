@@ -21,7 +21,7 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
   error MemeClubTooMany();
   error MemeClubLFGUnsupported();
   error MemeClubUnlocked();
-  error Meme404NewDuplidate();
+  error Meme404NewDuplicate();
   error InvalidAmount();
   error InvalidFunds();
   error InsufficientFunds();
@@ -157,10 +157,16 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 quadCurveA,
     bytes calldata signature
   ) external whenNotPaused nonReentrant {
-    _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, maxSupply_, isNative_, _msgSender()), signature);
-
     if (!isNative_ && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
-    if (quadCurveA <= 0) revert MemeClubPriceArgs();
+    // it cannot be negative
+    if (quadCurveA == 0) revert MemeClubPriceArgs();
+
+    _validateSignature(
+      block.timestamp,
+      0,
+      hashForNewMemeClub(callId_, maxSupply_, isNative_, quadCurveA, _msgSender()),
+      signature
+    );
 
     uint256 clubId = _nextClubId();
     memeClubs[clubId] = MemeClub({
@@ -188,12 +194,13 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 baseUnit,
     bytes calldata signature
   ) external whenNotPaused nonReentrant {
-    bytes32 hashValue = hashForNewMeme404(callId, clubId, _msgSender(), name, symbol, baseURI, baseUnit);
-    _validateSignature(block.timestamp, 0, hashValue, signature);
     MemeClub storage club = memeClubs[clubId];
     if (club.clubId == 0) revert MemeClubNotFound();
     if (!club.isLocked) revert MemeClubUnlocked();
-    if (club.memeAddress != address(0)) revert Meme404NewDuplidate();
+    if (club.memeAddress != address(0)) revert Meme404NewDuplicate();
+
+    bytes32 hashValue = hashForNewMeme404(callId, clubId, _msgSender(), name, symbol, baseURI, baseUnit);
+    _validateSignature(block.timestamp, 0, hashValue, signature);
 
     Meme404Proxy memeProxy = new Meme404Proxy(memeImplementation);
     Meme404 meme = Meme404(payable(address(memeProxy)));
@@ -211,15 +218,15 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 validFor,
     bytes calldata signature
   ) external payable whenNotPaused nonReentrant {
+    if (amount == 0) revert ZeroAmount();
+    MemeClub storage club = memeClubs[clubId];
+    if (club.memeAddress == address(0)) revert Meme404NewDuplicate();
     _validateSignature(
       timestamp,
       validFor,
       hashForMintMeme404(callId, clubId, _msgSender(), amount, timestamp, validFor),
       signature
     );
-    if (amount == 0) revert ZeroAmount();
-    MemeClub storage club = memeClubs[clubId];
-    if (club.memeAddress == address(0)) revert Meme404NewDuplidate();
     Meme404 meme = Meme404(payable(club.memeAddress));
     meme.mint(_msgSender(), amount);
 
@@ -242,6 +249,16 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     return price;
   }
 
+  function getPriceByClubId(uint256 clubId, uint256 amount, bool sellingPrice) public view returns (uint256) {
+    return
+      getPrice(
+        memeClubs[clubId].supply - (sellingPrice ? amount : 0),
+        amount,
+        memeClubs[clubId].priceType,
+        memeClubs[clubId].priceArgs
+      );
+  }
+
   function getProtocolFee(uint256 price) public view virtual returns (uint256) {
     return (price * protocolFeePercent) / 1 ether;
   }
@@ -251,28 +268,19 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
   }
 
   function getBuyPrice(uint256 clubId, uint256 amount) public view returns (uint256) {
-    uint256 supply = memeClubs[clubId].supply;
-    PriceFormulaType priceType = memeClubs[clubId].priceType;
-    PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
-    uint256 price = getPrice(supply, amount, priceType, priceArgs);
-    return price;
+    return getPriceByClubId(clubId, amount, false);
   }
 
   function getBuyPriceAfterFee(uint256 clubId, uint256 amount) public view returns (uint256) {
-    uint256 supply = memeClubs[clubId].supply;
-    PriceFormulaType priceType = memeClubs[clubId].priceType;
-    PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
-    uint256 price = getPrice(supply, amount, priceType, priceArgs);
+    uint256 price = getPriceByClubId(clubId, amount, false);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     return price + protocolFee + subjectFee;
   }
 
+  // Should this be getSellPriceAfterFee instead?
   function getSellPrice(uint256 clubId, uint256 amount) public view returns (uint256) {
-    uint256 supply = memeClubs[clubId].supply;
-    PriceFormulaType priceType = memeClubs[clubId].priceType;
-    PriceFormulaArgs memory priceArgs = memeClubs[clubId].priceArgs;
-    uint256 price = getPrice(supply - amount, amount, priceType, priceArgs);
+    uint256 price = getPriceByClubId(clubId, amount, true);
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     return price - protocolFee - subjectFee;
@@ -289,17 +297,11 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     if (club.isNative) {
       if (priceAfterFee > msg.value) revert InsufficientFunds();
-      _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
-      _sendNativeFunds(club.subjectAddress, subjectFee);
-      protocolNativeFees += protocolFee;
     } else {
       // $LFG
       if (msg.value != 0) revert InvalidFunds();
       if (priceAfterFee > expectedPrice) revert InsufficientFunds();
       if (lfgToken.balanceOf(_msgSender()) < priceAfterFee) revert InsufficientLFG();
-      lfgToken.safeTransferFrom(_msgSender(), address(this), priceAfterFee);
-      lfgToken.transfer(club.subjectAddress, subjectFee);
-      protocolLFGFees += protocolFee;
     }
 
     club.funds += actualPrice;
@@ -320,6 +322,17 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
       protocolFee,
       subjectFee
     );
+
+    // we make the external calls at the end to minimize reentrancy risks
+    if (club.isNative) {
+      protocolNativeFees += protocolFee;
+      _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
+      _sendNativeFunds(club.subjectAddress, subjectFee);
+    } else {
+      protocolLFGFees += protocolFee;
+      lfgToken.safeTransferFrom(_msgSender(), address(this), priceAfterFee);
+      lfgToken.transfer(club.subjectAddress, subjectFee);
+    }
   }
 
   function sellCard(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
@@ -334,16 +347,6 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 protocolFee = getProtocolFee(actualPrice);
     uint256 subjectFee = getSubjectFee(actualPrice);
     uint256 priceAfterFee = actualPrice - protocolFee - subjectFee;
-    if (club.isNative) {
-      _sendNativeFunds(_msgSender(), priceAfterFee);
-      _sendNativeFunds(club.subjectAddress, subjectFee);
-      protocolNativeFees += protocolFee;
-    } else {
-      // $LFG
-      lfgToken.transfer(_msgSender(), priceAfterFee);
-      lfgToken.transfer(club.subjectAddress, subjectFee);
-      protocolLFGFees += protocolFee;
-    }
 
     club.funds -= actualPrice;
     club.supply -= amount;
@@ -361,6 +364,18 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
       protocolFee,
       subjectFee
     );
+
+    // we make the external calls at the end to minimize reentrancy risks
+    if (club.isNative) {
+      protocolNativeFees += protocolFee;
+      _sendNativeFunds(_msgSender(), priceAfterFee);
+      _sendNativeFunds(club.subjectAddress, subjectFee);
+    } else {
+      // $LFG
+      protocolLFGFees += protocolFee;
+      lfgToken.transfer(_msgSender(), priceAfterFee);
+      lfgToken.transfer(club.subjectAddress, subjectFee);
+    }
   }
 
   function _sendNativeFunds(address beneficiary, uint256 amount) internal {
@@ -404,13 +419,13 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
   }
 
   function _saveSignatureAsUsed(bytes memory _signature) internal {
-    bytes32 key = bytes32(keccak256(abi.encodePacked(_signature)));
+    bytes32 key = _hashBytes(_signature);
     if (_usedSignatures[key]) revert SignatureAlreadyUsed();
     _usedSignatures[key] = true;
   }
 
   function isSignatureUsed(bytes memory _signature) public view returns (bool) {
-    bytes32 key = bytes32(keccak256(abi.encodePacked(_signature)));
+    bytes32 key = _hashBytes(_signature);
     return _usedSignatures[key];
   }
 
@@ -425,8 +440,17 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     _saveSignatureAsUsed(signature);
   }
 
-  function hashForNewMemeClub(uint256 callId, uint256 maxSupply, bool isNative, address creator) public view returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, maxSupply, isNative, creator));
+  function hashForNewMemeClub(
+    uint256 callId,
+    uint256 maxSupply,
+    bool isNative,
+    uint256 quadCurveA,
+    address creator
+  ) public view returns (bytes32) {
+    // we use abi.encode instead of abi.encodePacked to avoid that the series
+    // block.chainid, callId, maxSupply risks to generate a collision,
+    // despite being more expensive
+    return keccak256(abi.encode("\x19\x01", block.chainid, callId, maxSupply, isNative, quadCurveA, creator));
   }
 
   function hashForNewMeme404(
@@ -438,7 +462,7 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     string calldata baseURI,
     uint256 baseUnit
   ) public view returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, creator, name, symbol, baseURI, baseUnit));
+    return keccak256(abi.encode("\x19\x01", block.chainid, callId, clubId, creator, name, symbol, baseURI, baseUnit));
   }
 
   function hashForMintMeme404(
@@ -449,6 +473,19 @@ contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgrad
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, applyer, amount, timestamp, validFor));
+    return keccak256(abi.encode("\x19\x01", block.chainid, callId, clubId, applyer, amount, timestamp, validFor));
   }
+
+  // this reduces the cost of encoding a bytes array
+  function _hashBytes(bytes memory signature) internal pure returns (bytes32 hash) {
+    // solhint-disable-next-line no-inline-assembly
+    assembly {
+      let data := add(signature, 32)
+      let length := mload(signature)
+      hash := keccak256(data, length)
+    }
+  }
+
+  // for future upgrades
+  uint256[50] private __gap;
 }

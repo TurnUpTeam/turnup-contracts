@@ -7,7 +7,7 @@ import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
 error InvalidImplementation();
 
 contract Meme404Proxy is Proxy, ERC1967Upgrade {
-  address immutable DEFAULT_IMPL;
+  address public immutable DEFAULT_IMPL;
 
   constructor(address _defaultImplementation) {
     if (_defaultImplementation == address(0)) revert InvalidImplementation();
