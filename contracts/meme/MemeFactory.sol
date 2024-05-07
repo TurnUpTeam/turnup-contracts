@@ -11,7 +11,7 @@ import {Meme404} from "./Meme404.sol";
 import {Meme404Proxy} from "./Meme404Proxy.sol";
 import {MemeFT} from "./MemeFT.sol";
 
-contract Meme404Factory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
   error ZeroAmount();
