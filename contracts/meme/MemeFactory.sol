@@ -18,8 +18,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error ZeroAddress();
   error MemeClubNotFound();
   error MemeClubIsLocked();
-  error MemeClubPriceTypeUnsupported();
-  error MemeClubPriceArgs();
+  error MemeConfInvalid(); 
   error MemeClubTooMany();
   error MemeClubLFGUnsupported();
   error MemeClubUnlocked();
@@ -174,7 +173,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       && memeConf.priceType != PriceFormulaType.Fixed) {
         return false;
     }
-    
+
     return true;
   }
   function isValidPriceConf(PriceFormulaType priceType) public pure returns (bool) {
@@ -191,8 +190,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   ) external whenNotPaused nonReentrant { 
     _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, memeConf_), signature);
 
+    if (!checkMemeConf(memeConf_)) revert MemeConfInvalid();
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
-    if (!isValidPriceConf(memeConf_.priceType)) revert MemeClubPriceTypeUnsupported();
+    
 
     uint256 clubId = _nextClubId();
     memeClubs[clubId] = MemeClub({
