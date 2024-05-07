@@ -214,11 +214,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     
     if (club.isFT) {
       MemeFT meme = new MemeFT(name, symbol);
+      meme.setFactory(_msgSender());
       club.memeAddress = address(meme);
     } else {
       Meme404Proxy memeProxy = new Meme404Proxy(memeImplementation);
       Meme404 meme = Meme404(payable(address(memeProxy)));
       meme.init(name, symbol, baseURI, baseUnit, 0, address(this));
+      meme.setFactory(_msgSender());
       club.memeAddress = address(meme);
     }
 
