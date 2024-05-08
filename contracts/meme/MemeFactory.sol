@@ -91,9 +91,6 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   uint256 public baseClubId;
   LFGToken public lfgToken;
 
-  // used to avoid double sell during batch sell
-  mapping(uint256 => bool) private _checked;
-
   mapping(uint256 => MemeClub) public memeClubs;
   mapping(uint256 => mapping(address => uint256)) public balanceOf;
 
