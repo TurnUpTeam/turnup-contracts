@@ -3,10 +3,7 @@ const {expect} = require("chai");
 const {anyValue} = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const DeployUtils = require("eth-deploy-utils");
 
-const {
-  signPackedData,
-  privateKeyByWallet, 
-} = require("./helpers");
+const {signPackedData, privateKeyByWallet} = require("./helpers");
 
 describe.only("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
@@ -17,6 +14,7 @@ describe.only("Meme", function () {
   let memeFactory;
   let memeImplementation;
   let mirrorImplementation;
+  let memeFtImplementation;
   const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
 
@@ -43,8 +41,9 @@ describe.only("Meme", function () {
       amountReservedToPool,
       amountReservedToSharesPool
     );
-    
+
     memeImplementation = await deployUtils.deploy("Meme404");
+    memeFtImplementation = await deployUtils.deploy("MemeFT");
     mirrorImplementation = await deployUtils.deploy("Meme404Mirror", addr0);
 
     memeFactory = await deployUtils.deployProxy(
@@ -53,6 +52,7 @@ describe.only("Meme", function () {
       [validator.address],
       memeImplementation.address,
       mirrorImplementation.address,
+      memeFtImplementation.address
     );
   }
 
@@ -101,15 +101,21 @@ describe.only("Meme", function () {
     await expect(memeFactory.setProtocolFeePercent(percent)).to.emit(memeFactory, "ProtocolFeePercentUpdate").withArgs(percent);
     expect(await memeFactory.protocolFeePercent()).to.equal(percent);
 
-    await expect(memeFactory.connect(bob).setProtocolFeePercent(percent)).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(memeFactory.connect(bob).setProtocolFeePercent(percent)).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
   });
 
-  it("should be update protocol fee destination", async function () { 
-    expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address); 
-    await expect(memeFactory.setProtocolFeeDestination(bob.address)).to.emit(memeFactory, "ProtocolFeeDestinationUpdate").withArgs(bob.address);
+  it("should be update protocol fee destination", async function () {
+    expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address);
+    await expect(memeFactory.setProtocolFeeDestination(bob.address))
+      .to.emit(memeFactory, "ProtocolFeeDestinationUpdate")
+      .withArgs(bob.address);
     expect(await memeFactory.protocolFeeDestination()).to.equal(bob.address);
 
-    await expect(memeFactory.connect(bob).setProtocolFeePercent(bob.address)).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(memeFactory.connect(bob).setProtocolFeePercent(bob.address)).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
   });
 
   function toBn(v) {
@@ -121,102 +127,102 @@ describe.only("Meme", function () {
     let arg1 = ethers.utils.parseEther("5");
     let arg2 = ethers.utils.parseEther("1");
 
-    let amountArr = [1, 2, 3, 4, 5]
-    let expectedPriceArr = [6, 17, 33, 54, 80] 
+    let amountArr = [1, 2, 3, 4, 5];
+    let expectedPriceArr = [6, 17, 33, 54, 80];
     for (var i = 0; i < amountArr.length; i++) {
-      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString());
       expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
-    } 
+    }
 
-    amountArr = [1, 2, 3, 4]
-    expectedPriceArr = [16, 37, 63, 94] 
+    amountArr = [1, 2, 3, 4];
+    expectedPriceArr = [16, 37, 63, 94];
     for (var i = 0; i < amountArr.length; i++) {
-      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString());
       expect(await memeFactory.getPrice(2, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
-    } 
+    }
   });
 
-  it("should be getPrice(QuadCurve)", async function () { 
-    let priceType = 2;  
+  it("should be getPrice(QuadCurve)", async function () {
+    let priceType = 2;
     let arg1 = ethers.utils.parseEther("5");
     let arg2 = ethers.utils.parseEther("2");
- 
-    let amountArr = [1, 2, 3, 4, 5]
-    let expectedPriceArr = [7, 31, 82, 170, 305] 
-    for (var i = 0; i < amountArr.length; i++) {
-      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
-      expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
-    } 
 
-    amountArr = [1, 2, 3, 4]
-    expectedPriceArr = [51, 139, 274, 466] 
+    let amountArr = [1, 2, 3, 4, 5];
+    let expectedPriceArr = [7, 31, 82, 170, 305];
     for (var i = 0; i < amountArr.length; i++) {
-      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString());
+      expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
+    }
+
+    amountArr = [1, 2, 3, 4];
+    expectedPriceArr = [51, 139, 274, 466];
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString());
       expect(await memeFactory.getPrice(2, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
-    } 
+    }
   });
 
   it("should be getPrice(Fixed)", async function () {
     let priceType = 3;
-    let arg1 = ethers.utils.parseEther("5"); 
+    let arg1 = ethers.utils.parseEther("5");
     let arg2 = ethers.utils.parseEther("0");
 
-    let amountArr = [1, 2, 3, 4, 5]
-    let expectedPriceArr = [5, 10, 15, 20, 25] 
+    let amountArr = [1, 2, 3, 4, 5];
+    let expectedPriceArr = [5, 10, 15, 20, 25];
     for (var i = 0; i < amountArr.length; i++) {
-      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString());
       expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
-    } 
+    }
 
-    amountArr = [1, 2, 3, 4]
-    expectedPriceArr = [5, 10, 15, 20] 
+    amountArr = [1, 2, 3, 4];
+    expectedPriceArr = [5, 10, 15, 20];
     for (var i = 0; i < amountArr.length; i++) {
-      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString());
       expect(await memeFactory.getPrice(2, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
-    } 
+    }
   });
 
   function buildMemeConf() {
-    let conf = {}
-    conf.maxSupply = toBn(100)
-    conf.isNative = false
-    conf.isFT = false
-    conf.name = "name"
-    conf.symbol = "symbol"
-    conf.baseURI = "https://www.abc.com"
-    conf.baseUnit = ethers.utils.parseEther("1")
-    conf.priceType = toBn(1)
-    conf.priceArg1 = ethers.utils.parseEther("1")
-    conf.priceArg2 = ethers.utils.parseEther("1")
-    return conf
+    let conf = {};
+    conf.maxSupply = toBn(100);
+    conf.isNative = false;
+    conf.isFT = false;
+    conf.name = "name";
+    conf.symbol = "symbol";
+    conf.baseURI = "https://www.abc.com";
+    conf.baseUnit = ethers.utils.parseEther("1");
+    conf.priceType = toBn(1);
+    conf.priceArg1 = ethers.utils.parseEther("1");
+    conf.priceArg2 = ethers.utils.parseEther("1");
+    return conf;
   }
 
   it("should be check meme conf", async function () {
-    let conf = buildMemeConf()
+    let conf = buildMemeConf();
     expect(await memeFactory.checkMemeConf(conf)).to.be.true;
 
-    conf = buildMemeConf()
-    conf.maxSupply = toBn(0)
+    conf = buildMemeConf();
+    conf.maxSupply = toBn(0);
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
 
-    conf = buildMemeConf()
-    conf.name = ""
+    conf = buildMemeConf();
+    conf.name = "";
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
 
-    conf = buildMemeConf()
-    conf.symbol = ""
+    conf = buildMemeConf();
+    conf.symbol = "";
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
 
-    conf = buildMemeConf()
-    conf.baseURI = ""
+    conf = buildMemeConf();
+    conf.baseURI = "";
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
 
-    conf = buildMemeConf()
-    conf.baseUnit = ethers.utils.parseEther("0.9")
+    conf = buildMemeConf();
+    conf.baseUnit = ethers.utils.parseEther("0.9");
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
 
-    conf = buildMemeConf()
-    conf.priceType = toBn(0)
+    conf = buildMemeConf();
+    conf.priceType = toBn(0);
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
   });
 
@@ -226,87 +232,86 @@ describe.only("Meme", function () {
   }
 
   it("should be new meme club", async function () {
-    let conf = buildMemeConf()
-    conf.isNative = true
-    
-    let callId = 1
-    let hash = await memeFactory.hashForNewMemeClub(callId, conf)
-    let signature = await getSignature(hash, validator)
-    
-    await expect(memeFactory.newMemeClub(callId, conf, signature))
-      .to.emit(memeFactory, "MemeClubCreated")
-      .withArgs(callId, anyValue, anyValue) 
+    let conf = buildMemeConf();
+    conf.isNative = true;
 
-    await memeFactory.setLFGToken(lfg.address)
-    callId = 2
-    hash = await memeFactory.hashForNewMemeClub(callId, conf)
-    signature = await getSignature(hash, validator)
+    let callId = 1;
+    let hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    let signature = await getSignature(hash, validator);
+
     await expect(memeFactory.newMemeClub(callId, conf, signature))
       .to.emit(memeFactory, "MemeClubCreated")
-      .withArgs(callId, anyValue, anyValue)  
+      .withArgs(callId, anyValue, anyValue);
+
+    await memeFactory.setLFGToken(lfg.address);
+    callId = 2;
+    hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    signature = await getSignature(hash, validator);
+    await expect(memeFactory.newMemeClub(callId, conf, signature))
+      .to.emit(memeFactory, "MemeClubCreated")
+      .withArgs(callId, anyValue, anyValue);
   });
- 
 
   it("should be new meme club(check property)", async function () {
-    let conf = buildMemeConf()
-    conf.isNative = true
-    
-    let callId = 1
+    let conf = buildMemeConf();
+    conf.isNative = true;
+
+    let callId = 1;
     let clubId = chainId * 10000000 + 1;
-    let hash = await memeFactory.hashForNewMemeClub(callId, conf)
-    let signature = await getSignature(hash, validator)
-    
+    let hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    let signature = await getSignature(hash, validator);
+
     await expect(memeFactory.newMemeClub(callId, conf, signature))
       .to.emit(memeFactory, "MemeClubCreated")
-      .withArgs(callId, clubId, anyValue) 
- 
-      let club = await memeFactory.getMemeClub(clubId);
-      
-      expect(club.clubId).to.equal(clubId);
-      expect(club.isLocked).to.be.false;
-      expect(club.subjectAddress).to.equal(owner.address);
-      expect(club.memeAddress).to.equal(addr0);
-      expect(club.supply).to.equal(0);
-      expect(club.funds).to.equal(0);
+      .withArgs(callId, clubId, anyValue);
 
-      expect(club.memeConf.maxSupply).to.equal(conf.maxSupply)
-      expect(club.memeConf.isNative).to.equal(conf.isNative);
-      expect(club.memeConf.isFT).to.equal(conf.isFT);
-      expect(club.memeConf.name).to.equal(conf.name);
-      expect(club.memeConf.symbol).to.equal(conf.symbol);
-      expect(club.memeConf.baseURI).to.equal(conf.baseURI);
-      expect(club.memeConf.baseUnit).to.equal(conf.baseUnit);
-      expect(club.memeConf.priceType).to.equal(conf.priceType);
-      expect(club.memeConf.priceArg1).to.equal(conf.priceArg1);
-      expect(club.memeConf.priceArg2).to.equal(conf.priceArg2);
+    let club = await memeFactory.getMemeClub(clubId);
+
+    expect(club.clubId).to.equal(clubId);
+    expect(club.isLocked).to.be.false;
+    expect(club.subjectAddress).to.equal(owner.address);
+    expect(club.memeAddress).to.equal(addr0);
+    expect(club.supply).to.equal(0);
+    expect(club.funds).to.equal(0);
+
+    expect(club.memeConf.maxSupply).to.equal(conf.maxSupply);
+    expect(club.memeConf.isNative).to.equal(conf.isNative);
+    expect(club.memeConf.isFT).to.equal(conf.isFT);
+    expect(club.memeConf.name).to.equal(conf.name);
+    expect(club.memeConf.symbol).to.equal(conf.symbol);
+    expect(club.memeConf.baseURI).to.equal(conf.baseURI);
+    expect(club.memeConf.baseUnit).to.equal(conf.baseUnit);
+    expect(club.memeConf.priceType).to.equal(conf.priceType);
+    expect(club.memeConf.priceArg1).to.equal(conf.priceArg1);
+    expect(club.memeConf.priceArg2).to.equal(conf.priceArg2);
   });
-  
+
   function randBetween(min, max) {
     let diff = max - min;
     return Math.floor(min + diff * Math.random());
   }
- 
+
   it("should be pause", async function () {
-    let conf = buildMemeConf()
-    conf.isNative = true
-    
-    let callId = 1 
-    let hash = await memeFactory.hashForNewMemeClub(callId, conf)
-    let signature = await getSignature(hash, validator)
-    await expect(memeFactory.newMemeClub(callId, conf, signature)).to.emit(memeFactory, "MemeClubCreated")
- 
+    let conf = buildMemeConf();
+    conf.isNative = true;
+
+    let callId = 1;
+    let hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    let signature = await getSignature(hash, validator);
+    await expect(memeFactory.newMemeClub(callId, conf, signature)).to.emit(memeFactory, "MemeClubCreated");
+
     await memeFactory.pause();
 
-    callId = 2 
-    hash = await memeFactory.hashForNewMemeClub(callId, conf)
-    signature = await getSignature(hash, validator)
+    callId = 2;
+    hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    signature = await getSignature(hash, validator);
     await expect(memeFactory.newMemeClub(callId, conf, signature)).to.be.revertedWith("Pausable: paused");
 
     await memeFactory.unpause();
 
-    callId = 3
-    hash = await memeFactory.hashForNewMemeClub(callId, conf)
-    signature = await getSignature(hash, validator)
-    await expect(memeFactory.newMemeClub(callId, conf, signature)).to.emit(memeFactory, "MemeClubCreated") 
+    callId = 3;
+    hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    signature = await getSignature(hash, validator);
+    await expect(memeFactory.newMemeClub(callId, conf, signature)).to.emit(memeFactory, "MemeClubCreated");
   });
 });
