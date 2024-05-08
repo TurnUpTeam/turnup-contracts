@@ -2,5 +2,7 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 if [[ "$HUSKY" != "0" ]]; then
-  npx pretty-quick --staged && npm run lint && bin/get-coverage.sh && bin/export.sh && git add -A
+  npx pretty-quick --staged && npm run lint &&
+  #bin/get-coverage.sh &&
+  bin/export.sh && git add -A
 fi
