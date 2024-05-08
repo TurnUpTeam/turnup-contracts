@@ -9787,22 +9787,17 @@
       },
       {
         "inputs": [],
-        "name": "MemeClubPriceArgs",
-        "type": "error"
-      },
-      {
-        "inputs": [],
-        "name": "MemeClubPriceTypeUnsupported",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "MemeClubTooMany",
         "type": "error"
       },
       {
         "inputs": [],
         "name": "MemeClubUnlocked",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MemeConfInvalid",
         "type": "error"
       },
       {
@@ -10001,12 +9996,6 @@
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
           },
@@ -10014,6 +10003,12 @@
             "indexed": false,
             "internalType": "address",
             "name": "creator",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "tokenAddress",
             "type": "address"
           }
         ],
@@ -10217,6 +10212,77 @@
       {
         "inputs": [
           {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "maxSupply",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isNative",
+                "type": "bool"
+              },
+              {
+                "internalType": "bool",
+                "name": "isFT",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "baseURI",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "baseUnit",
+                "type": "uint256"
+              },
+              {
+                "internalType": "enum MemeFactory.PriceFormulaType",
+                "name": "priceType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg1",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg2",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct MemeFactory.MemeConfig",
+            "name": "memeConf",
+            "type": "tuple"
+          }
+        ],
+        "name": "checkMemeConf",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
@@ -10304,21 +10370,6 @@
                 "type": "uint256"
               },
               {
-                "internalType": "uint256",
-                "name": "maxSupply",
-                "type": "uint256"
-              },
-              {
-                "internalType": "bool",
-                "name": "isNative",
-                "type": "bool"
-              },
-              {
-                "internalType": "bool",
-                "name": "isFT",
-                "type": "bool"
-              },
-              {
                 "internalType": "bool",
                 "name": "isLocked",
                 "type": "bool"
@@ -10344,25 +10395,60 @@
                 "type": "uint256"
               },
               {
-                "internalType": "enum MemeFactory.PriceFormulaType",
-                "name": "priceType",
-                "type": "uint8"
-              },
-              {
                 "components": [
                   {
                     "internalType": "uint256",
-                    "name": "arg1",
+                    "name": "maxSupply",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "bool",
+                    "name": "isNative",
+                    "type": "bool"
+                  },
+                  {
+                    "internalType": "bool",
+                    "name": "isFT",
+                    "type": "bool"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "symbol",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "baseURI",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "baseUnit",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "enum MemeFactory.PriceFormulaType",
+                    "name": "priceType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "priceArg1",
                     "type": "uint256"
                   },
                   {
                     "internalType": "uint256",
-                    "name": "arg2",
+                    "name": "priceArg2",
                     "type": "uint256"
                   }
                 ],
-                "internalType": "struct MemeFactory.PriceFormulaArgs",
-                "name": "priceArgs",
+                "internalType": "struct MemeFactory.MemeConfig",
+                "name": "memeConf",
                 "type": "tuple"
               }
             ],
@@ -10417,6 +10503,35 @@
         "inputs": [
           {
             "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "sellingPrice",
+            "type": "bool"
+          }
+        ],
+        "name": "getPriceByClubId",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
             "name": "price",
             "type": "uint256"
           }
@@ -10446,6 +10561,30 @@
           }
         ],
         "name": "getSellPrice",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "getSellPriceAfterFee",
         "outputs": [
           {
             "internalType": "uint256",
@@ -10507,11 +10646,6 @@
             "type": "uint256"
           },
           {
-            "internalType": "address",
-            "name": "applyer",
-            "type": "address"
-          },
-          {
             "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
@@ -10527,7 +10661,7 @@
             "type": "uint256"
           }
         ],
-        "name": "hashForMintMeme404",
+        "name": "hashForMintMemeToken",
         "outputs": [
           {
             "internalType": "bytes32",
@@ -10546,68 +10680,61 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "creator",
-            "type": "address"
-          },
-          {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "symbol",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "baseURI",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "baseUnit",
-            "type": "uint256"
-          }
-        ],
-        "name": "hashForNewMeme404",
-        "outputs": [
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxSupply",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isNative",
-            "type": "bool"
-          },
-          {
-            "internalType": "address",
-            "name": "creator",
-            "type": "address"
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "maxSupply",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isNative",
+                "type": "bool"
+              },
+              {
+                "internalType": "bool",
+                "name": "isFT",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "baseURI",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "baseUnit",
+                "type": "uint256"
+              },
+              {
+                "internalType": "enum MemeFactory.PriceFormulaType",
+                "name": "priceType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg1",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg2",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct MemeFactory.MemeConfig",
+            "name": "memeConf",
+            "type": "tuple"
           }
         ],
         "name": "hashForNewMemeClub",
@@ -10656,6 +10783,11 @@
             "internalType": "address",
             "name": "memeImplementation_",
             "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "mirrorImplementation_",
+            "type": "address"
           }
         ],
         "name": "initialize",
@@ -10680,25 +10812,6 @@
           }
         ],
         "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "priceType",
-            "type": "uint256"
-          }
-        ],
-        "name": "isValidPriceType",
-        "outputs": [
-          {
-            "internalType": "bool",
-            "name": "",
-            "type": "bool"
-          }
-        ],
-        "stateMutability": "pure",
         "type": "function"
       },
       {
@@ -10730,21 +10843,6 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "maxSupply",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isNative",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "isFT",
-            "type": "bool"
-          },
-          {
             "internalType": "bool",
             "name": "isLocked",
             "type": "bool"
@@ -10770,25 +10868,60 @@
             "type": "uint256"
           },
           {
-            "internalType": "enum MemeFactory.PriceFormulaType",
-            "name": "priceType",
-            "type": "uint8"
-          },
-          {
             "components": [
               {
                 "internalType": "uint256",
-                "name": "arg1",
+                "name": "maxSupply",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isNative",
+                "type": "bool"
+              },
+              {
+                "internalType": "bool",
+                "name": "isFT",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "baseURI",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "baseUnit",
+                "type": "uint256"
+              },
+              {
+                "internalType": "enum MemeFactory.PriceFormulaType",
+                "name": "priceType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg1",
                 "type": "uint256"
               },
               {
                 "internalType": "uint256",
-                "name": "arg2",
+                "name": "priceArg2",
                 "type": "uint256"
               }
             ],
-            "internalType": "struct MemeFactory.PriceFormulaArgs",
-            "name": "priceArgs",
+            "internalType": "struct MemeFactory.MemeConfig",
+            "name": "memeConf",
             "type": "tuple"
           }
         ],
@@ -10847,6 +10980,19 @@
         "type": "function"
       },
       {
+        "inputs": [],
+        "name": "mirrorImplementation",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
         "inputs": [
           {
             "internalType": "uint256",
@@ -10854,34 +11000,61 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "maxSupply_",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isNative_",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "isFT_",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceType_",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceArg1_",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceArg2_",
-            "type": "uint256"
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "maxSupply",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isNative",
+                "type": "bool"
+              },
+              {
+                "internalType": "bool",
+                "name": "isFT",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "baseURI",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "baseUnit",
+                "type": "uint256"
+              },
+              {
+                "internalType": "enum MemeFactory.PriceFormulaType",
+                "name": "priceType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg1",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "priceArg2",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct MemeFactory.MemeConfig",
+            "name": "memeConf_",
+            "type": "tuple"
           },
           {
             "internalType": "bytes",
@@ -10890,49 +11063,6 @@
           }
         ],
         "name": "newMemeClub",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "symbol",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "baseURI",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "baseUnit",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "signature",
-            "type": "bytes"
-          }
-        ],
-        "name": "newMemeToken",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
