@@ -5,7 +5,7 @@ const DeployUtils = require("eth-deploy-utils");
 
 const {signPackedData, privateKeyByWallet} = require("./helpers");
 
-describe.only("Meme", function () {
+describe("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
   let chainId;
   let owner, bob, alice, fred, tokenHolder, validator;
