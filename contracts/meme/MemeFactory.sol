@@ -287,7 +287,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     } else if (priceType == PriceFormulaType.Fixed) {
       price = amount * priceArg1;
     }
-    return price;
+    return price * 1 ether;
   }
 
   function getPriceByClubId(uint256 clubId, uint256 amount, bool sellingPrice) public view returns (uint256) {

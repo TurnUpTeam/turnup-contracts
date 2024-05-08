@@ -40,10 +40,10 @@ describe.only("Meme", function () {
     );
     
     memeImplementation = await deployUtils.deploy("Meme404");
-    mirrorImplementation = await deployUtils.deploy("Meme404Mirror");
+    mirrorImplementation = await deployUtils.deploy("Meme404Mirror", addr0);
 
     memeFactory = await deployUtils.deployProxy(
-      "Meme404Factory",
+      "MemeFactory",
       protocolFeeDestination.address,
       [bob.address],
       memeImplementation.address,
@@ -55,7 +55,7 @@ describe.only("Meme", function () {
     await initAndDeploy();
   });
 
-  it.skip("should be initialized with the correct parameter", async function () {
+  it("should be initialized with the correct parameter", async function () {
     expect(await memeFactory.owner()).to.equal(owner.address);
     expect(await memeFactory.owner()).to.not.equal(bob.address);
     expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address);
@@ -68,29 +68,86 @@ describe.only("Meme", function () {
     expect(await memeFactory.subjectFeePercent()).to.equal(0);
     expect(await memeFactory.protocolLFGFees()).to.equal(0);
     expect(await memeFactory.protocolNativeFees()).to.equal(0);
+
+    expect(await memeFactory.memeImplementation()).to.equal(memeImplementation.address);
+    expect(await memeFactory.mirrorImplementation()).to.equal(mirrorImplementation.address);
   });
 
-  it.skip("should be update LFGToken", async function () {
+  it("should be update LFGToken", async function () {
     expect(await memeFactory.lfgToken()).to.equal(addr0);
     await expect(memeFactory.setLFGToken(lfg.address)).to.emit(memeFactory, "LfgTokenUpdate").withArgs(lfg.address);
     expect(await memeFactory.lfgToken()).to.equal(lfg.address);
     await expect(memeFactory.connect(bob).setLFGToken(lfg.address)).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
+  it("should be update subject fee percent", async function () {
+    expect(await memeFactory.subjectFeePercent()).to.equal(0);
+    let percent = ethers.utils.parseEther("0.53");
+    await expect(memeFactory.setSubjectFeePercent(percent)).to.emit(memeFactory, "SubjectFeePercentUpdate").withArgs(percent);
+    expect(await memeFactory.subjectFeePercent()).to.equal(percent);
+
+    await expect(memeFactory.connect(bob).setSubjectFeePercent(percent)).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
+  it("should be update protocol fee percent", async function () {
+    let defaultPercent = ethers.utils.parseEther("0.05");
+    expect(await memeFactory.protocolFeePercent()).to.equal(defaultPercent);
+    let percent = ethers.utils.parseEther("0.53");
+    await expect(memeFactory.setProtocolFeePercent(percent)).to.emit(memeFactory, "ProtocolFeePercentUpdate").withArgs(percent);
+    expect(await memeFactory.protocolFeePercent()).to.equal(percent);
+
+    await expect(memeFactory.connect(bob).setProtocolFeePercent(percent)).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
+  it("should be update protocol fee destination", async function () { 
+    expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address); 
+    await expect(memeFactory.setProtocolFeeDestination(bob.address)).to.emit(memeFactory, "ProtocolFeeDestinationUpdate").withArgs(bob.address);
+    expect(await memeFactory.protocolFeeDestination()).to.equal(bob.address);
+
+    await expect(memeFactory.connect(bob).setProtocolFeePercent(bob.address)).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
   function toBn(v) {
     return ethers.BigNumber.from(v);
   }
 
-  it.skip("should be getPrice", async function () {
-    let quadCurveA = 5;
+  it.skip("should be getPrice(Linear)", async function () {
     let priceType = 1;
-    let priceArgs = {quadCurveA: quadCurveA};
+    let arg1 = 5;
+    let arg2 = 2;  
+
+    for (let i = 0; i < 100; i += 5) {
+      let expectedPrice = toBn(i + 1).mul(arg1).add(arg2).mul(oneEther);
+      expect(await memeFactory.getPrice(i, 1, priceType, arg1, arg2)).to.equal(expectedPrice);
+    } 
+  });
+
+  it("should be getPrice(Fixed)", async function () {
+    let priceType = 3;
+    let arg1 = 5; 
+
+    for (let s = 0; s < 100; s += 5) {
+      let expectedPrice = toBn(1).mul(arg1).mul(oneEther);
+      expect(await memeFactory.getPrice(s, 1, priceType, arg1, 0)).to.equal(expectedPrice);
+    } 
+
+    for (let s = 0; s < 100; s += 5) {
+      for (let amount in [1, 3, 5, 8, 12, 55, 99]) { 
+        let expectedPrice = toBn(amount).mul(arg1).mul(oneEther);
+        expect(await memeFactory.getPrice(s, amount, priceType, arg1, 0)).to.equal(expectedPrice);
+      }
+    } 
+  });
+
+  it.skip("should be getPrice(QuadCurve)", async function () {
+    let quadCurveA = 5;
+    let priceType = 2;  
 
     for (let i = 0; i < 100; i += 5) {
       let expectedPrice = toBn((i + 1) * (i + 1))
         .mul(oneEther)
         .div(toBn(quadCurveA));
-      expect(await memeFactory.getPrice(i, 1, priceType, priceArgs)).to.equal(expectedPrice);
+      expect(await memeFactory.getPrice(i, 1, priceType, quadCurveA, 0)).to.equal(expectedPrice);
     }
 
     for (let i = 0; i < 100; i += 5) {
@@ -102,7 +159,7 @@ describe.only("Meme", function () {
             .div(toBn(quadCurveA));
           expectedPrice = expectedPrice.add(price);
         }
-        expect(await memeFactory.getPrice(i, amount, priceType, priceArgs)).to.equal(expectedPrice);
+        expect(await memeFactory.getPrice(i, amount, priceType, quadCurveA, 0)).to.equal(expectedPrice);
       }
     }
   });
