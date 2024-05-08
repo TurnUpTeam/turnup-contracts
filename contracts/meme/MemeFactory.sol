@@ -39,7 +39,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   event ProtocolFeePercentUpdate(uint256 feePercent);
   event ProtocolFeeDestinationUpdate(address feeDestination);
   event MemeClubCreated(uint256 callId, uint256 clubId, address creator);
-  event MemeTokenCreated(uint256 clubId, address creator);
+  event MemeTokenCreated(uint256 clubId, address creator, address tokenAddress);
 
   event MemeClubTrade(
     uint256 clubId,
@@ -179,13 +179,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     return true;
   }
-  function isValidPriceConf(PriceFormulaType priceType) public pure returns (bool) {
-    if (priceType != PriceFormulaType.Linear && priceType != PriceFormulaType.QuadCurve && priceType != PriceFormulaType.Fixed) {
-        return false;
-    }
-    return true;  
-  }
-
+  
   function newMemeClub(
     uint256 callId_,
     MemeConfig calldata memeConf_,
@@ -243,7 +237,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       club.memeAddress = address(meme);
     }
 
-    emit MemeTokenCreated(clubId, _msgSender());
+    emit MemeTokenCreated(clubId, _msgSender(), club.memeAddress);
   }
 
   function mintMemeToken(
