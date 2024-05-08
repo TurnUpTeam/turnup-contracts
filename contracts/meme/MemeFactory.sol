@@ -8,7 +8,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "../token/LFGToken.sol";
 import {Meme404} from "./Meme404.sol";
-import {Meme404Proxy} from "./Meme404Proxy.sol";
+import {MemeProxy} from "./MemeProxy.sol";
 import {MemeFT} from "./MemeFT.sol";
 
 contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
@@ -213,13 +213,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeAddress != address(0)) revert MemeTokenNewDuplidate();
 
     if (club.memeConf.isFT) {
-      Meme404Proxy memeProxy = new Meme404Proxy(memeFtImplementation);
+      MemeProxy memeProxy = new MemeProxy(memeFtImplementation);
       MemeFT meme = MemeFT(payable(address(memeProxy)));
       meme.initialize(club.memeConf.name, club.memeConf.symbol, address(this));
       meme.setFactory(address(this));
       club.memeAddress = address(meme);
     } else {
-      Meme404Proxy memeProxy = new Meme404Proxy(memeImplementation);
+      MemeProxy memeProxy = new MemeProxy(memeImplementation);
       Meme404 meme = Meme404(payable(address(memeProxy)));
 
       meme.init(
