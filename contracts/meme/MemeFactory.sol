@@ -277,7 +277,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   ) public pure returns (uint256) {
     uint256 price = 0;
     if (priceType == PriceFormulaType.Linear) {
-      uint256 sum1 = (supply * (supply + 1)) / 2 * priceArg1;
+      uint256 sum1 = (supply * (supply + 1)) / 2 * priceArg1 + supply * priceArg2;
       uint256 sum2 = ((supply + amount) * (supply + amount + 1)) / 2 * priceArg1 + (supply + amount) * priceArg2;
       price = sum2 - sum1;
     } else if (priceType == PriceFormulaType.QuadCurve) {
@@ -287,7 +287,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     } else if (priceType == PriceFormulaType.Fixed) {
       price = amount * priceArg1;
     }
-    return price * 1 ether;
+    return price;
   }
 
   function getPriceByClubId(uint256 clubId, uint256 amount, bool sellingPrice) public view returns (uint256) {

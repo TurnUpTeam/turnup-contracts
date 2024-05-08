@@ -111,58 +111,67 @@ describe.only("Meme", function () {
     return ethers.BigNumber.from(v);
   }
 
-  it.skip("should be getPrice(Linear)", async function () {
+  it("should be getPrice(Linear)", async function () {
     let priceType = 1;
-    let arg1 = 5;
-    let arg2 = 2;  
+    let arg1 = ethers.utils.parseEther("5");
+    let arg2 = ethers.utils.parseEther("1");
 
-    for (let i = 0; i < 100; i += 5) {
-      let expectedPrice = toBn(i + 1).mul(arg1).add(arg2).mul(oneEther);
-      expect(await memeFactory.getPrice(i, 1, priceType, arg1, arg2)).to.equal(expectedPrice);
+    let amountArr = [1, 2, 3, 4, 5]
+    let expectedPriceArr = [6, 17, 33, 54, 80] 
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
+    } 
+
+    amountArr = [1, 2, 3, 4]
+    expectedPriceArr = [16, 37, 63, 94] 
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      expect(await memeFactory.getPrice(2, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
+    } 
+  });
+
+  it("should be getPrice(QuadCurve)", async function () { 
+    let priceType = 2;  
+    let arg1 = ethers.utils.parseEther("5");
+    let arg2 = ethers.utils.parseEther("2");
+ 
+    let amountArr = [1, 2, 3, 4, 5]
+    let expectedPriceArr = [7, 31, 82, 170, 305] 
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
+    } 
+
+    amountArr = [1, 2, 3, 4]
+    expectedPriceArr = [51, 139, 274, 466] 
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      expect(await memeFactory.getPrice(2, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
     } 
   });
 
   it("should be getPrice(Fixed)", async function () {
     let priceType = 3;
-    let arg1 = 5; 
+    let arg1 = ethers.utils.parseEther("5"); 
+    let arg2 = ethers.utils.parseEther("0");
 
-    for (let s = 0; s < 100; s += 5) {
-      let expectedPrice = toBn(1).mul(arg1).mul(oneEther);
-      expect(await memeFactory.getPrice(s, 1, priceType, arg1, 0)).to.equal(expectedPrice);
+    let amountArr = [1, 2, 3, 4, 5]
+    let expectedPriceArr = [5, 10, 15, 20, 25] 
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      expect(await memeFactory.getPrice(0, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
     } 
 
-    for (let s = 0; s < 100; s += 5) {
-      for (let amount in [1, 3, 5, 8, 12, 55, 99]) { 
-        let expectedPrice = toBn(amount).mul(arg1).mul(oneEther);
-        expect(await memeFactory.getPrice(s, amount, priceType, arg1, 0)).to.equal(expectedPrice);
-      }
+    amountArr = [1, 2, 3, 4]
+    expectedPriceArr = [5, 10, 15, 20] 
+    for (var i = 0; i < amountArr.length; i++) {
+      let expectedPrice = ethers.utils.parseEther(expectedPriceArr[i].toString())
+      expect(await memeFactory.getPrice(2, amountArr[i], priceType, arg1, arg2)).to.equal(expectedPrice);
     } 
   });
 
-  it.skip("should be getPrice(QuadCurve)", async function () {
-    let quadCurveA = 5;
-    let priceType = 2;  
 
-    for (let i = 0; i < 100; i += 5) {
-      let expectedPrice = toBn((i + 1) * (i + 1))
-        .mul(oneEther)
-        .div(toBn(quadCurveA));
-      expect(await memeFactory.getPrice(i, 1, priceType, quadCurveA, 0)).to.equal(expectedPrice);
-    }
-
-    for (let i = 0; i < 100; i += 5) {
-      for (let amount in [1, 3, 5, 8, 12, 55, 99]) {
-        let expectedPrice = toBn(0);
-        for (let j = 0; j < amount; j++) {
-          let price = toBn((i + 1 + j) * (i + 1 + j))
-            .mul(oneEther)
-            .div(toBn(quadCurveA));
-          expectedPrice = expectedPrice.add(price);
-        }
-        expect(await memeFactory.getPrice(i, amount, priceType, quadCurveA, 0)).to.equal(expectedPrice);
-      }
-    }
-  });
 
   it.skip("should be newMemeClubWithQuadCurve(check arguments)", async function () {
     await expect(memeFactory.newMemeClubWithQuadCurve(1, "name", "symbol", "tokenUri", false, 0)).to.be.revertedWith(
