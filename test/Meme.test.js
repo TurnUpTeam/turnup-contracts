@@ -5,7 +5,7 @@ const DeployUtils = require("eth-deploy-utils");
 
 const {signPackedData, privateKeyByWallet} = require("./helpers");
 
-describe.only("Meme", function () {
+describe("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
   let chainId;
   let owner, bob, alice, fred, tokenHolder, validator;
@@ -14,6 +14,7 @@ describe.only("Meme", function () {
   let memeFactory;
   let memeImplementation;
   let mirrorImplementation;
+  let memeFtImplementation;
   const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
 
@@ -42,6 +43,7 @@ describe.only("Meme", function () {
     );
 
     memeImplementation = await deployUtils.deploy("Meme404");
+    memeFtImplementation = await deployUtils.deploy("MemeFT");
     mirrorImplementation = await deployUtils.deploy("Meme404Mirror", addr0);
 
     memeFactory = await deployUtils.deployProxy(
@@ -49,7 +51,8 @@ describe.only("Meme", function () {
       protocolFeeDestination.address,
       [validator.address],
       memeImplementation.address,
-      mirrorImplementation.address
+      mirrorImplementation.address,
+      memeFtImplementation.address
     );
   }
 

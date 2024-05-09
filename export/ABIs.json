@@ -10788,6 +10788,11 @@
             "internalType": "address",
             "name": "mirrorImplementation_",
             "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "memeFtImplementation_",
+            "type": "address"
           }
         ],
         "name": "initialize",
@@ -10923,6 +10928,19 @@
             "internalType": "struct MemeFactory.MemeConfig",
             "name": "memeConf",
             "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "memeFtImplementation",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
           }
         ],
         "stateMutability": "view",

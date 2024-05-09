@@ -67,9 +67,3 @@ bin/export.sh
 ```
 
 Notice that the ABI is exported anyway during the pre-commit hook.
-
-## Test coverage
-
-```
-
-```
