@@ -24,6 +24,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error MemeClubUnlocked();
   error MemeTokenNewDuplidate();
   error MemeTokenNotCreated();
+  error InitBuyTooMany();
   error InvalidAmount();
   error InvalidFunds();
   error InsufficientFunds();
@@ -184,11 +185,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   function newMemeClub(
     uint256 callId_,
+    uint256 initBuyAmount_,
     MemeConfig calldata memeConf_,
     bytes calldata signature
   ) external whenNotPaused nonReentrant {
     if (!checkMemeConf(memeConf_)) revert MemeConfInvalid();
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
+    if (memeConf_.maxSupply <= initBuyAmount_) revert InitBuyTooMany();
 
     _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, _msgSender(), memeConf_), signature);
 
@@ -203,7 +206,12 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       memeConf: memeConf_
     });
 
+    // Club create event must be emit before trade event
     emit MemeClubCreated(callId_, clubId, _msgSender());
+    
+    if (initBuyAmount_ > 0) {
+      _buyCardImpl(clubId, initBuyAmount_, 0, false);
+    }
   }
 
   function _newMemeToken(uint256 clubId) internal {
@@ -331,7 +339,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     return price - protocolFee - subjectFee;
   }
 
-  function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
+  function _buyCardImpl(uint256 clubId, uint256 amount, uint256 expectedPrice, bool checkPrice) internal {
     if (amount == 0) revert InvalidAmount();
     MemeClub storage club = memeClubs[clubId];
     if (club.isLocked) revert MemeClubIsLocked();
@@ -342,10 +350,11 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     if (club.memeConf.isNative) {
       if (priceAfterFee > msg.value) revert InsufficientFunds();
-    } else {
-      // $LFG
+    } else { // $LFG
       if (msg.value != 0) revert InvalidFunds();
-      if (priceAfterFee > expectedPrice) revert InsufficientFunds();
+      if (checkPrice) {
+        if (priceAfterFee > expectedPrice) revert InsufficientFunds();
+      }
       if (lfgToken.balanceOf(_msgSender()) < priceAfterFee) revert InsufficientLFG();
     }
 
@@ -364,8 +373,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       protocolNativeFees += protocolFee;
       _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
       _sendNativeFunds(club.subjectAddress, subjectFee);
-    } else {
-      // $LFG
+    } else { // $LFG
       protocolLFGFees += protocolFee;
       lfgToken.safeTransferFrom(_msgSender(), address(this), priceAfterFee);
       if (subjectFee > 0) {
@@ -385,6 +393,10 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       protocolFee,
       subjectFee
     );
+  }
+
+  function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
+    return _buyCardImpl(clubId, amount, expectedPrice, true);
   }
 
   function sellCard(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
