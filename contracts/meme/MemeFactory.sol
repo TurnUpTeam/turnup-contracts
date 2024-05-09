@@ -100,14 +100,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   uint256 public protocolLFGFees;
   uint256 public protocolNativeFees;
 
-  address public memeImplementation;
+  address public meme404Implementation;
   address public mirrorImplementation;
   address public memeFtImplementation;
 
   function initialize(
     address protocolFeeDestination_,
     address[] memory validators_,
-    address memeImplementation_,
+    address meme404Implementation_,
     address mirrorImplementation_,
     address memeFtImplementation_
   ) public initializer {
@@ -119,7 +119,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     setSubjectFeePercent(0 ether / 100);
     setProtocolFeePercent(5 ether / 100);
     setProtocolFeeDestination(protocolFeeDestination_);
-    memeImplementation = memeImplementation_;
+    meme404Implementation = meme404Implementation_;
     mirrorImplementation = mirrorImplementation_;
     memeFtImplementation = memeFtImplementation_;
   }
@@ -219,7 +219,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       meme.setFactory(address(this));
       club.memeAddress = address(meme);
     } else {
-      MemeProxy memeProxy = new MemeProxy(memeImplementation);
+      MemeProxy memeProxy = new MemeProxy(meme404Implementation);
       Meme404 meme = Meme404(payable(address(memeProxy)));
 
       meme.init(
@@ -496,7 +496,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   function hashForNewMemeClub(uint256 callId, MemeConfig calldata memeConf) public view returns (bytes32) {
     return
       keccak256(
-        abi.encode(
+        abi.encodePacked(
           "\x19\x01",
           block.chainid,
           callId,
@@ -519,7 +519,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
-    return keccak256(abi.encode("\x19\x01", block.chainid, callId, clubId, _msgSender(), amount, timestamp, validFor));
+    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, _msgSender(), amount, timestamp, validFor));
   }
 
   function _hashBytes(bytes memory signature) internal pure returns (bytes32 hash) {

@@ -12,7 +12,7 @@ describe("Meme", function () {
   let protocolFeeDestination;
   let lfg;
   let memeFactory;
-  let memeImplementation;
+  let meme404Implementation;
   let mirrorImplementation;
   let memeFtImplementation;
   const addr0 = "0x" + "0".repeat(40);
@@ -42,7 +42,7 @@ describe("Meme", function () {
       amountReservedToSharesPool
     );
 
-    memeImplementation = await deployUtils.deploy("Meme404");
+    meme404Implementation = await deployUtils.deploy("Meme404");
     memeFtImplementation = await deployUtils.deploy("MemeFT");
     mirrorImplementation = await deployUtils.deploy("Meme404Mirror", addr0);
 
@@ -50,7 +50,7 @@ describe("Meme", function () {
       "MemeFactory",
       protocolFeeDestination.address,
       [validator.address],
-      memeImplementation.address,
+      meme404Implementation.address,
       mirrorImplementation.address,
       memeFtImplementation.address
     );
@@ -74,8 +74,9 @@ describe("Meme", function () {
     expect(await memeFactory.protocolLFGFees()).to.equal(0);
     expect(await memeFactory.protocolNativeFees()).to.equal(0);
 
-    expect(await memeFactory.memeImplementation()).to.equal(memeImplementation.address);
+    expect(await memeFactory.meme404Implementation()).to.equal(meme404Implementation.address);
     expect(await memeFactory.mirrorImplementation()).to.equal(mirrorImplementation.address);
+    expect(await memeFactory.memeFtImplementation()).to.equal(memeFtImplementation.address);
   });
 
   it("should be update LFGToken", async function () {
