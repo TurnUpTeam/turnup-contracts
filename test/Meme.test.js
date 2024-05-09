@@ -233,11 +233,29 @@ describe("Meme", function () {
   }
 
   it("should be new meme club", async function () {
+    ////----
+    /*
+    let c = buildMemeConf()
+    c.maxSupply = 100;
+    c.isNative = false;
+    c.isFT = false;
+    c.name = "name";
+    c.symbol = "symbol";
+    c.baseURI = "https://www.abc.com";
+    c.baseUnit = ethers.utils.parseEther("10000");
+    c.priceType = 1;
+    c.priceArg1 = ethers.utils.parseEther("1");
+    c.priceArg2 = ethers.utils.parseEther("1");
+    let hash = await memeFactory.hashForNewMemeClub(1, conf);
+    */
+    ////----
+
+
     let conf = buildMemeConf();
     conf.isNative = true;
 
     let callId = 1;
-    let hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    let hash = await memeFactory.hashForNewMemeClub(callId, owner.address, conf);
     let signature = await getSignature(hash, validator);
 
     await expect(memeFactory.newMemeClub(callId, conf, signature))
@@ -246,7 +264,7 @@ describe("Meme", function () {
 
     await memeFactory.setLFGToken(lfg.address);
     callId = 2;
-    hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    hash = await memeFactory.hashForNewMemeClub(callId, owner.address, conf);
     signature = await getSignature(hash, validator);
     await expect(memeFactory.newMemeClub(callId, conf, signature))
       .to.emit(memeFactory, "MemeClubCreated")
@@ -259,7 +277,7 @@ describe("Meme", function () {
 
     let callId = 1;
     let clubId = chainId * 10000000 + 1;
-    let hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    let hash = await memeFactory.hashForNewMemeClub(callId, owner.address, conf);
     let signature = await getSignature(hash, validator);
 
     await expect(memeFactory.newMemeClub(callId, conf, signature))
@@ -297,21 +315,21 @@ describe("Meme", function () {
     conf.isNative = true;
 
     let callId = 1;
-    let hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    let hash = await memeFactory.hashForNewMemeClub(callId, owner.address, conf);
     let signature = await getSignature(hash, validator);
     await expect(memeFactory.newMemeClub(callId, conf, signature)).to.emit(memeFactory, "MemeClubCreated");
 
     await memeFactory.pause();
 
     callId = 2;
-    hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    hash = await memeFactory.hashForNewMemeClub(callId, owner.address, conf);
     signature = await getSignature(hash, validator);
     await expect(memeFactory.newMemeClub(callId, conf, signature)).to.be.revertedWith("Pausable: paused");
 
     await memeFactory.unpause();
 
     callId = 3;
-    hash = await memeFactory.hashForNewMemeClub(callId, conf);
+    hash = await memeFactory.hashForNewMemeClub(callId, owner.address, conf);
     signature = await getSignature(hash, validator);
     await expect(memeFactory.newMemeClub(callId, conf, signature)).to.emit(memeFactory, "MemeClubCreated");
   });

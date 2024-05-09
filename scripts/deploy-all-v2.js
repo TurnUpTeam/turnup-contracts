@@ -9,6 +9,15 @@ async function getGasPrice() {
   return gasPrice.mul(150).div(100);
 }
 
+async function deployImplementation(contractName, ...args) {
+  console.debug("Deploying implementation", contractName, "to", hre.network.name);
+  const impl = await hre.ethers.deployContract(contractName, [...args]); 
+  console.log("Deploying implementation", contractName, "wait tx:", impl.deployTransaction.hash);
+  await impl.deployed();
+  console.log("Deployed implementation", contractName, "address", impl.address);
+  return impl;
+}
+
 async function deployProxy(contractName, ...args) {
   let options;
   if (typeof args[args.length - 1] === "object") {
@@ -160,7 +169,23 @@ async function deployLottery(lfgAddress, sharesAddress) {
 }
 
 async function deployMemeFactory() {
-  let memeFactory = await deployProxy("MemeFactory", []);
+  const addr0 = "0x" + "0".repeat(40);
+
+  const meme404Implementation = await deployImplementation("Meme404");
+  const mirrorImplementation = await deployImplementation("Meme404Mirror", addr0);
+  const memeFtImplementation = await deployImplementation("MemeFT");
+ 
+  const { FIRST_VALIDATOR } = process.env;
+
+  memeFactory = await deployProxy(
+    "MemeFactory",
+    process.env.FEE_DESTINATION,
+    [FIRST_VALIDATOR],
+    meme404Implementation.address,
+    mirrorImplementation.address,
+    memeFtImplementation.address
+  );
+
   return memeFactory;
 }
 

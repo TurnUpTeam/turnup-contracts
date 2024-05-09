@@ -190,7 +190,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (!checkMemeConf(memeConf_)) revert MemeConfInvalid();
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
 
-    _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, memeConf_), signature);
+    _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, _msgSender(), memeConf_), signature);
 
     uint256 clubId = _nextClubId();
     memeClubs[clubId] = MemeClub({
@@ -252,7 +252,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     MemeClub storage club = memeClubs[clubId];
     if (club.memeAddress == address(0)) revert MemeTokenNotCreated();
 
-    _validateSignature(timestamp, validFor, hashForMintMemeToken(callId, clubId, amount, timestamp, validFor), signature);
+    _validateSignature(timestamp, validFor, hashForMintMemeToken(callId, _msgSender(), clubId, amount, timestamp, validFor), signature);
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
@@ -493,14 +493,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     _saveSignatureAsUsed(signature);
   }
 
-  function hashForNewMemeClub(uint256 callId, MemeConfig calldata memeConf) public view returns (bytes32) {
+  function hashForNewMemeClub(uint256 callId, address applyer, MemeConfig calldata memeConf) public view returns (bytes32) {
     return
       keccak256(
         abi.encodePacked(
           "\x19\x01",
           block.chainid,
           callId,
-          _msgSender(),
+          applyer,
           memeConf.maxSupply,
           memeConf.isNative,
           memeConf.isFT,
@@ -514,12 +514,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   function hashForMintMemeToken(
     uint256 callId,
+    address applyer,
     uint256 clubId,
     uint256 amount,
     uint256 timestamp,
     uint256 validFor
   ) public view returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, _msgSender(), amount, timestamp, validFor));
+    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, applyer, amount, timestamp, validFor));
   }
 
   function _hashBytes(bytes memory signature) internal pure returns (bytes32 hash) {
