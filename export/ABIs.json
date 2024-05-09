@@ -10641,6 +10641,11 @@
             "type": "uint256"
           },
           {
+            "internalType": "address",
+            "name": "applyer",
+            "type": "address"
+          },
+          {
             "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
@@ -10678,6 +10683,11 @@
             "internalType": "uint256",
             "name": "callId",
             "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "applyer",
+            "type": "address"
           },
           {
             "components": [
@@ -10781,7 +10791,7 @@
           },
           {
             "internalType": "address",
-            "name": "memeImplementation_",
+            "name": "meme404Implementation_",
             "type": "address"
           },
           {
@@ -10825,6 +10835,19 @@
         "outputs": [
           {
             "internalType": "contract LFGToken",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "meme404Implementation",
+        "outputs": [
+          {
+            "internalType": "address",
             "name": "",
             "type": "address"
           }
@@ -10936,19 +10959,6 @@
       {
         "inputs": [],
         "name": "memeFtImplementation",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "memeImplementation",
         "outputs": [
           {
             "internalType": "address",
