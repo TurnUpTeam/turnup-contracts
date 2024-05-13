@@ -193,7 +193,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
     if (memeConf_.maxSupply <= initBuyAmount_) revert InitBuyTooMany();
 
-    _validateSignature(block.timestamp, 0, hashForNewMemeClub(callId_, _msgSender(), memeConf_), signature);
+    _validateSignature(block.timestamp, 0, hashForNewMemeClub(block.chainid, callId_, _msgSender(), memeConf_), signature);
 
     uint256 clubId = _nextClubId();
     memeClubs[clubId] = MemeClub({
@@ -260,7 +260,12 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     MemeClub storage club = memeClubs[clubId];
     if (club.memeAddress == address(0)) revert MemeTokenNotCreated();
 
-    _validateSignature(timestamp, validFor, hashForMintMemeToken(callId, _msgSender(), clubId, amount, timestamp, validFor), signature);
+    _validateSignature(
+      timestamp, 
+      validFor, 
+      hashForMintMemeToken(block.chainid, callId, _msgSender(), clubId, amount, timestamp, validFor), 
+      signature
+    );
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
@@ -505,34 +510,44 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     _saveSignatureAsUsed(signature);
   }
 
-  function hashForNewMemeClub(uint256 callId, address applyer, MemeConfig calldata memeConf) public view returns (bytes32) {
-    return
-      keccak256(
-        abi.encodePacked(
-          "\x19\x01",
-          block.chainid,
-          callId,
-          applyer,
-          memeConf.maxSupply,
-          memeConf.isNative,
-          memeConf.isFT,
-          memeConf.name,
-          memeConf.symbol,
-          memeConf.baseURI,
-          memeConf.baseUnit
-        )
-      );
+  // Split into multiple parts, due to stack too deep
+  function hashForNewMemeClub(
+    uint256 chainId, 
+    uint256 callId, 
+    address applyer, 
+    MemeConfig calldata memeConf
+  ) public pure returns (bytes32) {
+    bytes memory part1 = abi.encodePacked(
+      "\x19\x01", 
+      chainId, 
+      callId, 
+      applyer
+    );
+    bytes memory part2 = abi.encodePacked(
+      memeConf.maxSupply,
+      memeConf.isNative,
+      memeConf.isFT,
+      memeConf.name,
+      memeConf.symbol,
+      memeConf.baseURI,
+      memeConf.baseUnit,
+      uint256(memeConf.priceType),
+      memeConf.priceArg1,
+      memeConf.priceArg2
+    );
+    return keccak256(bytes.concat(part1, part2)); 
   }
 
   function hashForMintMemeToken(
+    uint256 chainId,
     uint256 callId,
     address applyer,
     uint256 clubId,
     uint256 amount,
     uint256 timestamp,
     uint256 validFor
-  ) public view returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", block.chainid, callId, clubId, applyer, amount, timestamp, validFor));
+  ) public pure returns (bytes32) {
+    return keccak256(abi.encodePacked("\x19\x01", chainId, callId, clubId, applyer, amount, timestamp, validFor));
   }
 
   function _hashBytes(bytes memory signature) internal pure returns (bytes32 hash) {
