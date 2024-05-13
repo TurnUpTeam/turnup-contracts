@@ -510,32 +510,29 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     _saveSignatureAsUsed(signature);
   }
 
-  // Split into multiple parts, due to stack too deep
   function hashForNewMemeClub(
     uint256 chainId, 
     uint256 callId, 
     address applyer, 
     MemeConfig calldata memeConf
   ) public pure returns (bytes32) {
-    bytes memory part1 = abi.encodePacked(
+    bytes memory part = abi.encodePacked(
       "\x19\x01", 
       chainId, 
       callId, 
-      applyer
-    );
-    bytes memory part2 = abi.encodePacked(
+      applyer,
       memeConf.maxSupply,
       memeConf.isNative,
       memeConf.isFT,
-      memeConf.name,
-      memeConf.symbol,
-      memeConf.baseURI,
+      // memeConf.name,
+      // memeConf.symbol,
+      // memeConf.baseURI,
       memeConf.baseUnit,
       uint256(memeConf.priceType),
       memeConf.priceArg1,
       memeConf.priceArg2
     );
-    return keccak256(bytes.concat(part1, part2)); 
+    return keccak256(part); 
   }
 
   function hashForMintMemeToken(

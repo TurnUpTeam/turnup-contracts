@@ -239,14 +239,14 @@ describe("Meme", function () {
     c.maxSupply = 10;
     c.isNative = true;
     c.isFT = false;
-    c.name = "ClubName";
-    c.symbol = "ClubTicker";
+    c.name = "erer";
+    c.symbol = "FWAEF";
     c.baseURI = "https://test.badass.xyz/memeclub_json";
-    c.baseUnit = 10000;
-    c.priceType = 1;
-    c.priceArg1 = 100;
-    c.priceArg2 = 200;
-    let hash1 = await memeFactory.hashForNewMemeClub(80002, 1, "0xBC7fE00602139BF63527Fd7Ea608C1989708ec8E", c);
+    c.baseUnit = ethers.BigNumber.from("10000000000000000000000");
+    c.priceType = ethers.BigNumber.from(1);
+    c.priceArg1 = ethers.BigNumber.from("5000000000000000");
+    c.priceArg2 = 0;
+    let hash1 = await memeFactory.hashForNewMemeClub(80002, 64, "0xBC7fE00602139BF63527Fd7Ea608C1989708ec8E", c);
     console.log(hash1)
     */
     ////----
