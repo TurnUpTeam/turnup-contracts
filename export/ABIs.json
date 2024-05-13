@@ -9742,6 +9742,11 @@
     "MemeFactory": [
       {
         "inputs": [],
+        "name": "InitBuyTooMany",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "InsufficientFees",
         "type": "error"
       },
@@ -10637,6 +10642,11 @@
         "inputs": [
           {
             "internalType": "uint256",
+            "name": "chainId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
             "name": "callId",
             "type": "uint256"
           },
@@ -10674,11 +10684,16 @@
             "type": "bytes32"
           }
         ],
-        "stateMutability": "view",
+        "stateMutability": "pure",
         "type": "function"
       },
       {
         "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "chainId",
+            "type": "uint256"
+          },
           {
             "internalType": "uint256",
             "name": "callId",
@@ -10755,7 +10770,7 @@
             "type": "bytes32"
           }
         ],
-        "stateMutability": "view",
+        "stateMutability": "pure",
         "type": "function"
       },
       {
@@ -11025,6 +11040,11 @@
           {
             "internalType": "uint256",
             "name": "callId_",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "initBuyAmount_",
             "type": "uint256"
           },
           {
