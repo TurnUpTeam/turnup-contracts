@@ -17,7 +17,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error ZeroAmount();
   error ZeroAddress();
   error MemeClubNotFound();
-  error MemeClubIsLocked();
+  error MemeClubIsLocked(); 
+  error MemeClubBuyExceed();
   error MemeConfInvalid();
   error MemeClubTooMany();
   error MemeClubLFGUnsupported();
@@ -348,7 +349,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (amount == 0) revert InvalidAmount();
     MemeClub storage club = memeClubs[clubId];
     if (club.isLocked) revert MemeClubIsLocked();
-
+	if (club.memeConf.maxSupply < club.supply + amount) revert MemeClubBuyExceed();
     uint256 actualPrice = getBuyPrice(clubId, amount);
     uint256 protocolFee = getProtocolFee(actualPrice);
     uint256 subjectFee = getSubjectFee(actualPrice);
@@ -439,7 +440,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       _msgSender(),
       club.supply,
       club.isLocked,
-      true,
+      false,
       amount,
       holdingAmount - amount,
       priceAfterFee,
