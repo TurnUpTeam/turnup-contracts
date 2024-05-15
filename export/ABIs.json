@@ -9777,6 +9777,11 @@
       },
       {
         "inputs": [],
+        "name": "MemeClubBuyExceed",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "MemeClubIsLocked",
         "type": "error"
       },
