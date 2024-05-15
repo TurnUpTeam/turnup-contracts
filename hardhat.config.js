@@ -63,12 +63,23 @@ module.exports = {
       accounts: [process.env.FOR_TESTNET],
       chainId: 80002,
     },
+    base: {
+      url: "https://base-mainnet.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_KEY,
+      accounts: [process.env.FOR_TESTNET],
+      chainId: 8453,
+    },
+    sepolia: {
+      url: "https://base-sepolia.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_SEPOLIA_KEY,
+      accounts: [process.env.FOR_TESTNET],
+      chainId: 84532,
+    },
   },
   etherscan: {
     apiKey: {
-      polygonMumbai: process.env.POLYGON_SCAN_API,
       polygon: process.env.POLYGON_SCAN_API,
       amoy: process.env.POLYGON_SCAN_API,
+      base: process.env.BASE_SCAN_API,
+      sepolia: process.env.BASE_SCAN_API,
     },
     customChains: [
       {
@@ -78,6 +89,22 @@ module.exports = {
           apiURL: "https://api-amoy.polygonscan.com/api",
           browserURL: "https://amoy.polygonscan.com/",
         },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org"
+        }
+      },
+      {
+        network: "sepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org/"
+        }
       },
     ],
   },
