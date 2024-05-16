@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MemeFT is Initializable, ERC20Upgradeable, ERC20PermitUpgradeable, OwnableUpgradeable {
+contract MemeFT is ERC20, Ownable {
   error ZeroAddress();
   error NotAuthorized();
 
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
-    _disableInitializers();
+  address public factory;
+
+  modifier onlyFactory() {
+    if (factory == address(0) || factory != msg.sender) revert NotAuthorized();
+    _;
   }
 
-  function initialize(string memory name_, string memory symbol_, address initialOwner_) public initializer {
-    __ERC20_init(name_, symbol_);
-    __ERC20Permit_init(name_);
-    _transferOwnership(initialOwner_);
-  }
+  constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
-  function mint(address to, uint256 amount) public onlyOwner {
+  function mint(address to, uint256 amount) public onlyFactory {
     _mint(to, amount);
-  } 
+  }
+
+  function setFactory(address factory_) external onlyOwner {
+    if (factory_ == address(0)) revert ZeroAddress();
+    factory = factory_;
+  }
 }

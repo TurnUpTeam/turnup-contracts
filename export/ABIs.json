@@ -10133,6 +10133,19 @@
           {
             "indexed": false,
             "internalType": "address",
+            "name": "tokenFactory_",
+            "type": "address"
+          }
+        ],
+        "name": "TokenFactoryUpdated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
             "name": "account",
             "type": "address"
           }
@@ -10808,21 +10821,6 @@
             "internalType": "address[]",
             "name": "validators_",
             "type": "address[]"
-          },
-          {
-            "internalType": "address",
-            "name": "meme404Implementation_",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "mirrorImplementation_",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "memeFtImplementation_",
-            "type": "address"
           }
         ],
         "name": "initialize",
@@ -10855,19 +10853,6 @@
         "outputs": [
           {
             "internalType": "contract LFGToken",
-            "name": "",
-            "type": "address"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "meme404Implementation",
-        "outputs": [
-          {
-            "internalType": "address",
             "name": "",
             "type": "address"
           }
@@ -10977,19 +10962,6 @@
         "type": "function"
       },
       {
-        "inputs": [],
-        "name": "memeFtImplementation",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
         "inputs": [
           {
             "internalType": "uint256",
@@ -11025,19 +10997,6 @@
         "name": "mintMemeToken",
         "outputs": [],
         "stateMutability": "payable",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "mirrorImplementation",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ],
-        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -11285,6 +11244,19 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "tokenFactory_",
+            "type": "address"
+          }
+        ],
+        "name": "setTokenFactory",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "bytes32",
             "name": "hash",
             "type": "bytes32"
@@ -11314,6 +11286,19 @@
             "internalType": "uint256",
             "name": "",
             "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "tokenFactory",
+        "outputs": [
+          {
+            "internalType": "contract TokenFactory",
+            "name": "",
+            "type": "address"
           }
         ],
         "stateMutability": "view",
