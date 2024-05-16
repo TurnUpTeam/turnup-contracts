@@ -67,7 +67,7 @@ describe("Meme", function () {
     expect(await memeFactory.lfgToken()).to.equal(addr0);
     expect(await memeFactory.baseClubId()).to.equal(0);
 
-    let feePercent = ethers.utils.parseEther("0.05");
+    let feePercent = ethers.utils.parseEther("0.02");
     expect(await memeFactory.protocolFeePercent()).to.equal(feePercent);
 
     expect(await memeFactory.subjectFeePercent()).to.equal(0);
@@ -96,7 +96,7 @@ describe("Meme", function () {
   });
 
   it("should be update protocol fee percent", async function () {
-    let defaultPercent = ethers.utils.parseEther("0.05");
+    let defaultPercent = ethers.utils.parseEther("0.02");
     expect(await memeFactory.protocolFeePercent()).to.equal(defaultPercent);
     let percent = ethers.utils.parseEther("0.53");
     await expect(memeFactory.setProtocolFeePercent(percent)).to.emit(memeFactory, "ProtocolFeePercentUpdate").withArgs(percent);
@@ -305,6 +305,50 @@ describe("Meme", function () {
     expect(club.memeConf.priceArg2).to.equal(conf.priceArg2);
   });
 
+  it("should be buyCard(LFG FT TGE)", async function () {
+    await memeFactory.setLFGToken(lfg.address);
+    await lfg.connect(tokenHolder).transfer(owner.address, millionEther);
+    await lfg.connect(owner).approve(memeFactory.address, millionEther);
+
+    let conf = buildMemeConf();
+    conf.isFT = true
+    conf.isNative = false
+    conf.maxSupply = toBn(10);
+
+    let callId = 1
+    let clubId = chainId * 10000000 + 1; 
+    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    let signature = await getSignature(hash, validator);
+    await expect(memeFactory.newMemeClub(1, 0, conf, signature))
+      .to.emit(memeFactory, "MemeClubCreated")
+      .withArgs(callId, clubId, anyValue);
+
+    await expect(await memeFactory.buyCard(clubId, 9, millionEther)).to.emit(memeFactory, "MemeClubTrade")
+    await expect(await memeFactory.buyCard(clubId, 1, millionEther)).to.emit(memeFactory, "MemeTokenCreated")
+  })
+
+  it("should be buyCard(LFG DN404 TGE)", async function () {
+    await memeFactory.setLFGToken(lfg.address);
+    await lfg.connect(tokenHolder).transfer(owner.address, millionEther);
+    await lfg.connect(owner).approve(memeFactory.address, millionEther);
+
+    let conf = buildMemeConf();
+    conf.isFT = false
+    conf.isNative = false
+    conf.maxSupply = toBn(10);
+
+    let callId = 1
+    let clubId = chainId * 10000000 + 1; 
+    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    let signature = await getSignature(hash, validator);
+    await expect(memeFactory.newMemeClub(1, 0, conf, signature))
+      .to.emit(memeFactory, "MemeClubCreated")
+      .withArgs(callId, clubId, anyValue);
+
+    await expect(await memeFactory.buyCard(clubId, 9, millionEther)).to.emit(memeFactory, "MemeClubTrade")
+    await expect(await memeFactory.buyCard(clubId, 1, millionEther)).to.emit(memeFactory, "MemeTokenCreated")
+  })
+
   function randBetween(min, max) {
     let diff = max - min;
     return Math.floor(min + diff * Math.random());
@@ -313,7 +357,7 @@ describe("Meme", function () {
   it("should be pause", async function () {
     let conf = buildMemeConf();
     conf.isNative = true;
-
+    
     let callId = 1;
     let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
     let signature = await getSignature(hash, validator);

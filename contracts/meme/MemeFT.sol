@@ -10,13 +10,6 @@ contract MemeFT is Initializable, ERC20Upgradeable, ERC20PermitUpgradeable, Owna
   error ZeroAddress();
   error NotAuthorized();
 
-  address public factory;
-
-  modifier onlyFactory() {
-    if (factory == address(0) || factory != msg.sender) revert NotAuthorized();
-    _;
-  }
-
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -28,12 +21,7 @@ contract MemeFT is Initializable, ERC20Upgradeable, ERC20PermitUpgradeable, Owna
     _transferOwnership(initialOwner_);
   }
 
-  function mint(address to, uint256 amount) public onlyFactory {
+  function mint(address to, uint256 amount) public onlyOwner {
     _mint(to, amount);
-  }
-
-  function setFactory(address factory_) external onlyOwner {
-    if (factory_ == address(0)) revert ZeroAddress();
-    factory = factory_;
-  }
+  } 
 }

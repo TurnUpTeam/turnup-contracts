@@ -19,14 +19,7 @@ contract Meme404 is DN404, Ownable, Initializable {
   string private _symbol;
   string private _baseURI;
   uint256 private _baseUnit;
-
-  address public factory;
-
-  modifier onlyFactory() {
-    if (factory == address(0) || factory != msg.sender) revert NotAuthorized();
-    _;
-  }
-
+ 
   function initialize(
     string memory name_,
     string memory symbol_,
@@ -52,12 +45,7 @@ contract Meme404 is DN404, Ownable, Initializable {
     address mirror = address(memeMirror);
     _initializeDN404(initialTokenSupply, initialSupplyOwner, mirror);
   }
-
-  function setFactory(address factory_) external onlyOwner {
-    if (factory_ == address(0)) revert ZeroAddress();
-    factory = factory_;
-  }
-
+ 
   // Amount of token balance that is equal to one NFT
   function _unit() internal view virtual override returns (uint256) {
     return _baseUnit;
@@ -79,7 +67,7 @@ contract Meme404 is DN404, Ownable, Initializable {
     return uri;
   }
 
-  function mint(address to, uint256 amount) public onlyFactory {
+  function mint(address to, uint256 amount) public onlyOwner {
     _mint(to, amount);
   }
 
@@ -87,11 +75,11 @@ contract Meme404 is DN404, Ownable, Initializable {
     _burn(msg.sender, amount);
   }
 
-  function setBaseURI(string calldata baseURI_) public onlyFactory {
+  function setBaseURI(string calldata baseURI_) public onlyOwner {
     _baseURI = baseURI_;
   }
 
-  function withdraw(address beneficiary) public onlyFactory {
+  function withdraw(address beneficiary) public onlyOwner {
     SafeTransferLib.safeTransferAllETH(beneficiary);
   }
 }
