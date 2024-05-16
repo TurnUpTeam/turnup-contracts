@@ -6,8 +6,9 @@ import {Ownable} from "solady/src/auth/Ownable.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 import {Meme404Mirror} from "./Meme404Mirror.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Meme404 is DN404, Ownable {
+contract Meme404 is DN404, Ownable, Initializable {
   error InvalidBaseUnit();
   error NotAuthorized();
   error ZeroAddress();
@@ -26,7 +27,7 @@ contract Meme404 is DN404, Ownable {
     _;
   }
 
-  function init(
+  function initialize(
     string memory name_,
     string memory symbol_,
     string memory baseURI_,
@@ -34,8 +35,7 @@ contract Meme404 is DN404, Ownable {
     uint96 initialTokenSupply,
     address initialSupplyOwner,
     address mirrorImplementation
-  ) external {
-    if (bytes(_name).length != 0) revert AlreadyInitialized();
+  ) public initializer {
     if (baseUnit_ < 1e18) revert InvalidBaseUnit();
 
     _name = name_;
@@ -47,7 +47,7 @@ contract Meme404 is DN404, Ownable {
 
     Meme404Mirror memeMirrorProxy = new Meme404Mirror(mirrorImplementation);
     Meme404Mirror memeMirror = Meme404Mirror(payable(address(memeMirrorProxy)));
-    memeMirror.init(address(this));
+    memeMirror.initialize(address(this));
 
     address mirror = address(memeMirror);
     _initializeDN404(initialTokenSupply, initialSupplyOwner, mirror);

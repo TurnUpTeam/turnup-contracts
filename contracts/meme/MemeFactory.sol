@@ -17,7 +17,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error ZeroAmount();
   error ZeroAddress();
   error MemeClubNotFound();
-  error MemeClubIsLocked(); 
+  error MemeClubIsLocked();
   error MemeClubBuyExceed();
   error MemeConfInvalid();
   error MemeClubTooMany();
@@ -209,7 +209,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     // Club create event must be emit before trade event
     emit MemeClubCreated(callId_, clubId, _msgSender());
-    
+
     if (initBuyAmount_ > 0) {
       _buyCardImpl(clubId, initBuyAmount_, 0, false);
     }
@@ -231,7 +231,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       MemeProxy memeProxy = new MemeProxy(meme404Implementation);
       Meme404 meme = Meme404(payable(address(memeProxy)));
 
-      meme.init(
+      meme.initialize(
         club.memeConf.name,
         club.memeConf.symbol,
         club.memeConf.baseURI,
@@ -262,9 +262,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeAddress == address(0)) revert MemeTokenNotCreated();
 
     _validateSignature(
-      timestamp, 
-      validFor, 
-      hashForMintMemeToken(block.chainid, callId, _msgSender(), clubId, amount, timestamp, validFor), 
+      timestamp,
+      validFor,
+      hashForMintMemeToken(block.chainid, callId, _msgSender(), clubId, amount, timestamp, validFor),
       signature
     );
 
@@ -349,14 +349,15 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (amount == 0) revert InvalidAmount();
     MemeClub storage club = memeClubs[clubId];
     if (club.isLocked) revert MemeClubIsLocked();
-	if (club.memeConf.maxSupply < club.supply + amount) revert MemeClubBuyExceed();
+    if (club.memeConf.maxSupply < club.supply + amount) revert MemeClubBuyExceed();
     uint256 actualPrice = getBuyPrice(clubId, amount);
     uint256 protocolFee = getProtocolFee(actualPrice);
     uint256 subjectFee = getSubjectFee(actualPrice);
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     if (club.memeConf.isNative) {
       if (priceAfterFee > msg.value) revert InsufficientFunds();
-    } else { // $LFG
+    } else {
+      // $LFG
       if (msg.value != 0) revert InvalidFunds();
       if (checkPrice) {
         if (priceAfterFee > expectedPrice) revert InsufficientFunds();
@@ -379,7 +380,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       protocolNativeFees += protocolFee;
       _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
       _sendNativeFunds(club.subjectAddress, subjectFee);
-    } else { // $LFG
+    } else {
+      // $LFG
       protocolLFGFees += protocolFee;
       lfgToken.safeTransferFrom(_msgSender(), address(this), priceAfterFee);
       if (subjectFee > 0) {
@@ -512,15 +514,15 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function hashForNewMemeClub(
-    uint256 chainId, 
-    uint256 callId, 
-    address applyer, 
+    uint256 chainId,
+    uint256 callId,
+    address applyer,
     MemeConfig calldata memeConf
   ) public pure returns (bytes32) {
     bytes memory part = abi.encodePacked(
-      "\x19\x01", 
-      chainId, 
-      callId, 
+      "\x19\x01",
+      chainId,
+      callId,
       applyer,
       memeConf.maxSupply,
       memeConf.isNative,
@@ -533,7 +535,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       memeConf.priceArg1,
       memeConf.priceArg2
     );
-    return keccak256(part); 
+    return keccak256(part);
   }
 
   function hashForMintMemeToken(

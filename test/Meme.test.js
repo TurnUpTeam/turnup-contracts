@@ -251,7 +251,6 @@ describe("Meme", function () {
     */
     ////----
 
-
     let conf = buildMemeConf();
     conf.isNative = true;
 

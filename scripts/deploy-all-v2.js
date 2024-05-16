@@ -11,7 +11,7 @@ async function getGasPrice() {
 
 async function deployImplementation(contractName, ...args) {
   console.debug("Deploying implementation", contractName, "to", hre.network.name);
-  const impl = await hre.ethers.deployContract(contractName, [...args]); 
+  const impl = await hre.ethers.deployContract(contractName, [...args]);
   console.log("Deploying implementation", contractName, "wait tx:", impl.deployTransaction.hash);
   await impl.deployed();
   console.log("Deployed implementation", contractName, "address", impl.address);
@@ -174,8 +174,8 @@ async function deployMemeFactory() {
   const meme404Implementation = await deployImplementation("Meme404");
   const mirrorImplementation = await deployImplementation("Meme404Mirror", addr0);
   const memeFtImplementation = await deployImplementation("MemeFT");
- 
-  const { FIRST_VALIDATOR } = process.env;
+
+  const {FIRST_VALIDATOR} = process.env;
 
   memeFactory = await deployProxy(
     "MemeFactory",

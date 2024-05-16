@@ -2,19 +2,18 @@
 pragma solidity ^0.8.19;
 
 import {DN404Mirror} from "dn404/src/DN404Mirror.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Meme404Mirror is DN404Mirror {
+contract Meme404Mirror is DN404Mirror, Initializable {
   error AlreadyInitialized();
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
   constructor(address deployer) DN404Mirror(deployer) {
-    // the deployer of the implementation is ignored by the proxy
+    _disableInitializers();
   }
 
-  function init(address deployer) public {
+  function initialize(address deployer) public initializer {
     DN404NFTStorage storage $ = _getDN404NFTStorage();
-    if ($.deployer != address(0)) {
-      revert AlreadyInitialized();
-    }
     $.deployer = deployer;
   }
 }
