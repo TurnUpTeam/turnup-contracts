@@ -5,15 +5,20 @@ import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ER
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol"; 
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "../token/LFGToken.sol";
 import {Meme404} from "./Meme404.sol";
-import {MemeProxy} from "./MemeProxy.sol";
 import {MemeFT} from "./MemeFT.sol";
+import {TokenFactory} from "./TokenFactory.sol";
+import {IWETH} from "./IWETH.sol";
+import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
 
 contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
 
+  error InvalidInitParameters();
   error ZeroAmount();
   error ZeroAddress();
   error MemeClubNotFound();
@@ -37,11 +42,18 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error SignatureAlreadyUsed();
 
   event LfgTokenUpdate(address lfgToken_);
+  event TokenFactoryUpdated(address tokenFactory);
   event SubjectFeePercentUpdate(uint256 feePercent);
   event ProtocolFeePercentUpdate(uint256 feePercent);
   event ProtocolFeeDestinationUpdate(address feeDestination);
   event MemeClubCreated(uint256 callId, uint256 clubId, address creator);
-  event MemeTokenCreated(uint256 clubId, address creator, address tokenAddress);
+
+  event MemeTokenGeneration(
+    uint256 clubId, 
+    address creator, 
+    address tokenAddress, 
+    address swapPool
+  );
 
   event MemeClubTrade(
     uint256 clubId,
@@ -67,6 +79,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   struct MemeConfig {
     uint256 maxSupply;
+    uint256 liquidityAmount;
     bool isNative; // native or $LFG
     bool isFT; // 404 or ERC20
     string name;
@@ -83,6 +96,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     bool isLocked;
     address subjectAddress;
     address memeAddress;
+    address swapPool;
+    uint256 lpTokenId;
     uint256 supply;
     uint256 funds;
     MemeConfig memeConf;
@@ -101,33 +116,59 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   uint256 public subjectFeePercent;
   uint256 public protocolLFGFees;
   uint256 public protocolNativeFees;
+  
+  TokenFactory public tokenFactory;
 
-  address public meme404Implementation;
-  address public mirrorImplementation;
-  address public memeFtImplementation;
+  IUniswapV3Factory public uniswapV3Factory;
+  INonfungiblePositionManager public uniswapPositionManager;
+  IWETH public weth;
+
+  uint24 private constant _uniswapPoolFee = 10000;
+  int24 private _tickLower;
+  int24 private _tickUpper;
 
   function initialize(
     address protocolFeeDestination_,
-    address[] memory validators_,
-    address meme404Implementation_,
-    address mirrorImplementation_,
-    address memeFtImplementation_
+    address[] memory validators_, 
+    address uniswapV3Factory_,
+    address uniswapPositionManager_,
+    address weth_
   ) public initializer {
+
+    if ((uniswapV3Factory_ == address(0))
+      || (uniswapPositionManager_ == address(0))
+      || (weth_ == address(0))
+    ) revert InvalidInitParameters();
+
     __Validatable_init();
     __Pausable_init();
+
     for (uint256 i = 0; i < validators_.length; i++) {
       updateValidator(validators_[i], true);
     }
+
     setSubjectFeePercent(0 ether / 100);
     setProtocolFeePercent(2 ether / 100);
-    setProtocolFeeDestination(protocolFeeDestination_);
-    meme404Implementation = meme404Implementation_;
-    mirrorImplementation = mirrorImplementation_;
-    memeFtImplementation = memeFtImplementation_;
+    setProtocolFeeDestination(protocolFeeDestination_); 
+
+    uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
+    uniswapPositionManager = INonfungiblePositionManager(uniswapPositionManager_);
+
+    int24 tickSpacing = uniswapV3Factory.feeAmountTickSpacing(_uniswapPoolFee);
+    _tickLower = (-887272 / tickSpacing) * tickSpacing; // TickMath.MIN_TICK
+    _tickUpper = (887272 / tickSpacing) * tickSpacing; // TickMath.MAX_TICK
+
+    weth = IWETH(weth_);
+  }
+
+  function setTokenFactory(address factory) public onlyOwner {
+    tokenFactory = TokenFactory(factory);
+    emit TokenFactoryUpdated(factory);
   }
 
   function setLFGToken(address lfgToken_) public onlyOwner {
     lfgToken = LFGToken(lfgToken_);
+    lfgToken.approve(address(uniswapPositionManager), type(uint256).max);
     emit LfgTokenUpdate(lfgToken_);
   }
 
@@ -192,7 +233,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   ) external whenNotPaused nonReentrant {
     if (!checkMemeConf(memeConf_)) revert MemeConfInvalid();
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
-    if (memeConf_.maxSupply <= initBuyAmount_) revert InitBuyTooMany();
+    if (initBuyAmount_ >= memeConf_.maxSupply) revert InitBuyTooMany();
 
     _validateSignature(block.timestamp, 0, hashForNewMemeClub(block.chainid, callId_, _msgSender(), memeConf_), signature);
 
@@ -202,6 +243,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       isLocked: false,
       subjectAddress: _msgSender(),
       memeAddress: address(0),
+      swapPool: address(0),
+      lpTokenId: 0,
       supply: 0,
       funds: 0,
       memeConf: memeConf_
@@ -215,33 +258,74 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     }
   }
 
-  function _newMemeToken(uint256 clubId) internal {
-    MemeClub storage club = memeClubs[clubId];
-    if (club.clubId == 0) revert MemeClubNotFound();
-    if (!club.isLocked) revert MemeClubUnlocked();
-    if (club.memeAddress != address(0)) revert MemeTokenNewDuplidate();
-
+  function _tokenGeneration(MemeClub storage club) internal { 
     if (club.memeConf.isFT) {
-      MemeProxy memeProxy = new MemeProxy(memeFtImplementation);
-      MemeFT meme = MemeFT(payable(address(memeProxy)));
-      meme.initialize(club.memeConf.name, club.memeConf.symbol, address(this));
-      club.memeAddress = address(meme);
+      club.memeAddress = tokenFactory.newMemeFT(club.memeConf.name, club.memeConf.symbol);
     } else {
-      MemeProxy memeProxy = new MemeProxy(meme404Implementation);
-      Meme404 meme = Meme404(payable(address(memeProxy)));
-      meme.initialize(
+      club.memeAddress = tokenFactory.newMeme404(
         club.memeConf.name,
         club.memeConf.symbol,
         club.memeConf.baseURI,
-        club.memeConf.baseUnit,
-        0,
-        address(this),
-        mirrorImplementation
-      ); 
-      club.memeAddress = address(meme);
+        club.memeConf.baseUnit
+      );
     }
 
-    emit MemeTokenCreated(clubId, _msgSender(), club.memeAddress);
+    (address token0, address token1) = club.memeAddress < address(weth) 
+      ? (club.memeAddress, address(weth)) : (address(weth), club.memeAddress);
+    address pool = uniswapV3Factory.createPool(token0, token1, _uniswapPoolFee);
+    IUniswapV3Pool(pool).initialize(2 ** 96);
+    club.swapPool = pool;
+
+    _createLP(club);
+
+    emit MemeTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.swapPool);
+  }
+
+  function _createLP(MemeClub storage club) internal {
+    address token0 = club.memeAddress;
+    address token1 = address(lfgToken);
+    uint256 token0Amount = club.memeConf.liquidityAmount;
+    uint256 token1Amount = club.funds;
+    uint256 nativeAmount = 0;
+    
+    if (club.memeConf.isNative) { 
+      token1 = address(weth); 
+      nativeAmount = club.funds;
+    }
+
+    if (!(token0 < token1)) {
+       token0 = token1;
+       token1 = club.memeAddress;
+       token0Amount = club.funds;
+       token1Amount = club.memeConf.liquidityAmount;
+    }
+
+    if (club.memeConf.isFT) {
+      MemeFT meme = MemeFT(payable(club.memeAddress));
+      meme.mint(address(this), club.memeConf.liquidityAmount);
+      meme.approve(address(uniswapPositionManager), club.memeConf.liquidityAmount);
+    } else {
+      Meme404 meme = Meme404(payable(club.memeAddress));
+      meme.mint(address(this), club.memeConf.liquidityAmount);
+      meme.approve(address(uniswapPositionManager), club.memeConf.liquidityAmount);
+    }
+ 
+    (uint256 lpTokenId,,,) = uniswapPositionManager.mint{value: nativeAmount}(
+      INonfungiblePositionManager.MintParams({
+        token0: token0, 
+        token1: token1,
+        fee: _uniswapPoolFee,
+        tickLower: _tickLower,
+        tickUpper: _tickUpper,  
+        amount0Desired: token0Amount,
+        amount1Desired: token1Amount,
+        amount0Min: token0Amount,
+        amount1Min: token1Amount,
+        recipient: address(this),
+        deadline: block.timestamp
+      })
+    );
+    club.lpTokenId = lpTokenId;
   }
 
   function mintMemeToken(
@@ -393,8 +477,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     if (club.memeConf.maxSupply <= club.supply) {
       club.isLocked = true;
-      _newMemeToken(clubId); // Deploy 404 or ERC20 contracts
-      // TODO Create uniswap liquidity pool
+      _tokenGeneration(club);  
     }
   }
 
@@ -453,7 +536,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     }
   }
 
-  function withdrawProceeds(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {
+  function withdrawProtocolFees(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {
     if (beneficiary == address(0)) revert ZeroAddress();
     if (native) {
       if (amount == 0) {
@@ -476,6 +559,19 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       protocolLFGFees -= amount;
       lfgToken.safeTransfer(beneficiary, amount);
     }
+  }
+
+  function withdrawLiquidityFees(uint256 clubId, address beneficiary) external virtual onlyOwner nonReentrant {
+    MemeClub storage club = memeClubs[clubId];
+    if (club.memeAddress == address(0)) revert ZeroAddress();
+    uniswapPositionManager.collect(
+      INonfungiblePositionManager.CollectParams({
+        tokenId: club.lpTokenId,
+        recipient: beneficiary,
+        amount0Max: type(uint128).max,
+        amount1Max: type(uint128).max
+      })
+    );
   }
 
   function pause() external onlyOwner {
@@ -520,6 +616,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       callId, 
       applyer,
       memeConf.maxSupply,
+      memeConf.liquidityAmount,
       memeConf.isNative,
       memeConf.isFT,
       // memeConf.name,
