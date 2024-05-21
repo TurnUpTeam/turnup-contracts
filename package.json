@@ -60,6 +60,8 @@
   "dependencies": {
     "@ndujalabs/erc721lockable": "^0.13.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.4",
     "dn404": "^0.0.16",
     "solady": "^0.0.194"
   }

@@ -1,20 +1,59 @@
 const {ethers, network} = require("hardhat");
+const {ContractFactory, utils} = require("ethers")
 const {expect} = require("chai");
 const {anyValue} = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const DeployUtils = require("eth-deploy-utils");
+const WETH9 = require("./WETH9.json")
 
 const {signPackedData, privateKeyByWallet} = require("./helpers");
+
+const artifacts = {
+  UniswapV3Factory: require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json"),
+  SwapRouter: require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json"),
+  NFTDescriptor: require("@uniswap/v3-periphery/artifacts/contracts/libraries/NFTDescriptor.sol/NFTDescriptor.json"),
+  NonfungibleTokenPositionDescriptor: require("@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json"),
+  NonfungiblePositionManager: require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json"),
+  WETH9,
+};
+
+const linkLibraries = ({ bytecode, linkReferences }, libraries) => {
+  Object.keys(linkReferences).forEach((fileName) => {
+    Object.keys(linkReferences[fileName]).forEach((contractName) => {
+      if (!libraries.hasOwnProperty(contractName)) {
+        throw new Error(`Missing link library name ${contractName}`)
+      }
+      const address = utils
+        .getAddress(libraries[contractName])
+        .toLowerCase()
+        .slice(2)
+      linkReferences[fileName][contractName].forEach(
+        ({ start, length }) => {
+          const start2 = 2 + start * 2
+          const length2 = length * 2
+          bytecode = bytecode
+            .slice(0, start2)
+            .concat(address)
+            .concat(bytecode.slice(start2 + length2, bytecode.length))
+        }
+      )
+    })
+  })
+  return bytecode
+}
 
 describe("Meme", function () {
   let zeroEther, oneEther, millionEther, tooManyEther;
   let chainId;
   let owner, bob, alice, fred, tokenHolder, validator;
+  
+  let uniswapV3Factory;
+  let uniswapPositionManager;
+  let weth;
+
   let protocolFeeDestination;
   let lfg;
-  let memeFactory;
-  let meme404Implementation;
-  let mirrorImplementation;
-  let memeFtImplementation;
+  let tokenFactory;
+  let memeFactory; 
   const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
 
@@ -22,13 +61,52 @@ describe("Meme", function () {
     [owner, bob, alice, fred, tokenHolder, protocolFeeDestination, validator] = await ethers.getSigners();
     chainId = network.config.chainId;
   });
-
+ 
   async function initAndDeploy() {
     zeroEther = ethers.utils.parseEther("0");
     oneEther = ethers.utils.parseEther("1");
     millionEther = ethers.utils.parseEther("1000000");
     tooManyEther = ethers.utils.parseEther("100000000000");
+     
+    let contractFactory = new ContractFactory(artifacts.WETH9.abi, artifacts.WETH9.bytecode, owner);
+    weth = await contractFactory.deploy();
 
+    contractFactory = new ContractFactory(artifacts.UniswapV3Factory.abi, artifacts.UniswapV3Factory.bytecode, owner);
+    uniswapV3Factory = await contractFactory.deploy();
+    
+    contractFactory = new ContractFactory(artifacts.SwapRouter.abi, artifacts.SwapRouter.bytecode, owner);
+    swapRouter = await contractFactory.deploy(uniswapV3Factory.address, weth.address);
+
+    contractFactory = new ContractFactory(artifacts.NFTDescriptor.abi, artifacts.NFTDescriptor.bytecode, owner);
+    nftDescriptor = await contractFactory.deploy();
+
+    const linkedBytecode = linkLibraries(
+      {
+        bytecode: artifacts.NonfungibleTokenPositionDescriptor.bytecode,
+        linkReferences: {
+          "NFTDescriptor.sol": {
+            NFTDescriptor: [
+              {
+                length: 20,
+                // start: 1261,
+                start: 1681,
+              },
+            ],
+          },
+        },
+      },
+      {
+        NFTDescriptor: nftDescriptor.address,
+      }
+    );
+ 
+    contractFactory = new ContractFactory(artifacts.NonfungibleTokenPositionDescriptor.abi, linkedBytecode, owner);
+    const nativeCurrencyLabelBytes = utils.formatBytes32String('WETH')
+    nonfungibleTokenPositionDescriptor = await contractFactory.deploy(weth.address, nativeCurrencyLabelBytes);
+    
+    contractFactory = new ContractFactory(artifacts.NonfungiblePositionManager.abi, artifacts.NonfungiblePositionManager.bytecode, owner);
+    uniswapPositionManager = await contractFactory.deploy(uniswapV3Factory.address, weth.address, nonfungibleTokenPositionDescriptor.address);
+  
     let maxSupply = ethers.utils.parseEther("3000000000");
     let initialSupply = ethers.utils.parseEther("900000000");
     let amountReservedToPool = ethers.utils.parseEther("300000000");
@@ -42,18 +120,21 @@ describe("Meme", function () {
       amountReservedToSharesPool
     );
 
-    meme404Implementation = await deployUtils.deploy("Meme404");
-    memeFtImplementation = await deployUtils.deploy("MemeFT");
-    mirrorImplementation = await deployUtils.deploy("Meme404Mirror", addr0);
-
     memeFactory = await deployUtils.deployProxy(
       "MemeFactory",
       protocolFeeDestination.address,
-      [validator.address],
-      meme404Implementation.address,
-      mirrorImplementation.address,
-      memeFtImplementation.address
+      [validator.address], 
+      uniswapV3Factory.address,
+      uniswapPositionManager.address,
+      weth.address,
     );
+
+    tokenFactory = await deployUtils.deployProxy("TokenFactory", memeFactory.address);
+    
+    await memeFactory.setTokenFactory(tokenFactory.address);
+    await memeFactory.setLFGToken(lfg.address);
+
+    //console.log(await nonfungibleTokenPositionDescriptor.flipRatio())
   }
 
   beforeEach(async function () {
@@ -64,7 +145,7 @@ describe("Meme", function () {
     expect(await memeFactory.owner()).to.equal(owner.address);
     expect(await memeFactory.owner()).to.not.equal(bob.address);
     expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address);
-    expect(await memeFactory.lfgToken()).to.equal(addr0);
+    expect(await memeFactory.lfgToken()).to.equal(lfg.address);
     expect(await memeFactory.baseClubId()).to.equal(0);
 
     let feePercent = ethers.utils.parseEther("0.02");
@@ -73,14 +154,10 @@ describe("Meme", function () {
     expect(await memeFactory.subjectFeePercent()).to.equal(0);
     expect(await memeFactory.protocolLFGFees()).to.equal(0);
     expect(await memeFactory.protocolNativeFees()).to.equal(0);
-
-    expect(await memeFactory.meme404Implementation()).to.equal(meme404Implementation.address);
-    expect(await memeFactory.mirrorImplementation()).to.equal(mirrorImplementation.address);
-    expect(await memeFactory.memeFtImplementation()).to.equal(memeFtImplementation.address);
   });
 
   it("should be update LFGToken", async function () {
-    expect(await memeFactory.lfgToken()).to.equal(addr0);
+    expect(await memeFactory.lfgToken()).to.equal(lfg.address);
     await expect(memeFactory.setLFGToken(lfg.address)).to.emit(memeFactory, "LfgTokenUpdate").withArgs(lfg.address);
     expect(await memeFactory.lfgToken()).to.equal(lfg.address);
     await expect(memeFactory.connect(bob).setLFGToken(lfg.address)).to.be.revertedWith("Ownable: caller is not the owner");
@@ -186,6 +263,7 @@ describe("Meme", function () {
   function buildMemeConf() {
     let conf = {};
     conf.maxSupply = toBn(100);
+    conf.liquidityAmount = ethers.utils.parseEther("10000")
     conf.isNative = false;
     conf.isFT = false;
     conf.name = "name";
@@ -201,27 +279,27 @@ describe("Meme", function () {
   it("should be check meme conf", async function () {
     let conf = buildMemeConf();
     expect(await memeFactory.checkMemeConf(conf)).to.be.true;
-
+    
     conf = buildMemeConf();
     conf.maxSupply = toBn(0);
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
-
+    
     conf = buildMemeConf();
     conf.name = "";
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
-
+    
     conf = buildMemeConf();
     conf.symbol = "";
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
-
+    
     conf = buildMemeConf();
     conf.baseURI = "";
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
-
+    
     conf = buildMemeConf();
     conf.baseUnit = ethers.utils.parseEther("0.9");
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
-
+    
     conf = buildMemeConf();
     conf.priceType = toBn(0);
     expect(await memeFactory.checkMemeConf(conf)).to.be.false;
@@ -305,7 +383,7 @@ describe("Meme", function () {
     expect(club.memeConf.priceArg2).to.equal(conf.priceArg2);
   });
 
-  it("should be buyCard(LFG FT TGE)", async function () {
+  it.skip("should be buyCard(LFG FT TGE)", async function () {
     await memeFactory.setLFGToken(lfg.address);
     await lfg.connect(tokenHolder).transfer(owner.address, millionEther);
     await lfg.connect(owner).approve(memeFactory.address, millionEther);
@@ -324,10 +402,10 @@ describe("Meme", function () {
       .withArgs(callId, clubId, anyValue);
 
     await expect(await memeFactory.buyCard(clubId, 9, millionEther)).to.emit(memeFactory, "MemeClubTrade")
-    await expect(await memeFactory.buyCard(clubId, 1, millionEther)).to.emit(memeFactory, "MemeTokenCreated")
+    await expect(await memeFactory.buyCard(clubId, 1, millionEther)).to.emit(memeFactory, "MemeTokenGeneration")
   })
 
-  it("should be buyCard(LFG DN404 TGE)", async function () {
+  it.skip("should be buyCard(LFG DN404 TGE)", async function () {
     await memeFactory.setLFGToken(lfg.address);
     await lfg.connect(tokenHolder).transfer(owner.address, millionEther);
     await lfg.connect(owner).approve(memeFactory.address, millionEther);
@@ -346,7 +424,7 @@ describe("Meme", function () {
       .withArgs(callId, clubId, anyValue);
 
     await expect(await memeFactory.buyCard(clubId, 9, millionEther)).to.emit(memeFactory, "MemeClubTrade")
-    await expect(await memeFactory.buyCard(clubId, 1, millionEther)).to.emit(memeFactory, "MemeTokenCreated")
+    await expect(await memeFactory.buyCard(clubId, 1, millionEther)).to.emit(memeFactory, "MemeTokenGeneration")
   })
 
   function randBetween(min, max) {

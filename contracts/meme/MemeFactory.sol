@@ -52,6 +52,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 clubId, 
     address creator, 
     address tokenAddress, 
+    address mirrorERC721,
     address swapPool
   );
 
@@ -96,6 +97,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     bool isLocked;
     address subjectAddress;
     address memeAddress;
+    address mirrorERC721;
     address swapPool;
     uint256 lpTokenId;
     uint256 supply;
@@ -243,6 +245,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       isLocked: false,
       subjectAddress: _msgSender(),
       memeAddress: address(0),
+      mirrorERC721: address(0),
       swapPool: address(0),
       lpTokenId: 0,
       supply: 0,
@@ -268,6 +271,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         club.memeConf.baseURI,
         club.memeConf.baseUnit
       );
+      Meme404 meme = Meme404(payable(club.memeAddress));
+      club.mirrorERC721 = meme.mirrorERC721();
     }
 
     (address token0, address token1) = club.memeAddress < address(weth) 
@@ -278,7 +283,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     _createLP(club);
 
-    emit MemeTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.swapPool);
+    emit MemeTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.mirrorERC721, club.swapPool);
   }
 
   function _createLP(MemeClub storage club) internal {

@@ -7,6 +7,16 @@ import {Ownable} from "solady/src/auth/Ownable.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 
+interface IERC7631Base {
+  function mirrorERC721() external view returns (address);
+}
+
+interface IERC7631BaseNFTSkippable {
+  function getSkipNFT(address owner) external view returns (bool);
+
+  function setSkipNFT(bool status) external;
+}
+
 contract Meme404 is DN404, Ownable {
   error InvalidBaseUnit();
   error NotAuthorized();
@@ -43,6 +53,10 @@ contract Meme404 is DN404, Ownable {
     _initializeOwner(msg.sender);
     address mirror = address(new DN404Mirror(msg.sender));
     _initializeDN404(initialTokenSupply, initialSupplyOwner, mirror);
+  }
+
+  function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
+    return interfaceId == type(IERC7631Base).interfaceId || interfaceId == type(IERC7631BaseNFTSkippable).interfaceId;
   }
 
   function setFactory(address factory_) external onlyOwner {
