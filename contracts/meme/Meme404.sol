@@ -108,7 +108,7 @@ contract Meme404 is DN404, Ownable {
   }
 
   function _afterNFTTransfer(address from, address to, uint256 id) internal virtual override {
-    MemeFactory(factory).onNFTTransfer(address(this), mirrorERC721(), from, to, id);
+    MemeFactory(factory).onNFTTransfer(from, to, id);
   }
 
   function withdraw(address beneficiary) public onlyFactory {
