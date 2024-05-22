@@ -10015,6 +10015,12 @@
         "inputs": [
           {
             "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
             "internalType": "address",
             "name": "memeAddress",
             "type": "address"
