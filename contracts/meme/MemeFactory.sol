@@ -36,11 +36,12 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error InsufficientFunds();
   error InsufficientLFG();
   error UnableToSendFunds();
+  error Invalid404Address();
   error InsufficientFees();
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed();
-
+  
   event LfgTokenUpdate(address lfgToken_);
   event TokenFactoryUpdated(address tokenFactory);
   event SubjectFeePercentUpdate(uint256 feePercent);
@@ -70,6 +71,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   );
 
   event MemeTokenMint(uint256 callId, uint256 clubId, address minter, uint256 amount);
+
+  event MemeNFTTransfer(
+    address memeAddress,
+    address mirrorAddress,
+    address from,
+    address to,
+    uint256 tokenId
+  );
 
   enum PriceFormulaType {
     Min,
@@ -112,6 +121,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   mapping(uint256 => MemeClub) public memeClubs;
   mapping(uint256 => mapping(address => uint256)) public balanceOf;
+  mapping(address => uint256) private _404Tokens;
 
   address public protocolFeeDestination;
   uint256 public protocolFeePercent;
@@ -232,7 +242,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 initBuyAmount_,
     MemeConfig calldata memeConf_,
     bytes calldata signature
-  ) external whenNotPaused nonReentrant {
+  ) external payable whenNotPaused nonReentrant {
     if (!checkMemeConf(memeConf_)) revert MemeConfInvalid();
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
     if (initBuyAmount_ >= memeConf_.maxSupply) revert InitBuyTooMany();
@@ -273,6 +283,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       );
       Meme404 meme = Meme404(payable(club.memeAddress));
       club.mirrorERC721 = meme.mirrorERC721();
+      _404Tokens[club.memeAddress] = club.clubId;
     }
 
     (address token0, address token1) = club.memeAddress < address(weth) 
@@ -311,6 +322,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       meme.approve(address(uniswapPositionManager), club.memeConf.liquidityAmount);
     } else {
       Meme404 meme = Meme404(payable(club.memeAddress));
+      meme.setSkipNFT(true);
       meme.mint(address(this), club.memeConf.liquidityAmount);
       meme.approve(address(uniswapPositionManager), club.memeConf.liquidityAmount);
     }
@@ -539,6 +551,11 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       (bool success, ) = beneficiary.call{value: amount}("");
       if (!success) revert UnableToSendFunds();
     }
+  }
+
+  function onNFTTransfer(address memeAddress, address mirrorAddress, address from, address to, uint256 tokenId) external {
+    if (_404Tokens[memeAddress] == 0) revert Invalid404Address();
+    emit MemeNFTTransfer(memeAddress, mirrorAddress, from, to, tokenId);
   }
 
   function withdrawProtocolFees(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {

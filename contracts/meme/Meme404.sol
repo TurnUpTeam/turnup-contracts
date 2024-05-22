@@ -6,6 +6,7 @@ import {DN404Mirror} from "dn404/src/DN404Mirror.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
+import {MemeFactory} from "./MemeFactory.sol";
 
 interface IERC7631Base {
   function mirrorERC721() external view returns (address);
@@ -28,6 +29,7 @@ contract Meme404 is DN404, Ownable {
   string private _baseURI;
   uint256 private _baseUnit;
 
+  bool useDirectTransfers;
   address public factory;
 
   modifier onlyFactory() {
@@ -95,6 +97,18 @@ contract Meme404 is DN404, Ownable {
 
   function setBaseURI(string calldata baseURI_) public onlyFactory {
     _baseURI = baseURI_;
+  }
+
+  function setUseDirectTransfers(bool direct) public onlyFactory {
+    useDirectTransfers = direct;
+  }
+
+  function _useDirectTransfersIfPossible() internal view virtual override returns (bool) {
+    return useDirectTransfers;
+  }
+
+  function _afterNFTTransfer(address from, address to, uint256 id) internal virtual override {
+    MemeFactory(factory).onNFTTransfer(address(this), mirrorERC721(), from, to, id);
   }
 
   function withdraw(address beneficiary) public onlyFactory {
