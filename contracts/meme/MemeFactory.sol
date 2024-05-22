@@ -73,6 +73,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   event MemeTokenMint(uint256 callId, uint256 clubId, address minter, uint256 amount);
 
   event MemeNFTTransfer(
+    uint256 clubId,
     address memeAddress,
     address mirrorAddress,
     address from,
@@ -554,8 +555,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function onNFTTransfer(address memeAddress, address mirrorAddress, address from, address to, uint256 tokenId) external {
-    if (_404Tokens[memeAddress] == 0) revert Invalid404Address();
-    emit MemeNFTTransfer(memeAddress, mirrorAddress, from, to, tokenId);
+    uint256 clubId = _404Tokens[memeAddress];
+    if (clubId == 0) revert Invalid404Address();
+    emit MemeNFTTransfer(clubId, memeAddress, mirrorAddress, from, to, tokenId);
   }
 
   function withdrawProtocolFees(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {
