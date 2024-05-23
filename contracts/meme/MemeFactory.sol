@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -89,6 +90,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 amount1,
     uint256 lpTokenId,
     uint256 liquidity
+  );
+
+  event WithdrawLiquidityFees(
+    uint256 clubId,
+    address memeToken,
+    address beneficiary,
+    uint256 amount0,
+    uint256 amount1
   );
 
   enum PriceFormulaType {
@@ -295,6 +304,10 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       Meme404 meme = Meme404(payable(club.memeAddress));
       club.mirrorERC721 = meme.mirrorERC721();
       _404Tokens[club.memeAddress] = club.clubId;
+
+      string memory addr = Strings.toHexString(club.mirrorERC721);
+      string memory baseURI = string.concat(club.memeConf.baseURI, addr, "/");
+      meme.setBaseURI(baseURI);
     }
 
     (address token0, address token1) = club.memeAddress < address(weth) 
@@ -604,7 +617,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   function withdrawLiquidityFees(uint256 clubId, address beneficiary) external virtual onlyOwner nonReentrant {
     MemeClub storage club = memeClubs[clubId];
     if (club.memeAddress == address(0)) revert ZeroAddress();
-    uniswapPositionManager.collect(
+    (uint256 amount0, uint256 amount1) = uniswapPositionManager.collect(
       INonfungiblePositionManager.CollectParams({
         tokenId: club.lpTokenId,
         recipient: beneficiary,
@@ -612,6 +625,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         amount1Max: type(uint128).max
       })
     );
+    emit WithdrawLiquidityFees(clubId, club.memeAddress, beneficiary, amount0, amount1);
   }
 
   function pause() external onlyOwner {
