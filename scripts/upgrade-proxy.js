@@ -1,7 +1,8 @@
 const {ethers, upgrades, network} = require("hardhat");
 const web3 = require("web3");
 
-let proxyAddress = "0x5eA29B2680D01C28BC2C3d18d12D34F761153b09";
+// let proxyAddress = "0x5eA29B2680D01C28BC2C3d18d12D34F761153b09"; // amoy
+let proxyAddress = "0x805F16f3131A390A1B9BC301b44C093fDCBc6afb"; // base sepolia
 let contractName = "MemeFactory";
 
 async function main() {

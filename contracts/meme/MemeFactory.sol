@@ -81,6 +81,16 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 tokenId
   );
 
+  event LPCreate(
+    uint256 clubId,
+    address token0,
+    address token1,
+    uint256 amount0,
+    uint256 amount1,
+    uint256 lpTokenId,
+    uint256 liquidity
+  );
+
   enum PriceFormulaType {
     Min,
     Linear,
@@ -328,7 +338,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       meme.approve(address(uniswapPositionManager), club.memeConf.liquidityAmount);
     }
  
-    (uint256 lpTokenId,,,) = uniswapPositionManager.mint{value: nativeAmount}(
+    (uint256 lpTokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = uniswapPositionManager.mint{value: nativeAmount}(
       INonfungiblePositionManager.MintParams({
         token0: token0, 
         token1: token1,
@@ -337,13 +347,17 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         tickUpper: _tickUpper,  
         amount0Desired: token0Amount,
         amount1Desired: token1Amount,
-        amount0Min: token0Amount,
-        amount1Min: token1Amount,
+        // amount0Min: token0Amount,
+        // amount1Min: token1Amount,
+        amount0Min: 0,
+        amount1Min: 0,
         recipient: address(this),
         deadline: block.timestamp
       })
     );
     club.lpTokenId = lpTokenId;
+
+    emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity);
   }
 
   function mintMemeToken(
