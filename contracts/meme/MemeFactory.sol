@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -312,10 +313,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     (address token0, address token1) = club.memeAddress < address(weth) 
       ? (club.memeAddress, address(weth)) : (address(weth), club.memeAddress);
-    address pool = uniswapV3Factory.createPool(token0, token1, _uniswapPoolFee);
-    IUniswapV3Pool(pool).initialize(2 ** 96);
-    club.swapPool = pool;
-
+    club.swapPool = uniswapV3Factory.createPool(token0, token1, _uniswapPoolFee);
+    
     _createLP(club);
 
     emit MemeTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.mirrorERC721, club.swapPool);
@@ -339,6 +338,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
        token0Amount = club.funds;
        token1Amount = club.memeConf.liquidityAmount;
     }
+
+    uint160 sqrtPriceX96 = uint160((Math.sqrt(token1Amount / token0Amount) * 2)**96);
+    IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
@@ -393,6 +395,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       signature
     );
 
+    // Mint event must happen before nft transfer
+    emit MemeTokenMint(callId, clubId, _msgSender(), amount);
+
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
       meme.mint(_msgSender(), amount);
@@ -400,8 +405,6 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       Meme404 meme = Meme404(payable(club.memeAddress));
       meme.mint(_msgSender(), amount);
     }
-
-    emit MemeTokenMint(callId, clubId, _msgSender(), amount);
   }
 
   function getPrice(
