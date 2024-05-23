@@ -306,7 +306,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       club.mirrorERC721 = meme.mirrorERC721();
       _404Tokens[club.memeAddress] = club.clubId;
 
-      string memory addr = Strings.toHexString(club.mirrorERC721);
+      string memory addr = Strings.toHexString(club.mirrorERC721);  // must all lowercase 0x a-z
       string memory baseURI = string.concat(club.memeConf.baseURI, addr, "/");
       meme.setBaseURI(baseURI);
     }
@@ -339,8 +339,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
        token1Amount = club.memeConf.liquidityAmount;
     }
 
-    uint160 sqrtPriceX96 = uint160((Math.sqrt(token1Amount / token0Amount) * 2)**96);
-    IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
+    // uint160 sqrtPriceX96 = uint160((Math.sqrt(token1Amount / token0Amount) * 2)**96);
+    // IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
+    IUniswapV3Pool(club.swapPool).initialize(2 ** 96);
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
