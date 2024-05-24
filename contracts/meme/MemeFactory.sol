@@ -310,11 +310,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       string memory baseURI = string.concat(club.memeConf.baseURI, addr, "/");
       meme.setBaseURI(baseURI);
     }
-
-    (address token0, address token1) = club.memeAddress < address(weth) 
-      ? (club.memeAddress, address(weth)) : (address(weth), club.memeAddress);
-    club.swapPool = uniswapV3Factory.createPool(token0, token1, _uniswapPoolFee);
-    
+ 
     _createLP(club);
 
     emit MemeTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.mirrorERC721, club.swapPool);
@@ -338,6 +334,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
        token0Amount = club.funds;
        token1Amount = club.memeConf.liquidityAmount;
     }
+ 
+    club.swapPool = uniswapV3Factory.createPool(token0, token1, _uniswapPoolFee);
 
     // uint160 sqrtPriceX96 = uint160((Math.sqrt(token1Amount / token0Amount) * 2)**96);
     // IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
