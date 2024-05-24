@@ -1,5 +1,7 @@
 const {ethers, upgrades} = require("hardhat");
 
+const chainId = hre.network.config.chainId;
+
 async function sleep(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
@@ -10,7 +12,7 @@ async function getGasPrice() {
 }
 
 async function deployImplementation(contractName, ...args) {
-  console.debug("Deploying implementation", contractName, "to", hre.network.name);
+  console.debug("Deploying implementation", contractName, "to", hre.network.name, "chainId", chainId);
   const impl = await hre.ethers.deployContract(contractName, [...args]);
   console.log("Deploying implementation", contractName, "wait tx:", impl.deployTransaction.hash);
   await impl.deployed();
@@ -25,7 +27,7 @@ async function deployProxy(contractName, ...args) {
       options = args.pop();
     }
   }
-  console.debug("Deploying", contractName, "to", hre.network.name);
+  console.debug("Deploying", contractName, "to", hre.network.name, "chainId", chainId);
   const contract = await ethers.getContractFactory(contractName);
   const deployed = await upgrades.deployProxy(contract, [...args], options);
   console.debug("Tx:", deployed.deployTransaction.hash);
@@ -69,7 +71,7 @@ async function deployLFGToken() {
     AMOUNT_RESERVED_TO_POLL,
     AMOUNT_RESERVED_TO_SHARES_POLL,
     MAX_DAILY,
-    MIN_FACTORY_LOCK_TIME,
+    MIN_FACTORY_LOCK_TIME, 
   } = process.env;
 
   if (!/^0x[0-9a-fA-F]{40}$/.test(FIRST_VALIDATOR)) {
@@ -169,22 +171,56 @@ async function deployLottery(lfgAddress, sharesAddress) {
 }
 
 async function deployMemeFactory() {
-  const addr0 = "0x" + "0".repeat(40);
 
-  const meme404Implementation = await deployImplementation("Meme404");
-  const mirrorImplementation = await deployImplementation("Meme404Mirror", addr0);
-  const memeFtImplementation = await deployImplementation("MemeFT");
+  const {
+    FIRST_VALIDATOR,
+    BASE_SEPOLIA_UNISWAP_V3,
+    BASE_SEPOLIA_UNISWAP_POSITION_MANAGER,
+    BASE_SEPOLIA_WTH,
+    BASE_UNISWAP_V3,
+    BASE_UNISWAP_POSITION_MANAGER,
+    BASE_WTH,
+    POLYGON_UNISWAP_V3,
+    POLYGON_UNISWAP_POSITION_MANAGER,
+    POLYGON_WTH,
+  } = process.env;
+  
+  let uniswapV3Factory;
+  let uniswapPositionManager;
+  let weth;
 
-  const {FIRST_VALIDATOR} = process.env;
+  switch (chainId) {
+    case 137:  // polygon
+      uniswapV3Factory = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+      uniswapPositionManager = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
+      weth = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270";
+      break;
+    case 8453:  // base
+      uniswapV3Factory = "0x33128a8fC17869897dcE68Ed026d694621f6FDfD";
+      uniswapPositionManager = "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1";
+      weth = "0x4200000000000000000000000000000000000006";
+      break;
+    case 84532: // base sepolia
+      uniswapV3Factory = "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24";
+      uniswapPositionManager = "0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2";
+      weth = "0x4200000000000000000000000000000000000006";
+      break;  
+    default:  // unsupport
+      console.log("MemeFactory unsupport", "chainId", chainId);
+      break
+  }
 
   memeFactory = await deployProxy(
     "MemeFactory",
     process.env.FEE_DESTINATION,
     [FIRST_VALIDATOR],
-    meme404Implementation.address,
-    mirrorImplementation.address,
-    memeFtImplementation.address
+    uniswapV3Factory,
+    uniswapPositionManager,
+    weth
   );
+
+  tokenFactory = await deployProxy("TokenFactory", memeFactory.address);
+  await memeFactory.setTokenFactory(tokenFactory.address);
 
   return memeFactory;
 }
