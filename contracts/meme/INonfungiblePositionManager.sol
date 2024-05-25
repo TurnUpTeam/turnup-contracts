@@ -24,10 +24,9 @@ interface INonfungiblePositionManager {
   /// @return liquidity The amount of liquidity for this position
   /// @return amount0 The amount of token0
   /// @return amount1 The amount of token1
-  function mint(MintParams calldata params)
-    external
-    payable
-    returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
+  function mint(
+    MintParams calldata params
+  ) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 
   struct CollectParams {
     uint256 tokenId;

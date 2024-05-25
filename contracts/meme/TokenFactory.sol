@@ -7,6 +7,7 @@ import {MemeFT} from "./MemeFT.sol";
 
 contract TokenFactory is Initializable {
   error Forbidden();
+  error FactoryNotDeployed();
 
   address public memeFactory;
 
@@ -16,6 +17,12 @@ contract TokenFactory is Initializable {
   }
 
   function initialize(address memeFactory_) public initializer {
+    uint32 size;
+    // solhint-disable-next-line no-inline-assembly
+    assembly {
+      size := extcodesize(memeFactory_)
+    }
+    if (size == 0) revert FactoryNotDeployed();
     memeFactory = memeFactory_;
   }
 
@@ -37,4 +44,6 @@ contract TokenFactory is Initializable {
     meme.setFactory(msg.sender);
     return address(meme);
   }
+
+  uint256[50] private __gap;
 }
