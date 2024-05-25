@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {DN404Mirror} from "dn404/src/DN404Mirror.sol"; 
+import {DN404Mirror} from "dn404/src/DN404Mirror.sol";
 
 interface IERC7631Mirror {
   function baseERC20() external view returns (address);

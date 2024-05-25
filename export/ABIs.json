@@ -9910,6 +9910,55 @@
         "inputs": [
           {
             "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "token0",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "token1",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount0",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount1",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lpTokenId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "liquidity",
+            "type": "uint256"
+          }
+        ],
+        "name": "LPCreate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
             "internalType": "address",
             "name": "lfgToken_",
             "type": "address"
@@ -10235,6 +10284,43 @@
           }
         ],
         "name": "ValidatorUpdated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "memeToken",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "beneficiary",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount0",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "amount1",
+            "type": "uint256"
+          }
+        ],
+        "name": "WithdrawLiquidityFees",
         "type": "event"
       },
       {
@@ -11216,16 +11302,6 @@
       },
       {
         "inputs": [
-          {
-            "internalType": "address",
-            "name": "memeAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "mirrorAddress",
-            "type": "address"
-          },
           {
             "internalType": "address",
             "name": "from",
