@@ -8,7 +8,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol"; 
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {LFGToken} from "../token/LFGToken.sol";
 import {Meme404} from "./Meme404.sol";
@@ -25,7 +25,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error ZeroAddress();
   error Forbidden();
   error MemeClubNotFound();
-  error MemeClubIsLocked(); 
+  error MemeClubIsLocked();
   error MemeClubBuyExceed();
   error MemeConfInvalid();
   error MemeClubTooMany();
@@ -44,20 +44,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed();
-  
+
   event LfgTokenUpdate(address lfgToken_);
   event TokenFactoryUpdated(address tokenFactory);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
   event TGEFeePercentUpdate(uint256 feePercent); 
   event MemeClubCreated(uint256 callId, uint256 clubId, address creator);
 
-  event MemeTokenGeneration(
-    uint256 clubId, 
-    address creator, 
-    address tokenAddress, 
-    address mirrorERC721,
-    address swapPool
-  );
+  event MemeTokenGeneration(uint256 clubId, address creator, address tokenAddress, address mirrorERC721, address swapPool);
 
   event MemeClubTrade(
     uint256 clubId,
@@ -73,14 +67,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   event MemeTokenMint(uint256 callId, uint256 clubId, address minter, uint256 amount);
 
-  event MemeNFTTransfer(
-    uint256 clubId,
-    address memeAddress,
-    address mirrorAddress,
-    address from,
-    address to,
-    uint256 tokenId
-  );
+  event MemeNFTTransfer(uint256 clubId, address memeAddress, address mirrorAddress, address from, address to, uint256 tokenId);
 
   event TGEFees(
     uint256 clubId,
@@ -100,13 +87,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 liquidity
   );
 
-  event WithdrawLiquidityFees(
-    uint256 clubId,
-    address memeToken,
-    address beneficiary,
-    uint256 amount0,
-    uint256 amount1
-  );
+  event WithdrawLiquidityFees(uint256 clubId, address memeToken, address beneficiary, uint256 amount0, uint256 amount1);
 
   enum PriceFormulaType {
     Min,
@@ -177,11 +158,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     address uniswapPositionManager_,
     address weth_
   ) public initializer {
-
-    if ((uniswapV3Factory_ == address(0))
-      || (uniswapPositionManager_ == address(0))
-      || (weth_ == address(0))
-    ) revert InvalidInitParameters();
+    if ((uniswapV3Factory_ == address(0)) || (uniswapPositionManager_ == address(0)) || (weth_ == address(0)))
+      revert InvalidInitParameters();
 
     __Validatable_init();
     __Pausable_init();
@@ -295,13 +273,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     // Club create event must be emit before trade event
     emit MemeClubCreated(callId_, clubId, _msgSender());
-    
+
     if (initBuyAmount_ > 0) {
       _buyCardImpl(clubId, initBuyAmount_, 0, false);
     }
   }
 
-  function _tokenGeneration(MemeClub storage club) internal { 
+  function _tokenGeneration(MemeClub storage club) internal {
     if (club.memeConf.isFT) {
       club.memeAddress = tokenFactory.newMemeFT(club.memeConf.name, club.memeConf.symbol);
     } else {
@@ -315,11 +293,11 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       club.mirrorERC721 = meme.mirrorERC721();
       _404Tokens[club.memeAddress] = club.clubId;
 
-      string memory addr = Strings.toHexString(club.mirrorERC721);  // must all lowercase 0x a-z
+      string memory addr = Strings.toHexString(club.mirrorERC721); // must all lowercase 0x a-z
       string memory baseURI = string.concat(club.memeConf.baseURI, addr, "/");
       meme.setBaseURI(baseURI);
     }
- 
+
     _createLP(club);
 
     emit MemeTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.mirrorERC721, club.swapPool);
@@ -332,7 +310,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 token0Amount = club.memeConf.liquidityAmount;
     uint256 token1Amount = club.funds - tgeFee;
     uint256 nativeAmount = 0;
-
+ 
     if (club.memeConf.isNative) { 
       token1 = address(weth); 
       nativeAmount = token1Amount;
@@ -346,7 +324,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     }
  
     club.swapPool = uniswapV3Factory.createPool(token0, token1, _UNISWAP_POOL_FEE);
-
+  
     uint160 sqrtPriceX96 = uint160(Math.sqrt(token1Amount / token0Amount) * (2**96));
     IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
     // IUniswapV3Pool(club.swapPool).initialize(2 ** 96);
@@ -361,14 +339,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       meme.mint(address(this), club.memeConf.liquidityAmount);
       meme.approve(address(uniswapPositionManager), club.memeConf.liquidityAmount);
     }
- 
+
     (uint256 lpTokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = uniswapPositionManager.mint{value: nativeAmount}(
       INonfungiblePositionManager.MintParams({
-        token0: token0, 
+        token0: token0,
         token1: token1,
         fee: _UNISWAP_POOL_FEE,
         tickLower: _tickLower,
-        tickUpper: _tickUpper,  
+        tickUpper: _tickUpper,
         amount0Desired: token0Amount,
         amount1Desired: token1Amount,
         // amount0Min: token0Amount,
@@ -403,9 +381,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeAddress == address(0)) revert MemeTokenNotCreated();
 
     _validateSignature(
-      timestamp, 
-      validFor, 
-      hashForMintMemeToken(block.chainid, callId, _msgSender(), clubId, amount, timestamp, validFor), 
+      timestamp,
+      validFor,
+      hashForMintMemeToken(block.chainid, callId, _msgSender(), clubId, amount, timestamp, validFor),
       signature
     );
 
@@ -491,7 +469,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 priceAfterFee = actualPrice + protocolFee;
     if (club.memeConf.isNative) {
       if (priceAfterFee > msg.value) revert InsufficientFunds();
-    } else { // $LFG
+    } else {
+      // $LFG
       if (msg.value != 0) revert InvalidFunds();
       if (checkPrice) {
         if (priceAfterFee > expectedPrice) revert InsufficientFunds();
@@ -504,7 +483,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     club.funds += actualPrice;
     club.supply += amount;
-    
+
     if (club.memeConf.isNative) {
       protocolNativeFees += protocolFee;
       _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
@@ -679,15 +658,15 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function hashForNewMemeClub(
-    uint256 chainId, 
-    uint256 callId, 
-    address applyer, 
+    uint256 chainId,
+    uint256 callId,
+    address applyer,
     MemeConfig calldata memeConf
   ) public pure returns (bytes32) {
     bytes memory part = abi.encodePacked(
-      "\x19\x01", 
-      chainId, 
-      callId, 
+      "\x19\x01",
+      chainId,
+      callId,
       applyer,
       memeConf.maxSupply,
       memeConf.liquidityAmount,
@@ -701,7 +680,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       memeConf.priceArg1,
       memeConf.priceArg2
     );
-    return keccak256(part); 
+    return keccak256(part);
   }
 
   function hashForMintMemeToken(
