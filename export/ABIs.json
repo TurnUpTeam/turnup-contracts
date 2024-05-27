@@ -9742,6 +9742,11 @@
     "MemeFactory": [
       {
         "inputs": [],
+        "name": "Forbidden",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "InitBuyTooMany",
         "type": "error"
       },
@@ -10048,12 +10053,6 @@
             "internalType": "uint256",
             "name": "protocolFee",
             "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "subjectFee",
-            "type": "uint256"
           }
         ],
         "name": "MemeClubTrade",
@@ -10207,19 +10206,6 @@
         "inputs": [
           {
             "indexed": false,
-            "internalType": "address",
-            "name": "feeDestination",
-            "type": "address"
-          }
-        ],
-        "name": "ProtocolFeeDestinationUpdate",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": false,
             "internalType": "uint256",
             "name": "feePercent",
             "type": "uint256"
@@ -10238,7 +10224,44 @@
             "type": "uint256"
           }
         ],
-        "name": "SubjectFeePercentUpdate",
+        "name": "TGEFeePercentUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "isNative",
+            "type": "bool"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "nativeFees",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "lfgFees",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "fee",
+            "type": "uint256"
+          }
+        ],
+        "name": "TGEFees",
         "type": "event"
       },
       {
@@ -10555,7 +10578,7 @@
               },
               {
                 "internalType": "address",
-                "name": "subjectAddress",
+                "name": "creatorAddress",
                 "type": "address"
               },
               {
@@ -10798,25 +10821,6 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "price",
-            "type": "uint256"
-          }
-        ],
-        "name": "getSubjectFee",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
           }
@@ -10994,11 +10998,6 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "protocolFeeDestination_",
-            "type": "address"
-          },
-          {
             "internalType": "address[]",
             "name": "validators_",
             "type": "address[]"
@@ -11078,7 +11077,7 @@
           },
           {
             "internalType": "address",
-            "name": "subjectAddress",
+            "name": "creatorAddress",
             "type": "address"
           },
           {
@@ -11358,19 +11357,6 @@
       },
       {
         "inputs": [],
-        "name": "protocolFeeDestination",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
         "name": "protocolFeePercent",
         "outputs": [
           {
@@ -11449,19 +11435,6 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "feeDestination_",
-            "type": "address"
-          }
-        ],
-        "name": "setProtocolFeeDestination",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
             "internalType": "uint256",
             "name": "feePercent_",
             "type": "uint256"
@@ -11480,7 +11453,7 @@
             "type": "uint256"
           }
         ],
-        "name": "setSubjectFeePercent",
+        "name": "setTGEFeePercent",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -11524,7 +11497,33 @@
       },
       {
         "inputs": [],
-        "name": "subjectFeePercent",
+        "name": "tgeFeePercent",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "tgeLFGFees",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "tgeNativeFees",
         "outputs": [
           {
             "internalType": "uint256",
@@ -11662,6 +11661,29 @@
           }
         ],
         "name": "withdrawProtocolFees",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "beneficiary",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "native",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdrawTGEFees",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
