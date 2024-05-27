@@ -23,6 +23,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error InvalidInitParameters();
   error ZeroAmount();
   error ZeroAddress();
+  error Forbidden();
   error MemeClubNotFound();
   error MemeClubIsLocked(); 
   error MemeClubBuyExceed();
@@ -46,9 +47,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   
   event LfgTokenUpdate(address lfgToken_);
   event TokenFactoryUpdated(address tokenFactory);
-  event SubjectFeePercentUpdate(uint256 feePercent);
-  event ProtocolFeePercentUpdate(uint256 feePercent);
-  event ProtocolFeeDestinationUpdate(address feeDestination);
+  event ProtocolFeePercentUpdate(uint256 feePercent); 
+  event TGEFeePercentUpdate(uint256 feePercent); 
   event MemeClubCreated(uint256 callId, uint256 clubId, address creator);
 
   event MemeTokenGeneration(
@@ -68,8 +68,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 tradeAmount,
     uint256 holdingAmount,
     uint256 priceAfterFee,
-    uint256 protocolFee,
-    uint256 subjectFee
+    uint256 protocolFee
   );
 
   event MemeTokenMint(uint256 callId, uint256 clubId, address minter, uint256 amount);
@@ -81,6 +80,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     address from,
     address to,
     uint256 tokenId
+  );
+
+  event TGEFees(
+    uint256 clubId,
+    bool isNative,
+    uint256 nativeFees,
+    uint256 lfgFees, 
+    uint256 fee
   );
 
   event LPCreate(
@@ -125,7 +132,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   struct MemeClub {
     uint256 clubId;
     bool isLocked;
-    address subjectAddress;
+    address creatorAddress;
     address memeAddress;
     address mirrorERC721;
     address swapPool;
@@ -142,26 +149,29 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
   mapping(uint256 => MemeClub) public memeClubs;
   mapping(uint256 => mapping(address => uint256)) public balanceOf;
+
+  // solhint-disable-next-line var-name-mixedcase
   mapping(address => uint256) private _404Tokens;
 
-  address public protocolFeeDestination;
-  uint256 public protocolFeePercent;
-  uint256 public subjectFeePercent;
+  uint256 public protocolFeePercent; 
   uint256 public protocolLFGFees;
   uint256 public protocolNativeFees;
   
+  uint256 public tgeFeePercent;
+  uint256 public tgeLFGFees;
+  uint256 public tgeNativeFees;
+
   TokenFactory public tokenFactory;
 
   IUniswapV3Factory public uniswapV3Factory;
   INonfungiblePositionManager public uniswapPositionManager;
   IWETH public weth;
 
-  uint24 private constant _uniswapPoolFee = 10000;
+  uint24 private constant _UNISWAP_POOL_FEE = 10000;
   int24 private _tickLower;
   int24 private _tickUpper;
 
-  function initialize(
-    address protocolFeeDestination_,
+  function initialize( 
     address[] memory validators_, 
     address uniswapV3Factory_,
     address uniswapPositionManager_,
@@ -176,18 +186,20 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     __Validatable_init();
     __Pausable_init();
 
-    for (uint256 i = 0; i < validators_.length; i++) {
+    for (uint256 i = 0; i < validators_.length;) {
       updateValidator(validators_[i], true);
+      unchecked {
+        i++;
+      }
     }
-
-    setSubjectFeePercent(0 ether / 100);
-    setProtocolFeePercent(2 ether / 100);
-    setProtocolFeeDestination(protocolFeeDestination_); 
+ 
+    setProtocolFeePercent(2 ether / 100); 
+    setTGEFeePercent(3 ether / 100); 
 
     uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
     uniswapPositionManager = INonfungiblePositionManager(uniswapPositionManager_);
 
-    int24 tickSpacing = uniswapV3Factory.feeAmountTickSpacing(_uniswapPoolFee);
+    int24 tickSpacing = uniswapV3Factory.feeAmountTickSpacing(_UNISWAP_POOL_FEE);
     _tickLower = (-887272 / tickSpacing) * tickSpacing; // TickMath.MIN_TICK
     _tickUpper = (887272 / tickSpacing) * tickSpacing; // TickMath.MAX_TICK
 
@@ -195,31 +207,28 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function setTokenFactory(address factory) public onlyOwner {
+    if (factory == address(0)) revert ZeroAddress();
     tokenFactory = TokenFactory(factory);
     emit TokenFactoryUpdated(factory);
   }
 
   function setLFGToken(address lfgToken_) public onlyOwner {
+    if (lfgToken_ == address(0)) revert ZeroAddress();
     lfgToken = LFGToken(lfgToken_);
     lfgToken.approve(address(uniswapPositionManager), type(uint256).max);
     emit LfgTokenUpdate(lfgToken_);
   }
-
-  function setSubjectFeePercent(uint256 feePercent_) public virtual onlyOwner {
-    subjectFeePercent = feePercent_;
-    emit SubjectFeePercentUpdate(subjectFeePercent);
-  }
-
+  
   function setProtocolFeePercent(uint256 feePercent_) public virtual onlyOwner {
     protocolFeePercent = feePercent_;
     emit ProtocolFeePercentUpdate(protocolFeePercent);
   }
 
-  function setProtocolFeeDestination(address feeDestination_) public virtual onlyOwner {
-    protocolFeeDestination = feeDestination_;
-    emit ProtocolFeeDestinationUpdate(protocolFeeDestination);
+  function setTGEFeePercent(uint256 feePercent_) public virtual onlyOwner {
+    tgeFeePercent = feePercent_;
+    emit TGEFeePercentUpdate(tgeFeePercent);
   }
-
+   
   function _nextClubId() internal returns (uint256) {
     uint256 max = 10000000;
     ++baseClubId;
@@ -274,7 +283,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     memeClubs[clubId] = MemeClub({
       clubId: clubId,
       isLocked: false,
-      subjectAddress: _msgSender(),
+      creatorAddress: _msgSender(),
       memeAddress: address(0),
       mirrorERC721: address(0),
       swapPool: address(0),
@@ -317,29 +326,30 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function _createLP(MemeClub storage club) internal {
+    uint256 tgeFee = club.funds * tgeFeePercent / 1 ether;
     address token0 = club.memeAddress;
     address token1 = address(lfgToken);
     uint256 token0Amount = club.memeConf.liquidityAmount;
-    uint256 token1Amount = club.funds;
+    uint256 token1Amount = club.funds - tgeFee;
     uint256 nativeAmount = 0;
-    
+
     if (club.memeConf.isNative) { 
       token1 = address(weth); 
-      nativeAmount = club.funds;
+      nativeAmount = token1Amount;
     }
 
     if (!(token0 < token1)) {
        token0 = token1;
        token1 = club.memeAddress;
-       token0Amount = club.funds;
+       token0Amount = token1Amount;
        token1Amount = club.memeConf.liquidityAmount;
     }
  
-    club.swapPool = uniswapV3Factory.createPool(token0, token1, _uniswapPoolFee);
+    club.swapPool = uniswapV3Factory.createPool(token0, token1, _UNISWAP_POOL_FEE);
 
-    // uint160 sqrtPriceX96 = uint160((Math.sqrt(token1Amount / token0Amount) * 2)**96);
-    // IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
-    IUniswapV3Pool(club.swapPool).initialize(2 ** 96);
+    uint160 sqrtPriceX96 = uint160(Math.sqrt(token1Amount / token0Amount) * (2**96));
+    IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
+    // IUniswapV3Pool(club.swapPool).initialize(2 ** 96);
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
@@ -356,7 +366,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       INonfungiblePositionManager.MintParams({
         token0: token0, 
         token1: token1,
-        fee: _uniswapPoolFee,
+        fee: _UNISWAP_POOL_FEE,
         tickLower: _tickLower,
         tickUpper: _tickUpper,  
         amount0Desired: token0Amount,
@@ -369,8 +379,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         deadline: block.timestamp
       })
     );
+
+    if (club.memeConf.isNative) tgeNativeFees +=  tgeFee;
+    else tgeLFGFees += tgeFee;
+
     club.lpTokenId = lpTokenId;
 
+    emit TGEFees(club.clubId, club.memeConf.isNative, tgeNativeFees, tgeLFGFees, tgeFee);
     emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity);
   }
 
@@ -445,11 +460,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   function getProtocolFee(uint256 price) public view virtual returns (uint256) {
     return (price * protocolFeePercent) / 1 ether;
   }
-
-  function getSubjectFee(uint256 price) public view virtual returns (uint256) {
-    return (price * subjectFeePercent) / 1 ether;
-  }
-
+ 
   function getBuyPrice(uint256 clubId, uint256 amount) public view returns (uint256) {
     return getPriceByClubId(clubId, amount, false);
   }
@@ -457,8 +468,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   function getBuyPriceAfterFee(uint256 clubId, uint256 amount) public view returns (uint256) {
     uint256 price = getPriceByClubId(clubId, amount, false);
     uint256 protocolFee = getProtocolFee(price);
-    uint256 subjectFee = getSubjectFee(price);
-    return price + protocolFee + subjectFee;
+    return price + protocolFee;
   }
 
   function getSellPrice(uint256 clubId, uint256 amount) public view returns (uint256) {
@@ -468,8 +478,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   function getSellPriceAfterFee(uint256 clubId, uint256 amount) public view returns (uint256) {
     uint256 price = getPriceByClubId(clubId, amount, true);
     uint256 protocolFee = getProtocolFee(price);
-    uint256 subjectFee = getSubjectFee(price);
-    return price - protocolFee - subjectFee;
+    return price - protocolFee;
   }
 
   function _buyCardImpl(uint256 clubId, uint256 amount, uint256 expectedPrice, bool checkPrice) internal {
@@ -479,8 +488,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeConf.maxSupply < club.supply + amount) revert MemeClubBuyExceed();
     uint256 actualPrice = getBuyPrice(clubId, amount);
     uint256 protocolFee = getProtocolFee(actualPrice);
-    uint256 subjectFee = getSubjectFee(actualPrice);
-    uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
+    uint256 priceAfterFee = actualPrice + protocolFee;
     if (club.memeConf.isNative) {
       if (priceAfterFee > msg.value) revert InsufficientFunds();
     } else { // $LFG
@@ -500,13 +508,9 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeConf.isNative) {
       protocolNativeFees += protocolFee;
       _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
-      _sendNativeFunds(club.subjectAddress, subjectFee);
     } else { // $LFG
       protocolLFGFees += protocolFee;
       lfgToken.safeTransferFrom(_msgSender(), address(this), priceAfterFee);
-      if (subjectFee > 0) {
-        lfgToken.transfer(club.subjectAddress, subjectFee);
-      }
     }
 
     emit MemeClubTrade(
@@ -518,14 +522,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       amount,
       holdingAmount + amount,
       priceAfterFee,
-      protocolFee,
-      subjectFee
+      protocolFee
     );
 
     if (club.memeConf.maxSupply <= club.supply) {
       club.isLocked = true;
       _tokenGeneration(club);  
-    }
+    } 
   }
 
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
@@ -541,9 +544,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (amount > holdingAmount) revert InvalidAmount();
 
     uint256 actualPrice = getSellPrice(clubId, amount);
-    uint256 protocolFee = getProtocolFee(actualPrice);
-    uint256 subjectFee = getSubjectFee(actualPrice);
-    uint256 priceAfterFee = actualPrice - protocolFee - subjectFee;
+    uint256 protocolFee = getProtocolFee(actualPrice); 
+    uint256 priceAfterFee = actualPrice - protocolFee;
 
     club.funds -= actualPrice;
     club.supply -= amount;
@@ -552,14 +554,10 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeConf.isNative) {
       protocolNativeFees += protocolFee;
       _sendNativeFunds(_msgSender(), priceAfterFee);
-      _sendNativeFunds(club.subjectAddress, subjectFee);
     } else {
       // $LFG
       protocolLFGFees += protocolFee;
       lfgToken.transfer(_msgSender(), priceAfterFee);
-      if (subjectFee > 0) {
-        lfgToken.transfer(club.subjectAddress, subjectFee);
-      }
     }
 
     emit MemeClubTrade(
@@ -571,8 +569,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       amount,
       holdingAmount - amount,
       priceAfterFee,
-      protocolFee,
-      subjectFee
+      protocolFee
     );
   }
 
@@ -598,7 +595,6 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         amount = protocolNativeFees;
       }
       if (amount > protocolNativeFees) revert InsufficientFees();
-      // this should never happen and nativeFees should always be equal or smaller than the contract balance
       if (amount > address(this).balance) revert InsufficientFunds();
       protocolNativeFees -= amount;
       (bool success, ) = beneficiary.call{value: amount}("");
@@ -609,9 +605,31 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         amount = protocolLFGFees;
       }
       if (amount > protocolLFGFees) revert InsufficientFees();
-      // as for the native currency, this should never happen
       if (amount > balance) revert InsufficientFunds();
       protocolLFGFees -= amount;
+      lfgToken.safeTransfer(beneficiary, amount);
+    }
+  }
+
+  function withdrawTGEFees(address beneficiary, bool native, uint256 amount) external virtual onlyOwner nonReentrant {
+    if (beneficiary == address(0)) revert ZeroAddress();
+    if (native) {
+      if (amount == 0) {
+        amount = tgeNativeFees;
+      }
+      if (amount > tgeNativeFees) revert InsufficientFees();
+      if (amount > address(this).balance) revert InsufficientFunds();
+      tgeNativeFees -= amount;
+      (bool success, ) = beneficiary.call{value: amount}("");
+      if (!success) revert UnableToTransferFunds();
+    } else {
+      uint256 balance = lfgToken.balanceOf(address(this));
+      if (amount == 0) {
+        amount = tgeLFGFees;
+      }
+      if (amount > tgeLFGFees) revert InsufficientFees(); 
+      if (tgeLFGFees > balance) revert InsufficientFunds();
+      tgeLFGFees -= amount;
       lfgToken.safeTransfer(beneficiary, amount);
     }
   }

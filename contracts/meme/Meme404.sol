@@ -6,17 +6,9 @@ import {DN404Mirror} from "dn404/src/DN404Mirror.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
+import {IERC7631Base} from "./IERC7631Base.sol"; 
+import {IERC7631BaseNFTSkippable} from "./IERC7631BaseNFTSkippable.sol";
 import {MemeFactory} from "./MemeFactory.sol";
-
-interface IERC7631Base {
-  function mirrorERC721() external view returns (address);
-}
-
-interface IERC7631BaseNFTSkippable {
-  function getSkipNFT(address owner) external view returns (bool);
-
-  function setSkipNFT(bool status) external;
-}
 
 contract Meme404 is DN404, Ownable {
   error InvalidBaseUnit();
@@ -29,7 +21,7 @@ contract Meme404 is DN404, Ownable {
   string private _baseURI;
   uint256 private _baseUnit;
 
-  bool useDirectTransfers;
+  bool public useDirectTransfers;
   address public factory;
 
   modifier onlyFactory() {
