@@ -9954,6 +9954,12 @@
             "internalType": "uint256",
             "name": "liquidity",
             "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "reverseOrder",
+            "type": "bool"
           }
         ],
         "name": "LPCreate",
