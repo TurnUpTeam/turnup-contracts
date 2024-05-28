@@ -44,6 +44,8 @@ contract Meme404 is DN404, Ownable {
     _baseURI = baseURI_;
     _baseUnit = baseUnit_;
 
+    useDirectTransfers = true;
+	
     _initializeOwner(msg.sender);
     address mirror = address(new DN404Mirror(msg.sender));
     _initializeDN404(initialTokenSupply, initialSupplyOwner, mirror);

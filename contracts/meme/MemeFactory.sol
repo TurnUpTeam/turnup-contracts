@@ -84,7 +84,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 amount0,
     uint256 amount1,
     uint256 lpTokenId,
-    uint256 liquidity
+    uint256 liquidity,
+    bool    reverseOrder
   );
 
   event WithdrawLiquidityFees(uint256 clubId, address memeToken, address beneficiary, uint256 amount0, uint256 amount1);
@@ -310,6 +311,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 token0Amount = club.memeConf.liquidityAmount;
     uint256 token1Amount = club.funds - tgeFee;
     uint256 nativeAmount = 0;
+    bool reverseOrder = false;
  
     if (club.memeConf.isNative) { 
       token1 = address(weth); 
@@ -321,13 +323,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
        token1 = club.memeAddress;
        token0Amount = token1Amount;
        token1Amount = club.memeConf.liquidityAmount;
+       reverseOrder = true;
     }
  
     club.swapPool = uniswapV3Factory.createPool(token0, token1, _UNISWAP_POOL_FEE);
   
     uint160 sqrtPriceX96 = uint160(Math.sqrt(token1Amount / token0Amount) * (2**96));
     IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
-    // IUniswapV3Pool(club.swapPool).initialize(2 ** 96);
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
@@ -363,8 +365,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     club.lpTokenId = lpTokenId;
 
-    emit TGEFees(club.clubId, club.memeConf.isNative, tgeNativeFees, tgeLFGFees, tgeFee);
-    emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity);
+    // emit TGEFees(club.clubId, club.memeConf.isNative, tgeNativeFees, tgeLFGFees, tgeFee);
+    emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity, reverseOrder);
   }
 
   function mintMemeToken(
