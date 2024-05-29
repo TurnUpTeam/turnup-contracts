@@ -489,7 +489,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if (club.memeConf.isNative) {
       if (priceAfterFee > expectedPrice || priceAfterFee > remainingPrice) revert InsufficientFunds();
     } else { // $LFG
-      if (msg.value != 0) revert InvalidFunds();
+      if (remainingPrice != 0) revert InvalidFunds();
       if (priceAfterFee > expectedPrice) revert InsufficientFunds(); 
       if (lfgToken.balanceOf(_msgSender()) < priceAfterFee) revert InsufficientLFG();
     }
