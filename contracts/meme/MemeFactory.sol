@@ -16,6 +16,7 @@ import {MemeFT} from "./MemeFT.sol";
 import {TokenFactory} from "./TokenFactory.sol";
 import {IWETH} from "./IWETH.sol";
 import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
+import {FullMath} from "./FullMath.sol";
 
 contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   using SafeERC20Upgradeable for LFGToken;
@@ -327,8 +328,8 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     }
  
     club.swapPool = uniswapV3Factory.createPool(token0, token1, _UNISWAP_POOL_FEE);
-  
-    uint160 sqrtPriceX96 = uint160(Math.sqrt(token1Amount / token0Amount) * (2**96));
+
+    uint160 sqrtPriceX96 = uint160(Math.sqrt(FullMath.mulDiv(token1Amount, 2 ** 192, token0Amount)));
     IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
 
     if (club.memeConf.isFT) {
@@ -351,8 +352,6 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
         tickUpper: _tickUpper,
         amount0Desired: token0Amount,
         amount1Desired: token1Amount,
-        // amount0Min: token0Amount,
-        // amount1Min: token1Amount,
         amount0Min: 0,
         amount1Min: 0,
         recipient: address(this),
