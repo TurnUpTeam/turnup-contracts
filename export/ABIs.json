@@ -9998,6 +9998,12 @@
             "internalType": "address",
             "name": "creator",
             "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "creationFee",
+            "type": "uint256"
           }
         ],
         "name": "MemeClubCreated",
@@ -10489,6 +10495,19 @@
         "type": "function"
       },
       {
+        "inputs": [],
+        "name": "creationFees",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
         "inputs": [
           {
             "internalType": "uint256",
@@ -10909,6 +10928,11 @@
             "type": "address"
           },
           {
+            "internalType": "uint256",
+            "name": "creationFee",
+            "type": "uint256"
+          },
+          {
             "components": [
               {
                 "internalType": "uint256",
@@ -10969,6 +10993,16 @@
             "internalType": "struct MemeFactory.MemeConfig",
             "name": "memeConf",
             "type": "tuple"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
           }
         ],
         "name": "hashForNewMemeClub",
@@ -11293,6 +11327,16 @@
             "internalType": "struct MemeFactory.MemeConfig",
             "name": "memeConf_",
             "type": "tuple"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validFor",
+            "type": "uint256"
           },
           {
             "internalType": "bytes",
@@ -11628,6 +11672,24 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "beneficiary",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdrawCreationFees",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
