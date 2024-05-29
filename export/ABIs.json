@@ -9742,6 +9742,11 @@
     "MemeFactory": [
       {
         "inputs": [],
+        "name": "CreationFeeInvalid",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "Forbidden",
         "type": "error"
       },
@@ -11264,6 +11269,11 @@
           {
             "internalType": "uint256",
             "name": "initBuyAmount_",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "creationFee_",
             "type": "uint256"
           },
           {
