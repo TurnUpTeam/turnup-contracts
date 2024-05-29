@@ -25,6 +25,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   error ZeroAmount();
   error ZeroAddress();
   error Forbidden();
+  error CreationFeeInvalid();
   error MemeClubNotFound();
   error MemeClubIsLocked();
   error MemeClubBuyExceed();
@@ -252,6 +253,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   function newMemeClub(
     uint256 callId_,
     uint256 initBuyAmount_,
+    uint256 creationFee_,
     MemeConfig calldata memeConf_,
     uint256 timestamp,
     uint256 validFor,
@@ -259,12 +261,13 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   ) external payable whenNotPaused nonReentrant {
     if (!checkMemeConf(memeConf_)) revert MemeConfInvalid();
     if (!memeConf_.isNative && address(lfgToken) == address(0)) revert MemeClubLFGUnsupported();
+    if (msg.value < creationFee_) revert CreationFeeInvalid();
     if (initBuyAmount_ >= memeConf_.maxSupply) revert InitBuyTooMany();
 
     _validateSignature(
       timestamp, 
       validFor, 
-      hashForNewMemeClub(block.chainid, callId_, _msgSender(), msg.value, memeConf_, timestamp, validFor), 
+      hashForNewMemeClub(block.chainid, callId_, _msgSender(), creationFee_, memeConf_, timestamp, validFor), 
       signature
     );
 
@@ -282,13 +285,14 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
       memeConf: memeConf_
     });
 
-    creationFees += msg.value;
+    creationFees += creationFee_;
 
     // Club create event must be emit before trade event
-    emit MemeClubCreated(callId_, clubId, _msgSender(), msg.value);
+    emit MemeClubCreated(callId_, clubId, _msgSender(), creationFee_);
 
     if (initBuyAmount_ > 0) {
-      _buyCardImpl(clubId, initBuyAmount_, 0, false);
+      uint256 remainingPrice = msg.value - creationFee_;
+      _buyCardImpl(clubId, initBuyAmount_, remainingPrice, remainingPrice);
     }
   }
 
@@ -474,7 +478,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     return price - protocolFee;
   }
 
-  function _buyCardImpl(uint256 clubId, uint256 amount, uint256 expectedPrice, bool checkPrice) internal {
+  function _buyCardImpl(uint256 clubId, uint256 amount, uint256 expectedPrice, uint256 remainingPrice) internal {
     if (amount == 0) revert InvalidAmount();
     MemeClub storage club = memeClubs[clubId];
     if (club.isLocked) revert MemeClubIsLocked();
@@ -483,12 +487,10 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 protocolFee = getProtocolFee(actualPrice);
     uint256 priceAfterFee = actualPrice + protocolFee;
     if (club.memeConf.isNative) {
-      if (priceAfterFee > msg.value) revert InsufficientFunds();
+      if (priceAfterFee > expectedPrice || priceAfterFee > remainingPrice) revert InsufficientFunds();
     } else { // $LFG
       if (msg.value != 0) revert InvalidFunds();
-      if (checkPrice) {
-        if (priceAfterFee > expectedPrice) revert InsufficientFunds();
-      }
+      if (priceAfterFee > expectedPrice) revert InsufficientFunds(); 
       if (lfgToken.balanceOf(_msgSender()) < priceAfterFee) revert InsufficientLFG();
     }
 
@@ -500,7 +502,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     if (club.memeConf.isNative) {
       protocolNativeFees += protocolFee;
-      _sendNativeFunds(_msgSender(), msg.value - priceAfterFee);
+      _sendNativeFunds(_msgSender(), remainingPrice - priceAfterFee);
     } else { // $LFG
       protocolLFGFees += protocolFee;
       lfgToken.safeTransferFrom(_msgSender(), address(this), priceAfterFee);
@@ -525,7 +527,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   }
 
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
-    return _buyCardImpl(clubId, amount, expectedPrice, true);
+    return _buyCardImpl(clubId, amount, expectedPrice, msg.value);
   }
 
   function sellCard(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
