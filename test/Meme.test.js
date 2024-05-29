@@ -51,7 +51,7 @@ describe("Meme", function () {
   let memeFactory;
   const addr0 = "0x" + "0".repeat(40);
   const deployUtils = new DeployUtils();
-
+ 
   before(async function () {
     [owner, bob, alice, fred, tokenHolder, protocolFeeDestination, validator] = await ethers.getSigners();
     chainId = network.config.chainId;
@@ -125,7 +125,6 @@ describe("Meme", function () {
 
     memeFactory = await deployUtils.deployProxy(
       "MemeFactory",
-      protocolFeeDestination.address,
       [validator.address],
       uniswapV3Factory.address,
       uniswapPositionManager.address,
@@ -147,14 +146,12 @@ describe("Meme", function () {
   it("should be initialized with the correct parameter", async function () {
     expect(await memeFactory.owner()).to.equal(owner.address);
     expect(await memeFactory.owner()).to.not.equal(bob.address);
-    expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address);
     expect(await memeFactory.lfgToken()).to.equal(lfg.address);
     expect(await memeFactory.baseClubId()).to.equal(0);
 
     let feePercent = ethers.utils.parseEther("0.02");
     expect(await memeFactory.protocolFeePercent()).to.equal(feePercent);
-
-    expect(await memeFactory.subjectFeePercent()).to.equal(0);
+ 
     expect(await memeFactory.protocolLFGFees()).to.equal(0);
     expect(await memeFactory.protocolNativeFees()).to.equal(0);
   });
@@ -165,16 +162,7 @@ describe("Meme", function () {
     expect(await memeFactory.lfgToken()).to.equal(lfg.address);
     await expect(memeFactory.connect(bob).setLFGToken(lfg.address)).to.be.revertedWith("Ownable: caller is not the owner");
   });
-
-  it("should be update subject fee percent", async function () {
-    expect(await memeFactory.subjectFeePercent()).to.equal(0);
-    let percent = ethers.utils.parseEther("0.53");
-    await expect(memeFactory.setSubjectFeePercent(percent)).to.emit(memeFactory, "SubjectFeePercentUpdate").withArgs(percent);
-    expect(await memeFactory.subjectFeePercent()).to.equal(percent);
-
-    await expect(memeFactory.connect(bob).setSubjectFeePercent(percent)).to.be.revertedWith("Ownable: caller is not the owner");
-  });
-
+ 
   it("should be update protocol fee percent", async function () {
     let defaultPercent = ethers.utils.parseEther("0.02");
     expect(await memeFactory.protocolFeePercent()).to.equal(defaultPercent);
@@ -186,19 +174,7 @@ describe("Meme", function () {
       "Ownable: caller is not the owner"
     );
   });
-
-  it("should be update protocol fee destination", async function () {
-    expect(await memeFactory.protocolFeeDestination()).to.equal(protocolFeeDestination.address);
-    await expect(memeFactory.setProtocolFeeDestination(bob.address))
-      .to.emit(memeFactory, "ProtocolFeeDestinationUpdate")
-      .withArgs(bob.address);
-    expect(await memeFactory.protocolFeeDestination()).to.equal(bob.address);
-
-    await expect(memeFactory.connect(bob).setProtocolFeePercent(bob.address)).to.be.revertedWith(
-      "Ownable: caller is not the owner"
-    );
-  });
-
+  
   function toBn(v) {
     return ethers.BigNumber.from(v);
   }
@@ -313,6 +289,11 @@ describe("Meme", function () {
     return signPackedData(hash, privateKey);
   }
 
+  function now() {
+    var timestamp = new Date().getTime()
+    return Math.floor(timestamp / 1000)
+  }
+
   it("should be new meme club", async function () {
     ////----
     /*
@@ -334,42 +315,43 @@ describe("Meme", function () {
 
     let conf = buildMemeConf();
     conf.isNative = true;
+    let t = now()
 
     let callId = 1;
-    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, 0, conf, t, 120);
     let signature = await getSignature(hash, validator);
 
-    await expect(memeFactory.newMemeClub(callId, 0, conf, signature))
+    await expect(memeFactory.newMemeClub(callId, 0, 0, conf, t, 120, signature))
       .to.emit(memeFactory, "MemeClubCreated")
-      .withArgs(callId, anyValue, anyValue);
+      .withArgs(callId, anyValue, anyValue, anyValue);
 
     await memeFactory.setLFGToken(lfg.address);
     callId = 2;
-    hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, 0, conf, t, 120);
     signature = await getSignature(hash, validator);
-    await expect(memeFactory.newMemeClub(callId, 0, conf, signature))
+    await expect(memeFactory.newMemeClub(callId, 0, 0, conf, t, 120, signature))
       .to.emit(memeFactory, "MemeClubCreated")
-      .withArgs(callId, anyValue, anyValue);
+      .withArgs(callId, anyValue, anyValue, anyValue);
   });
 
   it("should be new meme club(check property)", async function () {
     let conf = buildMemeConf();
     conf.isNative = true;
+    let t = now()
 
     let callId = 1;
     let clubId = chainId * 10000000 + 1;
-    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, 0, conf, t, 120);
     let signature = await getSignature(hash, validator);
 
-    await expect(memeFactory.newMemeClub(callId, 0, conf, signature))
+    await expect(memeFactory.newMemeClub(callId, 0, 0, conf, t, 120, signature))
       .to.emit(memeFactory, "MemeClubCreated")
-      .withArgs(callId, clubId, anyValue);
+      .withArgs(callId, clubId, anyValue, anyValue);
 
     let club = await memeFactory.getMemeClub(clubId);
 
     expect(club.clubId).to.equal(clubId);
     expect(club.isLocked).to.be.false;
-    expect(club.subjectAddress).to.equal(owner.address);
     expect(club.memeAddress).to.equal(addr0);
     expect(club.supply).to.equal(0);
     expect(club.funds).to.equal(0);
@@ -438,24 +420,25 @@ describe("Meme", function () {
   it("should be pause", async function () {
     let conf = buildMemeConf();
     conf.isNative = true;
-
+    let t = now()
+    
     let callId = 1;
-    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    let hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, 0, conf, t, 120);
     let signature = await getSignature(hash, validator);
-    await expect(memeFactory.newMemeClub(callId, 0, conf, signature)).to.emit(memeFactory, "MemeClubCreated");
+    await expect(memeFactory.newMemeClub(callId, 0, 0, conf, t, 120, signature)).to.emit(memeFactory, "MemeClubCreated");
 
     await memeFactory.pause();
 
     callId = 2;
-    hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, 0, conf, t, 120);
     signature = await getSignature(hash, validator);
-    await expect(memeFactory.newMemeClub(callId, 0, conf, signature)).to.be.revertedWith("Pausable: paused");
+    await expect(memeFactory.newMemeClub(callId, 0, 0, conf, t, 120, signature)).to.be.revertedWith("Pausable: paused");
 
     await memeFactory.unpause();
 
     callId = 3;
-    hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, conf);
+    hash = await memeFactory.hashForNewMemeClub(chainId, callId, owner.address, 0, conf, t, 120);
     signature = await getSignature(hash, validator);
-    await expect(memeFactory.newMemeClub(callId, 0, conf, signature)).to.emit(memeFactory, "MemeClubCreated");
+    await expect(memeFactory.newMemeClub(callId, 0, 0, conf, t, 120, signature)).to.emit(memeFactory, "MemeClubCreated");
   });
 });
