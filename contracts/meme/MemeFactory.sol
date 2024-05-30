@@ -291,8 +291,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     emit MemeClubCreated(callId_, clubId, _msgSender(), creationFee_);
 
     if (initBuyAmount_ > 0) {
-      uint256 remainingPrice = msg.value - creationFee_;
-      _buyCardImpl(clubId, initBuyAmount_, remainingPrice, remainingPrice);
+      _buyCardImpl(clubId, initBuyAmount_, type(uint256).max, msg.value - creationFee_);
     }
   }
 
