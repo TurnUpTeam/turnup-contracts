@@ -67,7 +67,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     uint256 protocolFee
   );
 
-  event MemeTokenMint(uint256 callId, uint256 clubId, address minter, uint256 amount);
+  event MemeTokenMint(uint256 callId, uint256 clubId, address minter, address memeAddress, uint256 amount);
 
   event MemeNFTTransfer(uint256 clubId, address memeAddress, address mirrorAddress, address from, address to, uint256 tokenId);
 
@@ -406,7 +406,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     );
 
     // Mint event must happen before nft transfer
-    emit MemeTokenMint(callId, clubId, _msgSender(), amount);
+    emit MemeTokenMint(callId, clubId, _msgSender(), club.memeAddress, amount);
 
     if (club.memeConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
