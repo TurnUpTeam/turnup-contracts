@@ -177,7 +177,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     }
  
     setProtocolFeePercent(2 ether / 100); 
-    setTGEFeePercent(3 ether / 100); 
+    setTGEFeePercent(5 ether / 100); 
 
     uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
     uniswapPositionManager = INonfungiblePositionManager(uniswapPositionManager_);
