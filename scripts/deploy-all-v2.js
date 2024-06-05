@@ -1,13 +1,23 @@
-
 const {ethers, upgrades} = require("hardhat");
 
+const chainId = hre.network.config.chainId;
+
 async function sleep(ms) {
-  await new Promise((r) => setTimeout(r, ms)); 
+  await new Promise((r) => setTimeout(r, ms));
 }
 
 async function getGasPrice() {
-  let gasPrice = await ethers.provider.getGasPrice()
-  return gasPrice.mul(150).div(100)
+  let gasPrice = await ethers.provider.getGasPrice();
+  return gasPrice.mul(150).div(100);
+}
+
+async function deployImplementation(contractName, ...args) {
+  console.debug("Deploying implementation", contractName, "to", hre.network.name, "chainId", chainId);
+  const impl = await hre.ethers.deployContract(contractName, [...args]);
+  console.log("Deploying implementation", contractName, "wait tx:", impl.deployTransaction.hash);
+  await impl.deployed();
+  console.log("Deployed implementation", contractName, "address", impl.address);
+  return impl;
 }
 
 async function deployProxy(contractName, ...args) {
@@ -17,30 +27,30 @@ async function deployProxy(contractName, ...args) {
       options = args.pop();
     }
   }
-  console.debug("Deploying", contractName, "to", hre.network.name);
+  console.debug("Deploying", contractName, "to", hre.network.name, "chainId", chainId);
   const contract = await ethers.getContractFactory(contractName);
   const deployed = await upgrades.deployProxy(contract, [...args], options);
   console.debug("Tx:", deployed.deployTransaction.hash);
   await deployed.deployed();
 
-  sleep(1500)
-  
+  sleep(1500);
+
   console.debug("Proxy address", deployed.address);
-  console.debug("Implementation address",  await upgrades.erc1967.getImplementationAddress(deployed.address));
+  console.debug("Implementation address", await upgrades.erc1967.getImplementationAddress(deployed.address));
   console.debug("Admin address", await upgrades.erc1967.getAdminAddress(deployed.address));
-  
+
   // await run("verify:verify", {address: deployed.address})
 
   return deployed;
 }
 
 async function deployTurnupShares() {
-  let turnup = await deployProxy("TurnupSharesV4")
-  await turnup.setFeeDestination(process.env.FEE_DESTINATION, {gasPrice: await getGasPrice()})
-  let feePercent = ethers.utils.parseEther("0.05")
-  await turnup.setProtocolFeePercent(feePercent, {gasPrice: await getGasPrice()})
-  await turnup.setSubjectFeePercent(feePercent, {gasPrice: await getGasPrice()})
-  await turnup.setOperator(process.env.FIRST_OPERATOR, true, {gasPrice: await getGasPrice()}) 
+  let turnup = await deployProxy("TurnupSharesV4");
+  await turnup.setFeeDestination(process.env.FEE_DESTINATION, {gasPrice: await getGasPrice()});
+  let feePercent = ethers.utils.parseEther("0.05");
+  await turnup.setProtocolFeePercent(feePercent, {gasPrice: await getGasPrice()});
+  await turnup.setSubjectFeePercent(feePercent, {gasPrice: await getGasPrice()});
+  await turnup.setOperator(process.env.FIRST_OPERATOR, true, {gasPrice: await getGasPrice()});
 
   // sleep(3 * 1000)
   // console.log("protocolFeeDestination:", await turnup.protocolFeeDestination())
@@ -48,14 +58,14 @@ async function deployTurnupShares() {
   // console.log("subjectFeePercent:", await turnup.subjectFeePercent())
   // console.log("operator address:", await turnup.operator())
 
-  return turnup
+  return turnup;
 }
 
 async function deployLFGToken() {
   const {
     TOKEN_HOLDER,
     FIRST_VALIDATOR,
-    FIRST_OPERATOR, 
+    FIRST_OPERATOR,
     MAX_SUPPLY,
     INITIAL_SUPPLY,
     AMOUNT_RESERVED_TO_POLL,
@@ -75,11 +85,18 @@ async function deployLFGToken() {
   let maxSupply = ethers.utils.parseEther(MAX_SUPPLY);
   let initialSupply = ethers.utils.parseEther(INITIAL_SUPPLY);
   let amountReservedToPool = ethers.utils.parseEther(AMOUNT_RESERVED_TO_POLL);
-  let amountReservedToSharesPool = ethers.utils.parseEther(AMOUNT_RESERVED_TO_SHARES_POLL); 
+  let amountReservedToSharesPool = ethers.utils.parseEther(AMOUNT_RESERVED_TO_SHARES_POLL);
 
   // deploy token
 
-  const lfgToken = await deployProxy("LFGToken", TOKEN_HOLDER, maxSupply, initialSupply, amountReservedToPool, amountReservedToSharesPool);
+  const lfgToken = await deployProxy(
+    "LFGToken",
+    TOKEN_HOLDER,
+    maxSupply,
+    initialSupply,
+    amountReservedToPool,
+    amountReservedToSharesPool
+  );
 
   // deploy factory
 
@@ -90,14 +107,15 @@ async function deployLFGToken() {
   await lfgToken.setFactory(lfgFactory.address, {gasPrice: await getGasPrice()});
 
   // deploy core pool
-  
+
   const blockNumber = await ethers.provider.getBlockNumber();
-  
+
   // 16 weeks
   const minLockTime = 3600 * 24 * 7 * 16;
 
-  const pool = await deployProxy("CorePool", 
-    lfgToken.address, 
+  const pool = await deployProxy(
+    "CorePool",
+    lfgToken.address,
     blockNumber + 150,
     // ^ we let the pool start in 150 blocks (~5 minutes) to have time to announce it
     // Feel free to change this parameter.
@@ -109,17 +127,17 @@ async function deployLFGToken() {
   await lfgToken.setPool(pool.address, {gasPrice: await getGasPrice()});
   await lfgFactory.setPool(pool.address, {gasPrice: await getGasPrice()});
 
-  return [lfgToken, lfgFactory, pool]
-} 
+  return [lfgToken, lfgFactory, pool];
+}
 
 async function deployPFPAuction(lfgAddress) {
-  let auction = await deployProxy("PFPAuction", lfgAddress)
-  return auction
+  let auction = await deployProxy("PFPAuction", lfgAddress);
+  return auction;
 }
 
 async function deployTurnUPNFT(nftName, symbol, tokenUri) {
-  let nft = await deployProxy("TurnUPNFT", nftName, symbol, tokenUri)
-  return nft
+  let nft = await deployProxy("TurnUPNFT", nftName, symbol, tokenUri);
+  return nft;
 }
 
 async function deployLottery(lfgAddress, sharesAddress) {
@@ -131,23 +149,84 @@ async function deployLottery(lfgAddress, sharesAddress) {
     LOTTERY_PROTOCOL_FEE_PERCENT,
     LOTTERY_PROTOCOL_FEE_DESTINATION,
   } = process.env;
- 
+
   let minLfgPerPick = ethers.utils.parseEther(LOTTERY_MIN_LFG_PER_PICK);
   let minMaticPerPick = ethers.utils.parseEther(LOTTERY_MIN_MATIC_PER_PICK);
   let protocolFeePercent = ethers.utils.parseEther(LOTTERY_PROTOCOL_FEE_PERCENT);
 
-  let lottery = await deployProxy("Lottery", minLfgPerPick, minMaticPerPick, 
-    LOTTERY_RED_PACK_LIFE_TIME, LOTTERY_MAX_START_TIME, protocolFeePercent, LOTTERY_PROTOCOL_FEE_DESTINATION)
- 
+  let lottery = await deployProxy(
+    "Lottery",
+    minLfgPerPick,
+    minMaticPerPick,
+    LOTTERY_RED_PACK_LIFE_TIME,
+    LOTTERY_MAX_START_TIME,
+    protocolFeePercent,
+    LOTTERY_PROTOCOL_FEE_DESTINATION
+  );
+
   await lottery.setLFGToken(lfgAddress, {gasPrice: await getGasPrice()});
   await lottery.setShares(sharesAddress, {gasPrice: await getGasPrice()});
-  
-  return lottery
+
+  return lottery;
 }
 
-async function main() { 
-  console.log("start...")
+async function deployMemeFactory() {
+  const {
+    FIRST_VALIDATOR,
+    BASE_SEPOLIA_UNISWAP_V3,
+    BASE_SEPOLIA_UNISWAP_POSITION_MANAGER,
+    BASE_SEPOLIA_WTH,
+    BASE_UNISWAP_V3,
+    BASE_UNISWAP_POSITION_MANAGER,
+    BASE_WTH,
+    POLYGON_UNISWAP_V3,
+    POLYGON_UNISWAP_POSITION_MANAGER,
+    POLYGON_WTH,
+  } = process.env;
 
+  let uniswapV3Factory;
+  let uniswapPositionManager;
+  let weth;
+
+  switch (chainId) {
+    case 137: // polygon
+      uniswapV3Factory = POLYGON_UNISWAP_V3;
+      uniswapPositionManager = POLYGON_UNISWAP_POSITION_MANAGER;
+      weth = POLYGON_WTH;
+      break;
+    case 8453: // base
+      uniswapV3Factory = BASE_UNISWAP_V3;
+      uniswapPositionManager = BASE_UNISWAP_POSITION_MANAGER;
+      weth = BASE_WTH;
+      break;
+    case 84532: // base sepolia
+      uniswapV3Factory = BASE_SEPOLIA_UNISWAP_V3;
+      uniswapPositionManager = BASE_SEPOLIA_UNISWAP_POSITION_MANAGER;
+      weth = BASE_SEPOLIA_WTH;
+      break;
+    default: // unsupport
+      console.log("MemeFactory unsupport", "chainId", chainId);
+      break;
+  }
+
+  memeFactory = await deployProxy(
+    "MemeFactory",
+    [FIRST_VALIDATOR],
+    uniswapV3Factory,
+    uniswapPositionManager,
+    weth
+  );
+
+  tokenFactory = await deployProxy("TokenFactory", memeFactory.address);
+  await memeFactory.setTokenFactory(tokenFactory.address);
+
+  return memeFactory;
+}
+
+async function main() {
+  console.log("start...");
+
+  /*
   let turnup = await deployTurnupShares()
 
   let lfgContracts = await deployLFGToken()
@@ -171,8 +250,12 @@ async function main() {
   console.log("Lottery address:", lottery.address)
   console.log("PFPAuction address:", auction.address)
   console.log("TurnUPNFT address:", nft.address) 
+  */
 
-  console.log("end...")
+  let memeFactory = await deployMemeFactory();
+  console.log("MemeFactory address:", memeFactory.address);
+
+  console.log("end...");
 }
 
 main()

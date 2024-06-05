@@ -109,6 +109,11 @@
       "address": "0xf3A6c748d2038Ddc3F16d5f998e8E92a993a3723",
       "txHash": "0xa101b5ee54280f6727bf32343a3b8cd567499a0b20034348014cae1a75cf0644",
       "kind": "transparent"
+    },
+    {
+      "address": "0x5B78eb1C51F5580034ec8B6A39e59b81Fb67d371",
+      "txHash": "0x0cefc21b17d796929f20bb296e602da073614f74f28829991abc1b58c3b44476",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -2762,6 +2767,155 @@
           "t_uint64": {
             "label": "uint64",
             "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "d2920827070bccff5a02fda9160758c9f0694e769e19d0dd85d15c13a00d7734": {
+      "address": "0xc2b6c73A7fb608d9d8b416CEdC4a6b3d742201eD",
+      "txHash": "0xa27d221c4b5700c1c99a779b2a10e0a0b0b1be9e56ce22fa589d7e071a3e4c9d",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "lfg",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_contract(LFGToken)2733",
+            "contract": "LFGAirdropV1",
+            "src": "contracts\\airdrop\\LFGAirdropV1.sol:26"
+          },
+          {
+            "label": "fundDestination",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_address",
+            "contract": "LFGAirdropV1",
+            "src": "contracts\\airdrop\\LFGAirdropV1.sol:27"
+          },
+          {
+            "label": "maxLfgPerMember",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_uint256",
+            "contract": "LFGAirdropV1",
+            "src": "contracts\\airdrop\\LFGAirdropV1.sol:29"
+          },
+          {
+            "label": "dropMemberAmount",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_uint256",
+            "contract": "LFGAirdropV1",
+            "src": "contracts\\airdrop\\LFGAirdropV1.sol:30"
+          },
+          {
+            "label": "records",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "LFGAirdropV1",
+            "src": "contracts\\airdrop\\LFGAirdropV1.sol:32"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "156",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "LFGAirdropV1",
+            "src": "contracts\\airdrop\\LFGAirdropV1.sol:94"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(LFGToken)2733": {
+            "label": "contract LFGToken",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
           },
           "t_uint8": {
             "label": "uint8",
