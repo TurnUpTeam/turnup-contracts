@@ -150,6 +150,8 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   address[] internal _operators;
 
+  uint256 public constant WISH_EXPIRATION_TIME_V2 = 365 days;
+
   /**
    * @dev Prevents a contract from calling itself, directly or indirectly.
    * Calling a `nonReentrant` function from another `nonReentrant`
@@ -444,7 +446,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
 
   function _buyWish(address sharesSubject, uint256 supply, uint256 amount, uint256 price) internal virtual {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
-    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert ExpiredWishCanOnlyBeSold();
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME_V2 < block.timestamp) revert ExpiredWishCanOnlyBeSold();
     wishPasses[sharesSubject].totalSupply += amount;
     wishPasses[sharesSubject].balanceOf[_msgSender()] += amount;
     wishPasses[sharesSubject].subjectReward += getSubjectFee(price);
@@ -512,12 +514,12 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     uint256 protocolFee = getProtocolFee(price);
     uint256 subjectFee = getSubjectFee(price);
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundCannotBeBuyOrSell();
-    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME < block.timestamp)
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME_V2 + WISH_DEADLINE_TIME < block.timestamp)
       revert GracePeriodExpired();
     wishPasses[sharesSubject].totalSupply -= amount;
     wishPasses[sharesSubject].balanceOf[_msgSender()] -= amount;
     emit Trade(_msgSender(), sharesSubject, false, amount, price, supply - amount, SubjectType.WISH);
-    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME < block.timestamp) {
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME_V2 < block.timestamp) {
       // since the subject did not bind the wish, the user is not charged for the sale,
       // on the opposite, the seller will have also the unused subjectFee
       // Instead the protocolFee will be collected by the DAO at the end of the grace period
@@ -628,7 +630,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (sharesSubject == wisher) revert SubjectCannotBeAWish();
     if (sharesSubject == address(0) || wisher == address(0)) revert InvalidZeroAddress();
     if (wishPasses[wisher].owner != wisher) revert WishNotFound();
-    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
+    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME_V2 < block.timestamp) revert WishExpired();
     if (authorizedWishes[sharesSubject] != address(0)) revert WishAlreadyBound(authorizedWishes[sharesSubject]);
     wishPasses[wisher].subject = sharesSubject;
     authorizedWishes[sharesSubject] = wisher;
@@ -651,7 +653,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
     if (wishPasses[wisher].owner != wisher) revert InvalidWish(wishPasses[wisher].owner);
     if (wishPasses[wisher].subject != sharesSubject) revert SubjectDoesNotMatch(wishPasses[wisher].subject);
     if (wishPasses[wisher].reservedQuantity == 0) revert ZeroReservedQuantity();
-    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME < block.timestamp) revert WishExpired();
+    if (wishPasses[wisher].createdAt + WISH_EXPIRATION_TIME_V2 < block.timestamp) revert WishExpired();
     uint256 amount = wishPasses[wisher].reservedQuantity;
     uint256 price = getPrice(0, amount);
     uint256 protocolFee = getProtocolFee(price);
@@ -679,7 +681,7 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // @dev This function is used to close an expired wish
   function closeExpiredWish(address sharesSubject) external virtual onlyDAO {
     if (wishPasses[sharesSubject].subject != address(0)) revert BoundWish();
-    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME + WISH_DEADLINE_TIME > block.timestamp)
+    if (wishPasses[sharesSubject].createdAt + WISH_EXPIRATION_TIME_V2 + WISH_DEADLINE_TIME > block.timestamp)
       revert WishNotExpiredYet();
     if (wishPasses[sharesSubject].parkedFees == 0) revert NotCloseableOrAlreadyClosed();
     uint256 remain;
@@ -711,5 +713,5 @@ contract TurnupSharesV4 is Initializable, OwnableUpgradeable {
   // variables without shifting down storage in the inheritance chain.
   // See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
 
-  uint256[49] private __gap;
+  uint256[48] private __gap;
 }
