@@ -54,6 +54,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   event MomentClubTrade(
     uint256 callId,
     uint256 clubId,
+    uint256 supply,
     uint256 holdingAmount,
     uint256 priceAfterFee,
     uint256 protocolFee,
@@ -515,6 +516,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit MomentClubTrade(
       callId,
       clubId, 
+      club.supply,
       holdingAmount + amount,
       priceAfterFee,
       protocolFee,
@@ -577,10 +579,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     _sendFunds(_msgSender(), priceAfterFee);
     _sendFunds(club.creatorAddress, subjectFee);
-    
+
     emit MomentClubTrade(
       callId,
       clubId,
+      club.supply,
       holdingAmount - amount,
       priceAfterFee,
       protocolFee,

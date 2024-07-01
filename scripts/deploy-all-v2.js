@@ -223,6 +223,61 @@ async function deployMemeFactory() {
   return memeFactory;
 }
 
+
+async function deployMomentFactory() {
+  const {
+    FIRST_VALIDATOR,
+    BASE_SEPOLIA_UNISWAP_V3,
+    BASE_SEPOLIA_UNISWAP_POSITION_MANAGER,
+    BASE_SEPOLIA_WTH,
+    BASE_UNISWAP_V3,
+    BASE_UNISWAP_POSITION_MANAGER,
+    BASE_WTH,
+    POLYGON_UNISWAP_V3,
+    POLYGON_UNISWAP_POSITION_MANAGER,
+    POLYGON_WTH,
+  } = process.env;
+
+  let uniswapV3Factory;
+  let uniswapPositionManager;
+  let weth;
+
+  switch (chainId) {
+    case 137: // polygon
+      uniswapV3Factory = POLYGON_UNISWAP_V3;
+      uniswapPositionManager = POLYGON_UNISWAP_POSITION_MANAGER;
+      weth = POLYGON_WTH;
+      break;
+    case 8453: // base
+      uniswapV3Factory = BASE_UNISWAP_V3;
+      uniswapPositionManager = BASE_UNISWAP_POSITION_MANAGER;
+      weth = BASE_WTH;
+      break;
+    case 84532: // base sepolia
+      uniswapV3Factory = BASE_SEPOLIA_UNISWAP_V3;
+      uniswapPositionManager = BASE_SEPOLIA_UNISWAP_POSITION_MANAGER;
+      weth = BASE_SEPOLIA_WTH;
+      break;
+    default: // unsupport
+      console.log("MemeFactory unsupport", "chainId", chainId);
+      break;
+  }
+
+  momentFactory = await deployProxy(
+    "MomentFactory",
+    [FIRST_VALIDATOR],
+    FIRST_VALIDATOR,
+    uniswapV3Factory,
+    uniswapPositionManager,
+    weth
+  );
+
+  tokenFactory = await deployProxy("TokenFactory", momentFactory.address);
+  await momentFactory.setTokenFactory(tokenFactory.address);
+
+  return momentFactory;
+}
+
 async function main() {
   console.log("start...");
 
@@ -250,10 +305,13 @@ async function main() {
   console.log("Lottery address:", lottery.address)
   console.log("PFPAuction address:", auction.address)
   console.log("TurnUPNFT address:", nft.address) 
-  */
 
   let memeFactory = await deployMemeFactory();
   console.log("MemeFactory address:", memeFactory.address);
+  */
+  
+  let momentFactory = await deployMomentFactory();
+  console.log("MomentFactory address:", momentFactory.address);
 
   console.log("end...");
 }
