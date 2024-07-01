@@ -54,14 +54,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   event MomentClubTrade(
     uint256 callId,
     uint256 clubId,
-    address trader,
-    uint256 supply,  
-    bool isBuy,
-    uint256 tradeAmount,
     uint256 holdingAmount,
     uint256 priceAfterFee,
     uint256 protocolFee,
-    uint256 subjectFee
+    uint256 subjectFee,
+    uint64  ver
   );
 
   event MomentTokenMint(uint256 callId, uint256 clubId, address minter, address memeAddress, uint256 amount);
@@ -192,7 +189,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     weth = IWETH(weth_);
   }
 
-  function  setOperator(address operator_) public onlyOwner {
+  function setOperator(address operator_) public onlyOwner {
     if (operator_ == address(0)) revert ZeroAddress();
     operator = operator_;
     emit OperatorUpdated(operator);
@@ -517,35 +514,59 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     emit MomentClubTrade(
       callId,
-      clubId,
-      _msgSender(),
-      club.supply,  
-      true,
-      amount,
+      clubId, 
       holdingAmount + amount,
       priceAfterFee,
       protocolFee,
-      subjectFee
+      subjectFee,
+      club.ver
     ); 
   }
 
-  function buyCard(uint256 callId, uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
+  function buyCard(
+    uint256 callId, 
+    uint256 clubId, 
+    uint256 amount, 
+    uint256 expectedPrice, 
+    uint256 timestamp,
+    uint256 validFor,
+    bytes calldata signature
+  ) external payable whenNotPaused nonReentrant {
+    _validateSignature(
+      timestamp, 
+      validFor, 
+      hashForBuyCard(block.chainid, _msgSender(), callId, clubId, amount, expectedPrice, timestamp, validFor), 
+      signature
+    );
+
     return _buyCardImpl(callId, clubId, amount, expectedPrice, msg.value);
   }
 
-  function sellCard(uint256 callId, uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
-    if (amount == 0) revert InvalidAmount();
+  function sellCard(
+    uint256 callId, 
+    uint256 clubId, 
+    uint256 amount, 
+    uint256 timestamp,
+    uint256 validFor,
+    bytes calldata signature
+  ) external whenNotPaused nonReentrant {
+    _validateSignature(
+      timestamp, 
+      validFor, 
+      hashForSellCard(block.chainid, _msgSender(), callId, clubId, amount, timestamp, validFor), 
+      signature
+    );
+
     MomentClub storage club = momentClubs[clubId];
     if (club.isLocked) revert MomentClubIsLocked();
 
     uint256 holdingAmount = balanceOf[clubId][_msgSender()];
-    if (amount > holdingAmount) revert InvalidAmount();
+    if (amount == 0 || amount > holdingAmount) revert InvalidAmount();
 
     uint256 actualPrice = getSellPrice(clubId, amount);
     uint256 protocolFee = getProtocolFee(actualPrice); 
     uint256 subjectFee = getSubjectFee(actualPrice);
     uint256 priceAfterFee = actualPrice - protocolFee - subjectFee;
-
 
     club.funds -= actualPrice;
     club.supply -= amount;
@@ -556,19 +577,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     _sendFunds(_msgSender(), priceAfterFee);
     _sendFunds(club.creatorAddress, subjectFee);
-
+    
     emit MomentClubTrade(
       callId,
       clubId,
-      _msgSender(),
-      club.supply,  
-      false,
-      amount,
       holdingAmount - amount,
       priceAfterFee,
       protocolFee,
-      subjectFee
-    );
+      subjectFee,
+      club.ver
+    ); 
   }
 
   function _sendFunds(address beneficiary, uint256 amount) internal {
@@ -663,7 +681,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   function _validateSignature(
     uint256 timestamp,
-    uint256 validFor, // Usually fixed to 2 hours for apply
+    uint256 validFor,  
     bytes32 hash,
     bytes calldata signature
   ) internal {
@@ -712,6 +730,31 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 validFor
   ) public pure returns (bytes32) {
     return keccak256(abi.encodePacked("\x19\x01", chainId, callId, clubId, applyer, amount, timestamp, validFor));
+  }
+
+  function hashForBuyCard(
+    uint256 chainId, 
+    address applyer, 
+    uint256 callId, 
+    uint256 clubId, 
+    uint256 amount, 
+    uint256 expectedPrice, 
+    uint256 timestamp, 
+    uint256 validFor
+  ) public pure returns (bytes32) {
+    return keccak256(abi.encodePacked("\x19\x01", chainId, applyer, callId, clubId, amount, expectedPrice, timestamp, validFor));
+  }
+
+  function hashForSellCard(
+    uint256 chainId, 
+    address applyer,
+    uint256 callId, 
+    uint256 clubId, 
+    uint256 amount, 
+    uint256 timestamp, 
+    uint256 validFor
+  ) public pure returns (bytes32) {
+    return keccak256(abi.encodePacked("\x19\x01", chainId, applyer, callId, clubId, amount, timestamp, validFor));
   }
 
   function _hashBytes(bytes memory signature) internal pure returns (bytes32 hash) {
