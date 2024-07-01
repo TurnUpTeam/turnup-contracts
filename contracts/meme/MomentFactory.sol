@@ -295,7 +295,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     }
   }
 
-  function tge(uint256 clubId, uint256 clubVer) external onlyOperator {
+  function wantTge(uint256 clubId, uint256 clubVer) external onlyOperator {
     MomentClub storage club = momentClubs[clubId];
     if (club.clubId == clubId) revert MomentClubNotFound();
     if (club.isLocked) revert MomentClubIsLocked();
