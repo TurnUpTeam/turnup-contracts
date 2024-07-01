@@ -23,6 +23,7 @@ async function main() {
   abi("PFPAuction", "contracts/nft");
   abi("LFGAirdropV1", "contracts/airdrop");
   abi("MemeFactory", "contracts/meme");
+  abi("MomentFactory", "contracts/meme");
 
   await fs.writeFile(path.resolve(__dirname, "../export/ABIs.json"), JSON.stringify(ABIs, null, 2));
 }
