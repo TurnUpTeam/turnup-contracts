@@ -12,7 +12,6 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 import {IEntropy} from "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
 import {IEntropyConsumer} from "@pythnetwork/entropy-sdk-solidity/IEntropyConsumer.sol";
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
-import {LFGToken} from "../token/LFGToken.sol";
 import {Meme404} from "./Meme404.sol";
 import {MemeFT} from "./MemeFT.sol";
 import {TokenFactory} from "./TokenFactory.sol";
@@ -21,10 +20,10 @@ import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
 import {FullMath} from "./FullMath.sol";
 
 contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable, IEntropyConsumer {
-  using SafeERC20Upgradeable for LFGToken;
-
+  
   error NotAuthorized();
   error InvalidInitParameters();
+  error InvalidParameters();
   error ZeroAmount();
   error ZeroAddress();
   error Forbidden();
@@ -46,8 +45,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed();
-  
-  event OperatorUpdated(address operator);
+   
   event TokenFactoryUpdated(address tokenFactory);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
   event SubjectFeePercentUpdate(uint256 feePercent);
@@ -56,7 +54,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   event MomentTokenGeneration(uint256 clubId, address creator, address tokenAddress, address mirrorERC721, address swapPool);
 
-  event BuyCommit(
+  event BuyCardCommit(
       uint256 clubId,
       uint256 buyAmount,
       uint256 expectedPrice,
@@ -65,18 +63,26 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint64 sequenceNumber
   );
 
-  event BuyRevealFeedback(uint64 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
+  event BuyCardReveal(uint64 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
 
-  event MomentClubTrade( 
+  event MomentSnippetUpdate( 
+    address owner, 
     uint256 clubId,
-    uint256 supply,
-    uint256 holdingAmount,
-    uint256 priceAfterFee,
-    uint256 protocolFee,
-    uint256 subjectFee
+    uint256 snippetNo, 
+    uint256 holdAmount
   );
 
-  event MomentTokenMint(uint256 callId, uint256 clubId, address minter, address memeAddress, uint256 amount);
+  event MomentClubTrade(
+    uint256 clubId,
+    address trader,
+    uint256 supply,
+    bool isLocked,
+    uint256 amount,
+    bool isBuy,
+    uint256 priceAfterFee 
+  );
+
+  event MomentTokenMint(uint256 clubId, address minter, address memeAddress, uint256 amount);
 
   event MomentNFTTransfer(uint256 clubId, address memeAddress, address mirrorAddress, address from, address to, uint256 tokenId);
  
@@ -88,7 +94,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 amount1,
     uint256 lpTokenId,
     uint256 liquidity,
-    bool    reverseOrder
+    bool reverseOrder
   );
 
   event WithdrawLiquidityFees(uint256 clubId, address memeToken, address beneficiary, uint256 amount0, uint256 amount1);
@@ -123,7 +129,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 lpTokenId;
     uint256 supply;
     uint256 funds; 
-    MomentConfig momentConf;
+    MomentConfig momentConf; 
   }
 
   struct MomentOrder {  
@@ -140,8 +146,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   uint256 public baseClubId;
 
   mapping(uint256 => MomentClub) public momentClubs;
-  mapping(uint256 => mapping(address => uint256)) public balanceOf;
   mapping(uint256 => MomentOrder) public orders;
+
+  // clubId => series supply
+  mapping(uint256 => uint256) public seriesSupply;
+
+  // clubId => (snippetId => supply)
+  mapping(uint256 => mapping(uint256 => uint256)) public snippetSupply;
+
+  // address => (clubId => (snippetId => holdAmount))
+  mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public balanceOf;
 
   // solhint-disable-next-line var-name-mixedcase
   mapping(address => uint256) private _404Tokens;
@@ -156,8 +170,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   uint256 public creationFees;
 
   TokenFactory public tokenFactory;
-  address public operator;
-
+  
   IUniswapV3Factory public uniswapV3Factory;
   INonfungiblePositionManager public uniswapPositionManager;
   IWETH public weth;
@@ -168,15 +181,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   IEntropy public entropy;
   address public entropyProvider;
-
-  modifier onlyOperator() {
-    if (_msgSender() != operator) revert NotAuthorized();
-    _;
-  }
-
+  
   function initialize( 
-    address[] memory validators_, 
-    address operator_,
+    address[] memory validators_,  
     address uniswapV3Factory_,
     address uniswapPositionManager_,
     address weth_,
@@ -194,8 +201,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
         i++;
       }
     }
-
-    setOperator(operator_);
+ 
     setProtocolFeePercent(1 ether / 100); 
     setSubjectFeePercent(1 ether / 100);
     setTGEFeePercent(5 ether / 100); 
@@ -212,13 +218,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     entropy = IEntropy(entropy_);
     entropyProvider = entropy.getDefaultProvider();
   }
-
-  function setOperator(address operator_) public onlyOwner {
-    if (operator_ == address(0)) revert ZeroAddress();
-    operator = operator_;
-    emit OperatorUpdated(operator);
-  }
-
+ 
   function setTokenFactory(address factory) public onlyOwner {
     if (factory == address(0)) revert ZeroAddress();
     tokenFactory = TokenFactory(factory);
@@ -250,11 +250,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   function getSupply(uint256 clubId) public view returns (uint256) {
     return momentClubs[clubId].supply;
   }
-
-  function getBalanceOf(uint256 clubId, address user) public view returns (uint256) {
-    return balanceOf[clubId][user];
-  }
-
+  
   function checkMemeConf(MomentConfig calldata momentConf) public pure returns (bool) {
     if (momentConf.liquidityAmount < 1e18) return false;
     if (momentConf.snippetAmount == 0 || momentConf.snippetAmount > 1000) return false;
@@ -399,38 +395,37 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity, reverseOrder);
   }
 
-  function mintMomentToken(
-    uint256 callId,
-    uint256 clubId,
-    uint256 amount,
-    uint256 timestamp,
-    uint256 validFor,
-    bytes calldata signature
-  ) external payable whenNotPaused nonReentrant {
-    if (amount == 0) revert ZeroAmount();
-    
-    uint256 holdingAmount = balanceOf[clubId][_msgSender()];
-    if (holdingAmount == 0) revert Forbidden();
-    
+  function mintMomentToken(uint256 clubId, uint256[] calldata snippetArr, uint256[] calldata amountArr) external payable whenNotPaused nonReentrant {
+    if (snippetArr.length == 0 || snippetArr.length != amountArr.length) revert InvalidParameters();
     MomentClub storage club = momentClubs[clubId];
-    if (club.memeAddress == address(0)) revert MomentTokenNotCreated();
+    if (club.isLocked) revert MomentClubIsLocked();
+    
+    uint256 mintTokenAmount = 0;
+    uint256 slotTokenAmount = club.momentConf.liquidityAmount / club.momentConf.snippetAmount;
 
-    _validateSignature(
-      timestamp,
-      validFor,
-      hashForMintMomentToken(block.chainid, callId, _msgSender(), clubId, amount, timestamp, validFor),
-      signature
-    );
+    for (uint256 i = 0; i < snippetArr.length; i++) {
+      uint256 snippetNo = snippetArr[i];
+      uint256 saleAmount = amountArr[i];
 
+      uint256 holdAmount = balanceOf[_msgSender()][clubId][snippetNo];
+      if (saleAmount > holdAmount) revert InvalidAmount();
+      balanceOf[_msgSender()][clubId][snippetNo] = holdAmount - saleAmount;
+    
+      uint256 supply = snippetSupply[clubId][snippetNo];
+      mintTokenAmount = mintTokenAmount + slotTokenAmount * saleAmount / supply;
+
+      emit MomentSnippetUpdate(_msgSender(), clubId, snippetNo, holdAmount - saleAmount);
+    }
+ 
     // Mint event must happen before nft transfer
-    emit MomentTokenMint(callId, clubId, _msgSender(), club.memeAddress, amount);
+    emit MomentTokenMint(clubId, _msgSender(), club.memeAddress, mintTokenAmount);
 
     if (club.momentConf.isFT) {
       MemeFT meme = MemeFT(payable(club.memeAddress));
-      meme.mint(_msgSender(), amount);
+      meme.mint(_msgSender(), mintTokenAmount);
     } else {
       Meme404 meme = Meme404(payable(club.memeAddress));
-      meme.mint(_msgSender(), amount);
+      meme.mint(_msgSender(), mintTokenAmount);
     }
   }
 
@@ -448,10 +443,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       price = sum2 - sum1;
     } else if (priceType == PriceFormulaType.QuadCurve) {
       uint256 sum1 = ((supply * (supply + 1) * (2 * supply + 1)) / 6) * priceArg1 + ((supply * (supply + 1)) / 2) * priceArg2;
-      uint256 sum2 = (((supply + amount) * (supply + amount + 1) * (2 * (supply + amount) + 1)) / 6) *
-        priceArg1 +
-        (((supply + amount) * (supply + 1 + amount)) / 2) *
-        priceArg2;
+      uint256 sum2 = (((supply + amount) * (supply + amount + 1) * (2 * (supply + amount) + 1)) / 6) * priceArg1 
+        + (((supply + amount) * (supply + 1 + amount)) / 2) * priceArg2;
       price = sum2 - sum1;
     } else if (priceType == PriceFormulaType.Fixed) {
       price = amount * priceArg1;
@@ -460,14 +453,13 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
  
   function getPriceByClubId(uint256 clubId, uint256 amount, bool sellingPrice) public view returns (uint256) {
-    return
-      getPrice(
-        momentClubs[clubId].supply - (sellingPrice ? amount : 0),
-        amount,
-        momentClubs[clubId].momentConf.priceType,
-        momentClubs[clubId].momentConf.priceArg1,
-        momentClubs[clubId].momentConf.priceArg2
-      );
+    return getPrice(
+      momentClubs[clubId].supply - (sellingPrice ? amount : 0),
+      amount,
+      momentClubs[clubId].momentConf.priceType,
+      momentClubs[clubId].momentConf.priceArg1,
+      momentClubs[clubId].momentConf.priceArg2
+    );
   }
 
   function getProtocolFee(uint256 price) public view virtual returns (uint256) {
@@ -532,26 +524,26 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       commitTime: block.timestamp
     });
  
-    emit BuyCommit(clubId, amount, expectedPrice, remainFunds, userRandomNumber, sequenceNumber); 
+    emit BuyCardCommit(clubId, amount, expectedPrice, remainFunds, userRandomNumber, sequenceNumber); 
   }
 
   function _checkOrder(MomentOrder memory order, uint64 sequenceNumber, bytes32 rngNumber) internal returns (bool) { 
     if (order.clubId == 0) {
       _sendFunds(order.trader, order.remainFunds);
-      emit BuyRevealFeedback(sequenceNumber, rngNumber, 0, "Not found order");
+      emit BuyCardReveal(sequenceNumber, rngNumber, 0, "Not found order");
       return false;
     }
     
     MomentClub storage club = momentClubs[order.clubId];
     if (club.clubId == 0) {
       _sendFunds(order.trader, order.remainFunds);
-      emit BuyRevealFeedback(sequenceNumber, rngNumber, 0, "Not found club");
+      emit BuyCardReveal(sequenceNumber, rngNumber, 0, "Not found club");
       return false;
     }
 
     if (club.isLocked) {
       _sendFunds(order.trader, order.remainFunds);
-      emit BuyRevealFeedback(sequenceNumber, rngNumber, club.clubId, "Locked club");
+      emit BuyCardReveal(sequenceNumber, rngNumber, club.clubId, "Locked club");
       return false;
     }
 
@@ -562,14 +554,39 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     if (priceAfterFee > order.expectedPrice || priceAfterFee > order.remainFunds) { 
       _sendFunds(order.trader, order.remainFunds);
-      emit BuyRevealFeedback(sequenceNumber, rngNumber, club.clubId, "Insufficient funds");
+      emit BuyCardReveal(sequenceNumber, rngNumber, club.clubId, "Insufficient funds");
       return false;
     }
+
+    emit BuyCardReveal(sequenceNumber, rngNumber, club.clubId, "OK");
 
     return true;
   }
 
-  function _buyCardReveal(uint64 sequenceNumber, bytes32 rngNumber) internal {
+  function _executeOrder(MomentOrder memory order, bytes32 rngNumber) internal nonReentrant{
+    uint256 clubId = order.clubId;
+    MomentClub storage club = momentClubs[clubId]; 
+    for (uint256 i = 1; i <= order.amount; i++) {
+      uint256 rng = uint256(keccak256(abi.encodePacked(rngNumber, order.trader, block.timestamp, i)));
+      uint256 snippetNo = 1 + uint256(rng % club.momentConf.snippetAmount);
+      
+      uint256 holdAmount = balanceOf[order.trader][clubId][snippetNo];
+      balanceOf[order.trader][clubId][snippetNo] = holdAmount + 1;
+      
+      uint256 ss = snippetSupply[clubId][snippetNo];
+      snippetSupply[clubId][snippetNo] = ss + 1;
+      if (ss == 0) {
+        seriesSupply[clubId] += 1;
+        if (seriesSupply[clubId] >= club.momentConf.snippetAmount) {
+          club.isLocked = true;
+        }
+      }
+
+      emit MomentSnippetUpdate(order.trader, clubId, snippetNo, holdAmount + 1);
+    }
+  }
+
+  function _buyCardReveal(uint64 sequenceNumber, bytes32 rngNumber) internal nonReentrant {
     MomentOrder memory order = orders[sequenceNumber];
     delete orders[sequenceNumber];
     if (!_checkOrder(order, sequenceNumber, rngNumber)) return;
@@ -589,77 +606,62 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     _sendFunds(club.creatorAddress, subjectFee);
     _sendFunds(_msgSender(), order.remainFunds - priceAfterFee);
 
-    // TODO
+    _executeOrder(order, rngNumber);
+
+    emit MomentClubTrade(club.clubId, order.trader, club.supply, club.isLocked, order.amount, true, priceAfterFee);
   }
-
-  function _buyCardImpl2(uint256 clubId, uint256 amount, uint256 expectedPrice, uint256 remainingPrice) internal {
-    if (amount == 0) revert InvalidAmount();
-    MomentClub storage club = momentClubs[clubId];
-    if (club.isLocked) revert MomentClubIsLocked();
-    uint256 actualPrice = getBuyPrice(clubId, amount);
-    uint256 protocolFee = getProtocolFee(actualPrice);
-    uint256 subjectFee = getSubjectFee(actualPrice);
-    uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
-    
-    if (priceAfterFee > expectedPrice || priceAfterFee > remainingPrice) { 
-      revert InsufficientFunds();
-    }
-    
-    uint256 holdingAmount = balanceOf[clubId][_msgSender()];
-    balanceOf[clubId][_msgSender()] = holdingAmount + amount;
-
-    club.funds += actualPrice;
-    club.supply += amount; 
-
-    protocolFees += protocolFee;
-
-    _sendFunds(club.creatorAddress, subjectFee);
-    _sendFunds(_msgSender(), remainingPrice - priceAfterFee);
-
-    emit MomentClubTrade( 
-      clubId, 
-      club.supply,
-      holdingAmount + amount,
-      priceAfterFee,
-      protocolFee,
-      subjectFee
-    ); 
-  }
-
+  
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant { 
     _buyCardCommit(clubId, amount, expectedPrice, msg.value);
   }
 
-  function sellCard(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
+  function sellCard(uint256 clubId, uint256[] calldata snippetArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
+    if (snippetArr.length == 0 || snippetArr.length != amountArr.length) revert InvalidParameters();
+    
     MomentClub storage club = momentClubs[clubId];
     if (club.isLocked) revert MomentClubIsLocked();
 
-    uint256 holdingAmount = balanceOf[clubId][_msgSender()];
-    if (amount == 0 || amount > holdingAmount) revert InvalidAmount();
+    uint256 sellAmount = 0;
+    for (uint256 i = 0; i < snippetArr.length; i++) {
+      uint256 snippetNo = snippetArr[i];
+      uint256 snippetAmount = amountArr[i];
 
-    uint256 actualPrice = getSellPrice(clubId, amount);
+      uint256 holdAmount = balanceOf[_msgSender()][clubId][snippetNo];
+      if (snippetAmount > holdAmount) revert InvalidAmount();
+      balanceOf[_msgSender()][clubId][snippetNo] = holdAmount - snippetAmount;
+      uint256 ss = snippetSupply[clubId][snippetNo];
+      snippetSupply[clubId][snippetNo] = ss - snippetAmount;
+      if (ss == snippetAmount) {
+        seriesSupply[clubId] -= 1;
+      }
+
+      sellAmount += snippetAmount;
+
+      emit MomentSnippetUpdate(_msgSender(), clubId, snippetNo, holdAmount - snippetAmount);
+    }
+
+    uint256 actualPrice = getSellPrice(clubId, sellAmount);
     uint256 protocolFee = getProtocolFee(actualPrice); 
     uint256 subjectFee = getSubjectFee(actualPrice);
     uint256 priceAfterFee = actualPrice - protocolFee - subjectFee;
 
     club.funds -= actualPrice;
-    club.supply -= amount;
-    
-    balanceOf[clubId][_msgSender()] = holdingAmount - amount;
+    club.supply -= sellAmount;
 
     protocolFees += protocolFee;
 
     _sendFunds(_msgSender(), priceAfterFee);
     _sendFunds(club.creatorAddress, subjectFee);
-
+ 
     emit MomentClubTrade(
       clubId,
+      _msgSender(),
       club.supply,
-      holdingAmount - amount,
-      priceAfterFee,
-      protocolFee,
-      subjectFee
-    ); 
+      club.isLocked,
+      sellAmount,
+      false,
+      priceAfterFee
+    );  
   }
 
   function _sendFunds(address beneficiary, uint256 amount) internal {
