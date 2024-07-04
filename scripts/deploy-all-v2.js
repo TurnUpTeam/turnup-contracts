@@ -230,9 +230,11 @@ async function deployMomentFactory() {
     BASE_SEPOLIA_UNISWAP_V3,
     BASE_SEPOLIA_UNISWAP_POSITION_MANAGER,
     BASE_SEPOLIA_WTH,
+    BASE_SEPOLIA_PYTH_ENTROPY,
     BASE_UNISWAP_V3,
     BASE_UNISWAP_POSITION_MANAGER,
     BASE_WTH,
+    BASE_PYTH_ENTROPY,
     POLYGON_UNISWAP_V3,
     POLYGON_UNISWAP_POSITION_MANAGER,
     POLYGON_WTH,
@@ -241,6 +243,7 @@ async function deployMomentFactory() {
   let uniswapV3Factory;
   let uniswapPositionManager;
   let weth;
+  let pythEntropy;
 
   switch (chainId) {
     case 137: // polygon
@@ -252,11 +255,13 @@ async function deployMomentFactory() {
       uniswapV3Factory = BASE_UNISWAP_V3;
       uniswapPositionManager = BASE_UNISWAP_POSITION_MANAGER;
       weth = BASE_WTH;
+      pythEntropy = BASE_PYTH_ENTROPY;
       break;
     case 84532: // base sepolia
       uniswapV3Factory = BASE_SEPOLIA_UNISWAP_V3;
       uniswapPositionManager = BASE_SEPOLIA_UNISWAP_POSITION_MANAGER;
       weth = BASE_SEPOLIA_WTH;
+      pythEntropy = BASE_SEPOLIA_PYTH_ENTROPY;
       break;
     default: // unsupport
       console.log("MemeFactory unsupport", "chainId", chainId);
@@ -266,10 +271,10 @@ async function deployMomentFactory() {
   momentFactory = await deployProxy(
     "MomentFactory",
     [FIRST_VALIDATOR],
-    FIRST_VALIDATOR,
     uniswapV3Factory,
     uniswapPositionManager,
-    weth
+    weth,
+    pythEntropy
   );
 
   tokenFactory = await deployProxy("TokenFactory", momentFactory.address);
