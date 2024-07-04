@@ -184,13 +184,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   address public entropyProvider;
   
   function initialize( 
-    address[] memory validators_,  
+    address[] calldata validators_,  
     address uniswapV3Factory_,
     address uniswapPositionManager_,
     address weth_,
     address entropy_
   ) public initializer {
-    if ((uniswapV3Factory_ == address(0)) || (uniswapPositionManager_ == address(0)) || (weth_ == address(0)))
+    if ((uniswapV3Factory_ == address(0)) 
+      || (uniswapPositionManager_ == address(0)) 
+      || (weth_ == address(0))
+      || (entropy_ == address(0)))
       revert InvalidInitParameters();
 
     __Validatable_init();
