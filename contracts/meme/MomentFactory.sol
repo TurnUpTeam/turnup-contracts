@@ -66,10 +66,10 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   event BuyCardReveal(uint64 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
 
-  event MomentSnippetUpdate( 
+  event MomentCardUpdate( 
     address owner, 
     uint256 clubId,
-    uint256 snippetNo, 
+    uint256 cardNo, 
     uint256 holdAmount
   );
 
@@ -109,7 +109,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   struct MomentConfig {
     uint256 liquidityAmount;
-    uint256 snippetAmount;
+    uint256 seriesTotal;
     bool isFT; // 404 or ERC20
     string name;
     string symbol;
@@ -152,10 +152,10 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   // clubId => series supply
   mapping(uint256 => uint256) public seriesSupply;
 
-  // clubId => (snippetId => supply)
-  mapping(uint256 => mapping(uint256 => uint256)) public snippetSupply;
+  // clubId => (cardNo => supply)
+  mapping(uint256 => mapping(uint256 => uint256)) public cardSupply;
 
-  // address => (clubId => (snippetId => holdAmount))
+  // address => (clubId => (cardNo => holdAmount))
   mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public balanceOf;
 
   // solhint-disable-next-line var-name-mixedcase
@@ -254,7 +254,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   
   function checkMemeConf(MomentConfig calldata momentConf) public pure returns (bool) {
     if (momentConf.liquidityAmount < 1e18) return false;
-    if (momentConf.snippetAmount == 0 || momentConf.snippetAmount > 1000) return false;
+    if (momentConf.seriesTotal == 0 || momentConf.seriesTotal > 500) return false;
     if (bytes(momentConf.name).length == 0) return false;
     if (bytes(momentConf.symbol).length == 0) return false;
     if (bytes(momentConf.baseURI).length == 0) return false;
@@ -396,26 +396,26 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity, reverseOrder);
   }
 
-  function mintMomentToken(uint256 clubId, uint256[] calldata snippetArr, uint256[] calldata amountArr) external payable whenNotPaused nonReentrant {
-    if (snippetArr.length == 0 || snippetArr.length != amountArr.length) revert InvalidParameters();
+  function mintMomentToken(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external payable whenNotPaused nonReentrant {
+    if (cardArr.length == 0 || cardArr.length != amountArr.length) revert InvalidParameters();
     MomentClub storage club = momentClubs[clubId];
     if (club.isLocked) revert MomentClubIsLocked();
     
     uint256 mintTokenAmount = 0;
-    uint256 slotTokenAmount = club.momentConf.liquidityAmount / club.momentConf.snippetAmount;
+    uint256 slotTokenAmount = club.momentConf.liquidityAmount / club.momentConf.seriesTotal;
 
-    for (uint256 i = 0; i < snippetArr.length; i++) {
-      uint256 snippetNo = snippetArr[i];
+    for (uint256 i = 0; i < cardArr.length; i++) {
+      uint256 cardNo = cardArr[i];
       uint256 saleAmount = amountArr[i];
 
-      uint256 holdAmount = balanceOf[_msgSender()][clubId][snippetNo];
+      uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
       if (saleAmount > holdAmount) revert InvalidAmount();
-      balanceOf[_msgSender()][clubId][snippetNo] = holdAmount - saleAmount;
+      balanceOf[_msgSender()][clubId][cardNo] = holdAmount - saleAmount;
     
-      uint256 supply = snippetSupply[clubId][snippetNo];
+      uint256 supply = cardSupply[clubId][cardNo];
       mintTokenAmount = mintTokenAmount + slotTokenAmount * saleAmount / supply;
 
-      emit MomentSnippetUpdate(_msgSender(), clubId, snippetNo, holdAmount - saleAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, holdAmount - saleAmount);
     }
  
     // Mint event must happen before nft transfer
@@ -570,21 +570,21 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     MomentClub storage club = momentClubs[clubId]; 
     for (uint256 i = 1; i <= order.amount; i++) {
       uint256 rng = uint256(keccak256(abi.encodePacked(rngNumber, order.trader, block.timestamp, i)));
-      uint256 snippetNo = 1 + uint256(rng % club.momentConf.snippetAmount);
+      uint256 cardNo = 1 + uint256(rng % club.momentConf.seriesTotal);
       
-      uint256 holdAmount = balanceOf[order.trader][clubId][snippetNo];
-      balanceOf[order.trader][clubId][snippetNo] = holdAmount + 1;
+      uint256 holdAmount = balanceOf[order.trader][clubId][cardNo];
+      balanceOf[order.trader][clubId][cardNo] = holdAmount + 1;
       
-      uint256 ss = snippetSupply[clubId][snippetNo];
-      snippetSupply[clubId][snippetNo] = ss + 1;
+      uint256 ss = cardSupply[clubId][cardNo];
+      cardSupply[clubId][cardNo] = ss + 1;
       if (ss == 0) {
         seriesSupply[clubId] += 1;
-        if (seriesSupply[clubId] >= club.momentConf.snippetAmount) {
+        if (seriesSupply[clubId] >= club.momentConf.seriesTotal) {
           club.isLocked = true;
         }
       }
 
-      emit MomentSnippetUpdate(order.trader, clubId, snippetNo, holdAmount + 1);
+      emit MomentCardUpdate(order.trader, clubId, cardNo, holdAmount + 1);
     }
   }
 
@@ -617,29 +617,29 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     _buyCardCommit(clubId, amount, expectedPrice, msg.value);
   }
 
-  function sellCard(uint256 clubId, uint256[] calldata snippetArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
-    if (snippetArr.length == 0 || snippetArr.length != amountArr.length) revert InvalidParameters();
+  function sellCard(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
+    if (cardArr.length == 0 || cardArr.length != amountArr.length) revert InvalidParameters();
     
     MomentClub storage club = momentClubs[clubId];
     if (club.isLocked) revert MomentClubIsLocked();
 
     uint256 sellAmount = 0;
-    for (uint256 i = 0; i < snippetArr.length; i++) {
-      uint256 snippetNo = snippetArr[i];
-      uint256 snippetAmount = amountArr[i];
+    for (uint256 i = 0; i < cardArr.length; i++) {
+      uint256 cardNo = cardArr[i];
+      uint256 cardAmount = amountArr[i];
 
-      uint256 holdAmount = balanceOf[_msgSender()][clubId][snippetNo];
-      if (snippetAmount > holdAmount) revert InvalidAmount();
-      balanceOf[_msgSender()][clubId][snippetNo] = holdAmount - snippetAmount;
-      uint256 ss = snippetSupply[clubId][snippetNo];
-      snippetSupply[clubId][snippetNo] = ss - snippetAmount;
-      if (ss == snippetAmount) {
+      uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
+      if (cardAmount > holdAmount) revert InvalidAmount();
+      balanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
+      uint256 supply = cardSupply[clubId][cardNo];
+      cardSupply[clubId][cardNo] = supply - cardAmount;
+      if (supply == cardAmount) {
         seriesSupply[clubId] -= 1;
       }
 
-      sellAmount += snippetAmount;
+      sellAmount += cardAmount;
 
-      emit MomentSnippetUpdate(_msgSender(), clubId, snippetNo, holdAmount - snippetAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, holdAmount - cardAmount);
     }
 
     uint256 actualPrice = getSellPrice(clubId, sellAmount);
@@ -795,7 +795,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       applyer,
       creationFee,
       momentConf.liquidityAmount,
-      momentConf.snippetAmount,
+      momentConf.seriesTotal,
       momentConf.isFT,
       momentConf.baseUnit,
       uint256(momentConf.priceType),
