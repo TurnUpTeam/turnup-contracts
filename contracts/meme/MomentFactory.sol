@@ -805,19 +805,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       validFor
     ));
   }
-
-  function hashForMintMomentToken(
-    uint256 chainId,
-    uint256 callId,
-    address applyer,
-    uint256 clubId,
-    uint256 amount,
-    uint256 timestamp,
-    uint256 validFor
-  ) public pure returns (bytes32) {
-    return keccak256(abi.encodePacked("\x19\x01", chainId, callId, clubId, applyer, amount, timestamp, validFor));
-  }
-   
+  
   function _hashBytes(bytes memory signature) internal pure returns (bytes32 hash) {
     // solhint-disable-next-line no-inline-assembly
     assembly {
