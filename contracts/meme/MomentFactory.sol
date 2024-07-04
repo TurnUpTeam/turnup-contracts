@@ -56,12 +56,12 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   event MomentTokenGeneration(uint256 clubId, address creator, address tokenAddress, address mirrorERC721, address swapPool);
 
   event BuyCardCommit(
+      uint64 sequenceNumber,
+      bytes32 userRandomNumber,
       uint256 clubId,
       uint256 buyAmount,
       uint256 expectedPrice,
-      uint256 remainFunds,
-      bytes32 userRandomNumber,
-      uint64 sequenceNumber
+      uint256 remainFunds
   );
 
   event BuyCardReveal(uint64 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
@@ -526,7 +526,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       commitTime: block.timestamp
     });
  
-    emit BuyCardCommit(clubId, amount, expectedPrice, remainFunds, userRandomNumber, sequenceNumber); 
+    emit BuyCardCommit(sequenceNumber, userRandomNumber, clubId, amount, expectedPrice, remainFunds); 
   }
 
   function _checkOrder(MomentOrder memory order, uint64 sequenceNumber, bytes32 rngNumber) internal returns (bool) { 
