@@ -45,6 +45,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed();
+  error EntroypyFeeUnacceptable(uint256 entropyFee);
    
   event TokenFactoryUpdated(address tokenFactory);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
@@ -503,6 +504,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     
     uint256 entropyFee = getEntropyFee();
+    if (entropyFee > 1 ether / 10000) revert EntroypyFeeUnacceptable(entropyFee);
 
     if (priceAfterFee > expectedPrice || (priceAfterFee + entropyFee) > remainFunds) { 
       revert InsufficientFunds();
