@@ -11806,6 +11806,17 @@
         "type": "error"
       },
       {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "entropyFee",
+            "type": "uint256"
+          }
+        ],
+        "name": "EntroypyFeeUnacceptable",
+        "type": "error"
+      },
+      {
         "inputs": [],
         "name": "Forbidden",
         "type": "error"
@@ -11837,6 +11848,22 @@
       },
       {
         "inputs": [],
+        "name": "InvalidParameters",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint64",
+            "name": "sequenceNumber",
+            "type": "uint64"
+          }
+        ],
+        "name": "InvalidSequenceNumber",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "InvalidSignature",
         "type": "error"
       },
@@ -11852,7 +11879,17 @@
       },
       {
         "inputs": [],
+        "name": "MomentClubTGEDone",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "MomentClubTooMany",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MomentClubUnlocked",
         "type": "error"
       },
       {
@@ -11953,6 +11990,80 @@
         "inputs": [
           {
             "indexed": false,
+            "internalType": "uint64",
+            "name": "sequenceNumber",
+            "type": "uint64"
+          },
+          {
+            "indexed": false,
+            "internalType": "bytes32",
+            "name": "userRandomNumber",
+            "type": "bytes32"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "buyAmount",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "expectedPrice",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "remainFunds",
+            "type": "uint256"
+          }
+        ],
+        "name": "BuyCardCommit",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint64",
+            "name": "sequenceNumber",
+            "type": "uint64"
+          },
+          {
+            "indexed": false,
+            "internalType": "bytes32",
+            "name": "rngNumber",
+            "type": "bytes32"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "comments",
+            "type": "string"
+          }
+        ],
+        "name": "BuyCardReveal",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
             "internalType": "uint8",
             "name": "version",
             "type": "uint8"
@@ -12021,6 +12132,37 @@
         "inputs": [
           {
             "indexed": false,
+            "internalType": "address",
+            "name": "owner",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "cardNo",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "holdAmount",
+            "type": "uint256"
+          }
+        ],
+        "name": "MomentCardUpdate",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
             "internalType": "uint256",
             "name": "callId",
             "type": "uint256"
@@ -12053,14 +12195,14 @@
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "callId",
+            "name": "clubId",
             "type": "uint256"
           },
           {
             "indexed": false,
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
+            "internalType": "address",
+            "name": "trader",
+            "type": "address"
           },
           {
             "indexed": false,
@@ -12070,33 +12212,27 @@
           },
           {
             "indexed": false,
+            "internalType": "bool",
+            "name": "isLocked",
+            "type": "bool"
+          },
+          {
+            "indexed": false,
             "internalType": "uint256",
-            "name": "holdingAmount",
+            "name": "amount",
             "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "isBuy",
+            "type": "bool"
           },
           {
             "indexed": false,
             "internalType": "uint256",
             "name": "priceAfterFee",
             "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "protocolFee",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "subjectFee",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint64",
-            "name": "ver",
-            "type": "uint64"
           }
         ],
         "name": "MomentClubTrade",
@@ -12188,12 +12324,6 @@
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
           },
@@ -12217,19 +12347,6 @@
           }
         ],
         "name": "MomentTokenMint",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": false,
-            "internalType": "address",
-            "name": "operator",
-            "type": "address"
-          }
-        ],
-        "name": "OperatorUpdated",
         "type": "event"
       },
       {
@@ -12301,43 +12418,6 @@
           }
         ],
         "name": "TGEFeePercentUpdate",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "bool",
-            "name": "isNative",
-            "type": "bool"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "nativeFees",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "lfgFees",
-            "type": "uint256"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "fee",
-            "type": "uint256"
-          }
-        ],
-        "name": "TGEFees",
         "type": "event"
       },
       {
@@ -12425,14 +12505,42 @@
       {
         "inputs": [
           {
+            "internalType": "uint64",
+            "name": "sequence",
+            "type": "uint64"
+          },
+          {
+            "internalType": "address",
+            "name": "provider",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "randomNumber",
+            "type": "bytes32"
+          }
+        ],
+        "name": "_entropyCallback",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          },
+          {
             "internalType": "uint256",
             "name": "",
             "type": "uint256"
           },
           {
-            "internalType": "address",
+            "internalType": "uint256",
             "name": "",
-            "type": "address"
+            "type": "uint256"
           }
         ],
         "name": "balanceOf",
@@ -12463,11 +12571,6 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
           },
@@ -12480,21 +12583,6 @@
             "internalType": "uint256",
             "name": "expectedPrice",
             "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "signature",
-            "type": "bytes"
           }
         ],
         "name": "buyCard",
@@ -12505,10 +12593,39 @@
       {
         "inputs": [
           {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "name": "cardSupply",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "components": [
               {
                 "internalType": "uint256",
                 "name": "liquidityAmount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "seriesTotal",
                 "type": "uint256"
               },
               {
@@ -12582,24 +12699,26 @@
         "type": "function"
       },
       {
-        "inputs": [
+        "inputs": [],
+        "name": "entropy",
+        "outputs": [
           {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "user",
+            "internalType": "contract IEntropy",
+            "name": "",
             "type": "address"
           }
         ],
-        "name": "getBalanceOf",
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "entropyProvider",
         "outputs": [
           {
-            "internalType": "uint256",
+            "internalType": "address",
             "name": "",
-            "type": "uint256"
+            "type": "address"
           }
         ],
         "stateMutability": "view",
@@ -12654,14 +12773,8 @@
         "type": "function"
       },
       {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          }
-        ],
-        "name": "getClubVer",
+        "inputs": [],
+        "name": "getEntropyFee",
         "outputs": [
           {
             "internalType": "uint256",
@@ -12853,109 +12966,6 @@
             "type": "uint256"
           },
           {
-            "internalType": "address",
-            "name": "applyer",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expectedPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          }
-        ],
-        "name": "hashForBuyCard",
-        "outputs": [
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "chainId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "applyer",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          }
-        ],
-        "name": "hashForMintMomentToken",
-        "outputs": [
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "chainId",
-            "type": "uint256"
-          },
-          {
             "internalType": "uint256",
             "name": "callId",
             "type": "uint256"
@@ -12975,6 +12985,11 @@
               {
                 "internalType": "uint256",
                 "name": "liquidityAmount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "seriesTotal",
                 "type": "uint256"
               },
               {
@@ -13047,55 +13062,6 @@
       {
         "inputs": [
           {
-            "internalType": "uint256",
-            "name": "chainId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "applyer",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          }
-        ],
-        "name": "hashForSellCard",
-        "outputs": [
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
             "internalType": "address",
             "name": "validator",
             "type": "address"
@@ -13121,11 +13087,6 @@
           },
           {
             "internalType": "address",
-            "name": "operator_",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
             "name": "uniswapV3Factory_",
             "type": "address"
           },
@@ -13137,6 +13098,11 @@
           {
             "internalType": "address",
             "name": "weth_",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "entropy_",
             "type": "address"
           }
         ],
@@ -13168,33 +13134,18 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
+            "internalType": "uint256[]",
+            "name": "cardArr",
+            "type": "uint256[]"
           },
           {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "signature",
-            "type": "bytes"
+            "internalType": "uint256[]",
+            "name": "amountArr",
+            "type": "uint256[]"
           }
         ],
         "name": "mintMomentToken",
@@ -13258,15 +13209,15 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint64",
-            "name": "ver",
-            "type": "uint64"
-          },
-          {
             "components": [
               {
                 "internalType": "uint256",
                 "name": "liquidityAmount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "seriesTotal",
                 "type": "uint256"
               },
               {
@@ -13340,6 +13291,11 @@
               {
                 "internalType": "uint256",
                 "name": "liquidityAmount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "seriesTotal",
                 "type": "uint256"
               },
               {
@@ -13432,13 +13388,44 @@
         "type": "function"
       },
       {
-        "inputs": [],
-        "name": "operator",
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "name": "orders",
         "outputs": [
           {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
             "internalType": "address",
-            "name": "",
+            "name": "trader",
             "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expectedPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "remainFunds",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "commitTime",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -13514,33 +13501,18 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "callId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
             "name": "clubId",
             "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
+            "internalType": "uint256[]",
+            "name": "cardArr",
+            "type": "uint256[]"
           },
           {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "validFor",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "signature",
-            "type": "bytes"
+            "internalType": "uint256[]",
+            "name": "amountArr",
+            "type": "uint256[]"
           }
         ],
         "name": "sellCard",
@@ -13551,14 +13523,20 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "operator_",
-            "type": "address"
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
           }
         ],
-        "name": "setOperator",
-        "outputs": [],
-        "stateMutability": "nonpayable",
+        "name": "seriesSupply",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -13758,11 +13736,6 @@
           {
             "internalType": "uint256",
             "name": "clubId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "clubVer",
             "type": "uint256"
           }
         ],
