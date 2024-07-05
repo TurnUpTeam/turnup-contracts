@@ -80,7 +80,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     bool isLocked,
     uint256 amount,
     bool isBuy,
-    uint256 priceAfterFee 
+    uint256 priceAfterFee,
+    uint64 sequenceNumber
   );
 
   event MomentTokenMint(uint256 clubId, address minter, address memeAddress, uint256 amount);
@@ -613,7 +614,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     _executeOrder(order, rngNumber);
 
-    emit MomentClubTrade(club.clubId, order.trader, club.supply, club.isLocked, order.amount, true, priceAfterFee);
+    emit MomentClubTrade(club.clubId, order.trader, club.supply, club.isLocked, order.amount, true, priceAfterFee, sequenceNumber);
   }
   
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant { 
@@ -665,7 +666,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       club.isLocked,
       sellAmount,
       false,
-      priceAfterFee
+      priceAfterFee,
+      0
     );  
   }
 
