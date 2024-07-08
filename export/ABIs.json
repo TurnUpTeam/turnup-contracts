@@ -11809,6 +11809,11 @@
         "inputs": [
           {
             "internalType": "uint256",
+            "name": "entroyFeeMax",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
             "name": "entropyFee",
             "type": "uint256"
           }
@@ -12057,6 +12062,19 @@
           }
         ],
         "name": "BuyCardReveal",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "feeMax",
+            "type": "uint256"
+          }
+        ],
+        "name": "EntroyFeeMaxUpdate",
         "type": "event"
       },
       {
@@ -12731,6 +12749,19 @@
             "internalType": "address",
             "name": "",
             "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "entryFeeMax",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -13549,6 +13580,19 @@
           }
         ],
         "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "feeMax",
+            "type": "uint256"
+          }
+        ],
+        "name": "setEntropyFeeMax",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
       },
       {
