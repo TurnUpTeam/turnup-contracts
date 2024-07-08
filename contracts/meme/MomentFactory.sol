@@ -589,19 +589,6 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     for (uint256 i = 1; i <= order.amount; i++) {
       uint256 rng = uint256(keccak256(abi.encodePacked(rngNumber, order.trader, block.timestamp, i)));
       uint256 cardNo = 1 + uint256(rng % club.momentConf.seriesTotal);
-      
-      uint256 holdAmount = balanceOf[order.trader][clubId][cardNo];
-      balanceOf[order.trader][clubId][cardNo] = holdAmount + 1;
-      
-      uint256 supply = cardSupply[clubId][cardNo];
-      cardSupply[clubId][cardNo] = supply + 1;
-      if (supply == 0) {
-        seriesSupply[clubId] += 1;
-        if (seriesSupply[clubId] >= club.momentConf.seriesTotal) {
-          club.isLocked = true;
-        }
-      }
-
       if (_orderCards[cardNo] == 0) {
         _orderItems.push(cardNo);
       } 
@@ -611,10 +598,22 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     for (uint256 i = 0; i < _orderItems.length; i++) {
       uint256 cardNo = _orderItems[i];
       uint256 supply = cardSupply[clubId][cardNo];
+      uint256 buyAmount = _orderCards[cardNo];
       uint256 holdAmount = balanceOf[order.trader][clubId][cardNo];
-      emit MomentCardUpdate(order.trader, clubId, cardNo, supply, holdAmount, _orderCards[cardNo]);
+
+      balanceOf[order.trader][clubId][cardNo] = holdAmount + buyAmount;
+      cardSupply[clubId][cardNo] = supply + buyAmount;
+      if (supply == 0) {
+        seriesSupply[clubId] += buyAmount;
+        if (seriesSupply[clubId] >= club.momentConf.seriesTotal && (!club.isLocked)) {
+          club.isLocked = true;
+        }
+      }
+
+      emit MomentCardUpdate(order.trader, clubId, cardNo, supply, holdAmount, buyAmount);
       delete _orderCards[cardNo];
     }
+
     delete _orderItems;
   }
 
