@@ -12177,6 +12177,12 @@
             "internalType": "uint256",
             "name": "holdAmount",
             "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "updateAmount",
+            "type": "uint256"
           }
         ],
         "name": "MomentCardUpdate",
