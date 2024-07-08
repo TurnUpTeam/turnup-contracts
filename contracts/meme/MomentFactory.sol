@@ -582,7 +582,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     return true;
   }
 
-  function _executeOrder(MomentOrder memory order, bytes32 rngNumber) internal nonReentrant{
+  function _executeOrder(MomentOrder memory order, bytes32 rngNumber) internal {
     uint256 clubId = order.clubId;
     MomentClub storage club = momentClubs[clubId]; 
     
