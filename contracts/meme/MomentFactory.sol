@@ -513,6 +513,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   function _buyCardCommit(uint256 clubId, uint256 amount, uint256 expectedPrice, uint256 remainFunds) internal {
     if (amount == 0) revert InvalidAmount();
     MomentClub storage club = momentClubs[clubId];
+    if (club.clubId == 0) revert MomentClubNotFound();
     if (club.isLocked) revert MomentClubIsLocked();
     
     uint256 actualPrice = getBuyPrice(clubId, amount);
