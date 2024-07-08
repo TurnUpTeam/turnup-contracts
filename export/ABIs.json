@@ -11813,7 +11813,7 @@
             "type": "uint256"
           }
         ],
-        "name": "EntroypyFeeUnacceptable",
+        "name": "EntropyFeeUnacceptable",
         "type": "error"
       },
       {
