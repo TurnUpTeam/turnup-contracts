@@ -72,17 +72,18 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 clubId,
     uint256 cardNo, 
     uint256 cardSupply,
-    uint256 holdAmount
+    uint256 holdAmount,
+    uint256 updateAmount
   );
 
   event MomentClubTrade(
-    uint256 clubId,
+    uint256 clubId, 
     address trader,
     uint256 supply,
     bool isLocked,
     uint256 amount,
     bool isBuy,
-    uint256 priceAfterFee,
+    uint256 priceAfterFee, 
     uint64 sequenceNumber
   );
 
@@ -186,6 +187,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   IEntropy public entropy;
   address public entropyProvider;
   uint256 public entropyFeeMax; 
+
+  uint256[] private _orderItems; 
+  mapping(uint256 => uint256) private _orderCards;
 
   function initialize( 
     address[] calldata validators_,  
@@ -428,7 +432,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 supply = cardSupply[clubId][cardNo];
       mintTokenAmount = mintTokenAmount + slotTokenAmount * cardAmount / supply;
 
-      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply - cardAmount, holdAmount - cardAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply - cardAmount, holdAmount - cardAmount, cardAmount);
     }
  
     // Mint event must happen before nft transfer
@@ -581,6 +585,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   function _executeOrder(MomentOrder memory order, bytes32 rngNumber) internal nonReentrant{
     uint256 clubId = order.clubId;
     MomentClub storage club = momentClubs[clubId]; 
+    
     for (uint256 i = 1; i <= order.amount; i++) {
       uint256 rng = uint256(keccak256(abi.encodePacked(rngNumber, order.trader, block.timestamp, i)));
       uint256 cardNo = 1 + uint256(rng % club.momentConf.seriesTotal);
@@ -597,8 +602,20 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
         }
       }
 
-      emit MomentCardUpdate(order.trader, clubId, cardNo, supply + 1, holdAmount + 1);
+      if (_orderCards[cardNo] == 0) {
+        _orderItems.push(cardNo);
+      } 
+      _orderCards[cardNo] += 1;
     }
+
+    for (uint256 i = 0; i < _orderItems.length; i++) {
+      uint256 cardNo = _orderItems[i];
+      uint256 supply = cardSupply[clubId][cardNo];
+      uint256 holdAmount = balanceOf[order.trader][clubId][cardNo];
+      emit MomentCardUpdate(order.trader, clubId, cardNo, supply, holdAmount, _orderCards[cardNo]);
+      delete _orderCards[cardNo];
+    }
+    delete _orderItems;
   }
 
   function _buyCardReveal(uint64 sequenceNumber, bytes32 rngNumber) internal nonReentrant {
@@ -623,7 +640,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     _executeOrder(order, rngNumber);
 
-    emit MomentClubTrade(club.clubId, order.trader, club.supply, club.isLocked, order.amount, true, priceAfterFee, sequenceNumber);
+    emit MomentClubTrade(
+      club.clubId,  
+      order.trader, 
+      club.supply, 
+      club.isLocked, 
+      order.amount, 
+      true, 
+      priceAfterFee,  
+      sequenceNumber
+    );
   }
   
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant { 
@@ -652,7 +678,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
       sellAmount += cardAmount;
 
-      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply - cardAmount, holdAmount - cardAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply - cardAmount, holdAmount - cardAmount, cardAmount);
     }
 
     uint256 actualPrice = getSellPrice(clubId, sellAmount);
@@ -669,13 +695,13 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     _sendFunds(club.creatorAddress, subjectFee);
  
     emit MomentClubTrade(
-      clubId,
+      clubId, 
       _msgSender(),
       club.supply,
       club.isLocked,
       sellAmount,
       false,
-      priceAfterFee,
+      priceAfterFee, 
       0
     );  
   }
