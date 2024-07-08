@@ -70,6 +70,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     address owner, 
     uint256 clubId,
     uint256 cardNo, 
+    uint256 cardSupply,
     uint256 holdAmount
   );
 
@@ -410,16 +411,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     for (uint256 i = 0; i < cardArr.length; i++) {
       uint256 cardNo = cardArr[i];
-      uint256 saleAmount = amountArr[i];
+      uint256 cardAmount = amountArr[i];
 
       uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
-      if (saleAmount > holdAmount) revert InvalidAmount();
-      balanceOf[_msgSender()][clubId][cardNo] = holdAmount - saleAmount;
+      if (cardAmount == 0 || cardAmount > holdAmount) revert InvalidAmount();
+      balanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
     
       uint256 supply = cardSupply[clubId][cardNo];
-      mintTokenAmount = mintTokenAmount + slotTokenAmount * saleAmount / supply;
+      mintTokenAmount = mintTokenAmount + slotTokenAmount * cardAmount / supply;
 
-      emit MomentCardUpdate(_msgSender(), clubId, cardNo, holdAmount - saleAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply - cardAmount, holdAmount - cardAmount);
     }
  
     // Mint event must happen before nft transfer
@@ -579,16 +580,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 holdAmount = balanceOf[order.trader][clubId][cardNo];
       balanceOf[order.trader][clubId][cardNo] = holdAmount + 1;
       
-      uint256 ss = cardSupply[clubId][cardNo];
-      cardSupply[clubId][cardNo] = ss + 1;
-      if (ss == 0) {
+      uint256 supply = cardSupply[clubId][cardNo];
+      cardSupply[clubId][cardNo] = supply + 1;
+      if (supply == 0) {
         seriesSupply[clubId] += 1;
         if (seriesSupply[clubId] >= club.momentConf.seriesTotal) {
           club.isLocked = true;
         }
       }
 
-      emit MomentCardUpdate(order.trader, clubId, cardNo, holdAmount + 1);
+      emit MomentCardUpdate(order.trader, clubId, cardNo, supply + 1, holdAmount + 1);
     }
   }
 
@@ -633,7 +634,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 cardAmount = amountArr[i];
 
       uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
-      if (cardAmount > holdAmount) revert InvalidAmount();
+      if (cardAmount == 0 || cardAmount > holdAmount) revert InvalidAmount();
       balanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
       uint256 supply = cardSupply[clubId][cardNo];
       cardSupply[clubId][cardNo] = supply - cardAmount;
@@ -643,7 +644,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
       sellAmount += cardAmount;
 
-      emit MomentCardUpdate(_msgSender(), clubId, cardNo, holdAmount - cardAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply - cardAmount, holdAmount - cardAmount);
     }
 
     uint256 actualPrice = getSellPrice(clubId, sellAmount);
