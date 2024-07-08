@@ -610,7 +610,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
         }
       }
 
-      emit MomentCardUpdate(order.trader, clubId, cardNo, supply, holdAmount, buyAmount);
+      emit MomentCardUpdate(order.trader, clubId, cardNo, supply + buyAmount, holdAmount + buyAmount, buyAmount);
       delete _orderCards[cardNo];
     }
 
