@@ -45,11 +45,12 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed();
-  error EntropyFeeUnacceptable(uint256 entropyFee);
+  error EntropyFeeUnacceptable(uint256 entroyFeeMax, uint256 entropyFee);
    
   event TokenFactoryUpdated(address tokenFactory);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
   event SubjectFeePercentUpdate(uint256 feePercent);
+  event EntroyFeeMaxUpdate(uint256 feeMax);
   event TGEFeePercentUpdate(uint256 feePercent); 
   event MomentClubCreated(uint256 callId, uint256 clubId, address creator, uint256 creationFee);
 
@@ -184,7 +185,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   IEntropy public entropy;
   address public entropyProvider;
-  
+  uint256 public entryFeeMax; 
+
   function initialize( 
     address[] calldata validators_,  
     address uniswapV3Factory_,
@@ -223,6 +225,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
     entropy = IEntropy(entropy_);
     entropyProvider = entropy.getDefaultProvider();
+    setEntropyFeeMax(1 ether / 10000);
   }
  
   function setTokenFactory(address factory) public onlyOwner {
@@ -246,6 +249,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit TGEFeePercentUpdate(tgeFeePercent);
   }
    
+  function setEntropyFeeMax(uint256 feeMax) public virtual onlyOwner {
+    entryFeeMax = feeMax;
+    emit EntroyFeeMaxUpdate(feeMax);
+  }
+
   function _nextClubId() internal returns (uint256) {
     uint256 max = 100000000;
     ++baseClubId;
@@ -509,7 +517,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     
     uint256 entropyFee = getEntropyFee();
-    if (entropyFee > 1 ether / 10000) revert EntropyFeeUnacceptable(entropyFee);
+    if (entropyFee > entryFeeMax) revert EntropyFeeUnacceptable(entryFeeMax, entropyFee);
 
     if (priceAfterFee > expectedPrice || (priceAfterFee + entropyFee) > remainFunds) { 
       revert InsufficientFunds();
