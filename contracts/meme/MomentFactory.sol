@@ -50,7 +50,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   event TokenFactoryUpdated(address tokenFactory);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
   event SubjectFeePercentUpdate(uint256 feePercent);
-  event EntroyFeeMaxUpdate(uint256 feeMax);
+  event EntropyFeeMaxUpdate(uint256 feeMax);
   event TGEFeePercentUpdate(uint256 feePercent); 
   event MomentClubCreated(uint256 callId, uint256 clubId, address creator, uint256 creationFee);
 
@@ -185,7 +185,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   IEntropy public entropy;
   address public entropyProvider;
-  uint256 public entryFeeMax; 
+  uint256 public entropyFeeMax; 
 
   function initialize( 
     address[] calldata validators_,  
@@ -250,8 +250,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
    
   function setEntropyFeeMax(uint256 feeMax) public virtual onlyOwner {
-    entryFeeMax = feeMax;
-    emit EntroyFeeMaxUpdate(feeMax);
+    entropyFeeMax = feeMax;
+    emit EntropyFeeMaxUpdate(feeMax);
   }
 
   function _nextClubId() internal returns (uint256) {
@@ -517,7 +517,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
     
     uint256 entropyFee = getEntropyFee();
-    if (entropyFee > entryFeeMax) revert EntropyFeeUnacceptable(entryFeeMax, entropyFee);
+    if (entropyFee > entropyFeeMax) revert EntropyFeeUnacceptable(entropyFeeMax, entropyFee);
 
     if (priceAfterFee > expectedPrice || (priceAfterFee + entropyFee) > remainFunds) { 
       revert InsufficientFunds();
