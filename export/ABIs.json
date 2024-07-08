@@ -12074,7 +12074,7 @@
             "type": "uint256"
           }
         ],
-        "name": "EntroyFeeMaxUpdate",
+        "name": "EntropyFeeMaxUpdate",
         "type": "event"
       },
       {
@@ -12743,12 +12743,12 @@
       },
       {
         "inputs": [],
-        "name": "entropyProvider",
+        "name": "entropyFeeMax",
         "outputs": [
           {
-            "internalType": "address",
+            "internalType": "uint256",
             "name": "",
-            "type": "address"
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -12756,12 +12756,12 @@
       },
       {
         "inputs": [],
-        "name": "entryFeeMax",
+        "name": "entropyProvider",
         "outputs": [
           {
-            "internalType": "uint256",
+            "internalType": "address",
             "name": "",
-            "type": "uint256"
+            "type": "address"
           }
         ],
         "stateMutability": "view",
