@@ -9,8 +9,6 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {IEntropy} from "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
-import {IEntropyConsumer} from "@pythnetwork/entropy-sdk-solidity/IEntropyConsumer.sol";
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
 import {Meme404} from "./Meme404.sol";
 import {MemeFT} from "./MemeFT.sol";
@@ -19,12 +17,11 @@ import {IWETH} from "./IWETH.sol";
 import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
 import {FullMath} from "./FullMath.sol";
 
-contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable, IEntropyConsumer {
+contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   
   error NotAuthorized();
   error InvalidInitParameters();
-  error InvalidParameters();
-  error ZeroAmount();
+  error InvalidParameters(); 
   error ZeroAddress();
   error Forbidden();
   error CreationFeeInvalid(); 
@@ -34,9 +31,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error MomentConfInvalid();
   error MomentClubTooMany();  
   error MomentClubVerInvalid(uint256 expectedVer, uint256 actualVer);
-  error MomentTokenNotCreated();
   error MomentClubTGEDone();
-  error InvalidSequenceNumber(uint64 sequenceNumber);
   error InvalidAmount(); 
   error InsufficientFunds(); 
   error UnableToSendFunds();
@@ -44,29 +39,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error InsufficientFees();
   error UnableToTransferFunds();
   error SignatureExpired();
-  error SignatureAlreadyUsed();
-  error EntropyFeeUnacceptable(uint256 entroyFeeMax, uint256 entropyFee);
+  error SignatureAlreadyUsed(); 
    
   event TokenFactoryUpdated(address tokenFactory);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
   event SubjectFeePercentUpdate(uint256 feePercent);
-  event EntropyFeeMaxUpdate(uint256 feeMax);
   event TGEFeePercentUpdate(uint256 feePercent); 
   event MomentClubCreated(uint256 callId, uint256 clubId, address creator, uint256 creationFee);
 
   event MomentTokenGeneration(uint256 clubId, address creator, address tokenAddress, address mirrorERC721, address swapPool);
-
-  event BuyCardCommit(
-      uint64 sequenceNumber,
-      bytes32 userRandomNumber,
-      uint256 clubId,
-      uint256 buyAmount,
-      uint256 expectedPrice,
-      uint256 remainFunds
-  );
-
-  event BuyCardReveal(uint64 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
-
+ 
   event MomentCardUpdate( 
     address owner, 
     uint256 clubId,
@@ -83,8 +65,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     bool isLocked,
     uint256 amount,
     bool isBuy,
-    uint256 priceAfterFee, 
-    uint64 sequenceNumber
+    uint256 priceAfterFee
   );
 
   event MomentTokenMint(uint256 clubId, address minter, address memeAddress, uint256 amount);
@@ -137,22 +118,12 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     MomentConfig momentConf; 
   }
 
-  struct MomentOrder {  
-    uint256 clubId;
-    address trader;
-    uint256 amount;
-    uint256 expectedPrice;
-    uint256 remainFunds;
-    uint256 commitTime;
-  }
+  uint256 public baseClubId;
 
   mapping(bytes32 => bool) private _usedSignatures;
 
-  uint256 public baseClubId;
-
   mapping(uint256 => MomentClub) public momentClubs;
-  mapping(uint256 => MomentOrder) public orders;
-
+  
   // clubId => series supply
   mapping(uint256 => uint256) public seriesSupply;
 
@@ -161,6 +132,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   // address => (clubId => (cardNo => holdAmount))
   mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public balanceOf;
+
+  uint256 private _rngNumber = 0;
 
   // solhint-disable-next-line var-name-mixedcase
   mapping(address => uint256) private _404Tokens;
@@ -184,10 +157,6 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   int24 private _tickLower;
   int24 private _tickUpper;
 
-  IEntropy public entropy;
-  address public entropyProvider;
-  uint256 public entropyFeeMax; 
-
   uint256[] private _orderItems; 
   mapping(uint256 => uint256) private _orderCards;
 
@@ -195,23 +164,18 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     address[] calldata validators_,  
     address uniswapV3Factory_,
     address uniswapPositionManager_,
-    address weth_,
-    address entropy_
+    address weth_
   ) public initializer {
     if ((uniswapV3Factory_ == address(0)) 
       || (uniswapPositionManager_ == address(0)) 
-      || (weth_ == address(0))
-      || (entropy_ == address(0)))
+      || (weth_ == address(0)))
       revert InvalidInitParameters();
 
     __Validatable_init();
     __Pausable_init();
 
-    for (uint256 i = 0; i < validators_.length;) {
+    for (uint256 i = 0; i < validators_.length; i++) {
       updateValidator(validators_[i], true);
-      unchecked {
-        i++;
-      }
     }
  
     setProtocolFeePercent(1 ether / 100); 
@@ -226,10 +190,6 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     _tickUpper = (887272 / tickSpacing) * tickSpacing; // TickMath.MAX_TICK
 
     weth = IWETH(weth_);
-
-    entropy = IEntropy(entropy_);
-    entropyProvider = entropy.getDefaultProvider();
-    setEntropyFeeMax(1 ether / 10000);
   }
  
   function setTokenFactory(address factory) public onlyOwner {
@@ -253,11 +213,6 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit TGEFeePercentUpdate(tgeFeePercent);
   }
    
-  function setEntropyFeeMax(uint256 feeMax) public virtual onlyOwner {
-    entropyFeeMax = feeMax;
-    emit EntropyFeeMaxUpdate(feeMax);
-  }
-
   function _nextClubId() internal returns (uint256) {
     uint256 max = 100000000;
     ++baseClubId;
@@ -325,11 +280,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit MomentClubCreated(callId_, clubId, _msgSender(), creationFee_);
 
     if (initBuyAmount_ > 0) {
-      _buyCardCommit(clubId, initBuyAmount_, type(uint256).max, msg.value - creationFee_);
+      _buyCardImpl(clubId, initBuyAmount_, type(uint256).max, msg.value - creationFee_);
     }
   }
 
-  function wantTge(uint256 clubId) public {
+  function wantTge(uint256 clubId) internal {
     MomentClub storage club = momentClubs[clubId];
     if (club.clubId == clubId) revert MomentClubNotFound();
     if (!club.isLocked) revert MomentClubUnlocked();
@@ -510,7 +465,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     return price - protocolFee - subjectFee;
   }
 
-  function _buyCardCommit(uint256 clubId, uint256 amount, uint256 expectedPrice, uint256 remainFunds) internal {
+  function _buyCardImpl(uint256 clubId, uint256 amount, uint256 expectedPrice, uint256 remainFunds) internal {
     if (amount == 0) revert InvalidAmount();
     MomentClub storage club = momentClubs[clubId];
     if (club.clubId == 0) revert MomentClubNotFound();
@@ -520,75 +475,42 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 protocolFee = getProtocolFee(actualPrice);
     uint256 subjectFee = getSubjectFee(actualPrice);
     uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
-    
-    uint256 entropyFee = getEntropyFee();
-    if (entropyFee > entropyFeeMax) revert EntropyFeeUnacceptable(entropyFeeMax, entropyFee);
-
-    if (priceAfterFee > expectedPrice || (priceAfterFee + entropyFee) > remainFunds) { 
+      
+    if (priceAfterFee > expectedPrice || priceAfterFee > remainFunds) { 
       revert InsufficientFunds();
     }
     
-    bytes32 userRandomNumber = keccak256(abi.encodePacked(block.timestamp, blockhash(block.number - 1), _msgSender()));
-    uint64 sequenceNumber = entropy.requestWithCallback{value: entropyFee}(entropyProvider, userRandomNumber);
+    club.funds += actualPrice;
+    club.supply += amount;
+  
+    protocolFees += protocolFee;
 
-    if (orders[sequenceNumber].clubId != 0) {
-      revert InvalidSequenceNumber(sequenceNumber);
-    }
-    
-    orders[sequenceNumber] = MomentOrder({ 
-      clubId: clubId,
-      trader: _msgSender(),
-      amount: amount,
-      expectedPrice: expectedPrice,
-      remainFunds: remainFunds - entropyFee,
-      commitTime: block.timestamp
-    });
- 
-    emit BuyCardCommit(sequenceNumber, userRandomNumber, clubId, amount, expectedPrice, remainFunds); 
-  }
+    _sendFunds(club.creatorAddress, subjectFee);
+    _sendFunds(_msgSender(), remainFunds - priceAfterFee);
 
-  function _checkOrder(MomentOrder memory order, uint64 sequenceNumber, bytes32 rngNumber) internal returns (bool) { 
-    if (order.clubId == 0) {
-      _sendFunds(order.trader, order.remainFunds);
-      emit BuyCardReveal(sequenceNumber, rngNumber, 0, "Not found order");
-      return false;
-    }
-    
-    MomentClub storage club = momentClubs[order.clubId];
-    if (club.clubId == 0) {
-      _sendFunds(order.trader, order.remainFunds);
-      emit BuyCardReveal(sequenceNumber, rngNumber, 0, "Not found club");
-      return false;
-    }
+    _dropCards(club, amount);
+
+    emit MomentClubTrade(
+      club.clubId,  
+      _msgSender(), 
+      club.supply, 
+      club.isLocked, 
+      amount, 
+      true, 
+      priceAfterFee
+    );
 
     if (club.isLocked) {
-      _sendFunds(order.trader, order.remainFunds);
-      emit BuyCardReveal(sequenceNumber, rngNumber, club.clubId, "Locked club");
-      return false;
+      wantTge(clubId);
     }
-
-    uint256 actualPrice = getBuyPrice(order.clubId, order.amount);
-    uint256 protocolFee = getProtocolFee(actualPrice);
-    uint256 subjectFee = getSubjectFee(actualPrice);
-    uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
-
-    if (priceAfterFee > order.expectedPrice || priceAfterFee > order.remainFunds) { 
-      _sendFunds(order.trader, order.remainFunds);
-      emit BuyCardReveal(sequenceNumber, rngNumber, club.clubId, "Insufficient funds");
-      return false;
-    }
-
-    emit BuyCardReveal(sequenceNumber, rngNumber, club.clubId, "OK");
-
-    return true;
   }
+ 
+  function _dropCards( MomentClub storage club, uint256 amount) internal {
+    uint256 clubId = club.clubId;
 
-  function _executeOrder(MomentOrder memory order, bytes32 rngNumber) internal {
-    uint256 clubId = order.clubId;
-    MomentClub storage club = momentClubs[clubId]; 
-    
-    for (uint256 i = 1; i <= order.amount; i++) {
-      uint256 rng = uint256(keccak256(abi.encodePacked(rngNumber, order.trader, block.timestamp, i)));
+    for (uint256 i = 1; i <= amount; i++) {
+      _rngNumber += 1;
+      uint256 rng = uint256(keccak256(abi.encodePacked(block.number, block.timestamp, _msgSender(), _rngNumber, i)));
       uint256 cardNo = 1 + uint256(rng % club.momentConf.seriesTotal);
       if (_orderCards[cardNo] == 0) {
         _orderItems.push(cardNo);
@@ -600,9 +522,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 cardNo = _orderItems[i];
       uint256 supply = cardSupply[clubId][cardNo];
       uint256 buyAmount = _orderCards[cardNo];
-      uint256 holdAmount = balanceOf[order.trader][clubId][cardNo];
+      uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
 
-      balanceOf[order.trader][clubId][cardNo] = holdAmount + buyAmount;
+      balanceOf[_msgSender()][clubId][cardNo] = holdAmount + buyAmount;
       cardSupply[clubId][cardNo] = supply + buyAmount;
       if (supply == 0) {
         seriesSupply[clubId] += buyAmount;
@@ -611,49 +533,15 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
         }
       }
 
-      emit MomentCardUpdate(order.trader, clubId, cardNo, supply + buyAmount, holdAmount + buyAmount, buyAmount);
+      emit MomentCardUpdate(_msgSender(), clubId, cardNo, supply + buyAmount, holdAmount + buyAmount, buyAmount);
       delete _orderCards[cardNo];
     }
 
     delete _orderItems;
   }
-
-  function _buyCardReveal(uint64 sequenceNumber, bytes32 rngNumber) internal nonReentrant {
-    MomentOrder memory order = orders[sequenceNumber];
-    delete orders[sequenceNumber];
-    if (!_checkOrder(order, sequenceNumber, rngNumber)) return;
-
-    MomentClub storage club = momentClubs[order.clubId];
-
-    uint256 actualPrice = getBuyPrice(club.clubId, order.amount);
-    uint256 protocolFee = getProtocolFee(actualPrice);
-    uint256 subjectFee = getSubjectFee(actualPrice);
-    uint256 priceAfterFee = actualPrice + protocolFee + subjectFee;
-
-    club.funds += actualPrice;
-    club.supply += order.amount;
-  
-    protocolFees += protocolFee;
-
-    _sendFunds(club.creatorAddress, subjectFee);
-    _sendFunds(_msgSender(), order.remainFunds - priceAfterFee);
-
-    _executeOrder(order, rngNumber);
-
-    emit MomentClubTrade(
-      club.clubId,  
-      order.trader, 
-      club.supply, 
-      club.isLocked, 
-      order.amount, 
-      true, 
-      priceAfterFee,  
-      sequenceNumber
-    );
-  }
   
   function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant { 
-    _buyCardCommit(clubId, amount, expectedPrice, msg.value);
+    _buyCardImpl(clubId, amount, expectedPrice, msg.value);
   }
 
   function sellCard(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
@@ -701,8 +589,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       club.isLocked,
       sellAmount,
       false,
-      priceAfterFee, 
-      0
+      priceAfterFee
     );  
   }
 
@@ -768,19 +655,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     );
     emit WithdrawLiquidityFees(clubId, club.memeAddress, beneficiary, amount0, amount1);
   }
-
-  function getEntropyFee() public view returns (uint256)  {
-    return entropy.getFee(entropyProvider);
-  }
-
-  function getEntropy() internal view override returns (address) {
-    return address(entropy);
-  }
-
-  function entropyCallback(uint64 sequenceNumber, address /*provider*/, bytes32 randomNumber) internal override {
-    _buyCardReveal(sequenceNumber, randomNumber);
-  }
-
+   
   function pause() external onlyOwner {
     _pause();
   }
