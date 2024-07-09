@@ -273,8 +273,7 @@ async function deployMomentFactory() {
     [FIRST_VALIDATOR],
     uniswapV3Factory,
     uniswapPositionManager,
-    weth,
-    pythEntropy
+    weth
   );
 
   tokenFactory = await deployProxy("TokenFactory", momentFactory.address);
