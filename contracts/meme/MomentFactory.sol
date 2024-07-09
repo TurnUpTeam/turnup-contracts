@@ -133,7 +133,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   // address => (clubId => (cardNo => holdAmount))
   mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public balanceOf;
 
-  uint256 private _rngNumber = 0;
+  uint256 private _rngNumber;
 
   // solhint-disable-next-line var-name-mixedcase
   mapping(address => uint256) private _404Tokens;
