@@ -2,13 +2,13 @@
 pragma solidity ^0.8.19;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol"; 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import {IEntropy} from "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
 import {IEntropyConsumer} from "@pythnetwork/entropy-sdk-solidity/IEntropyConsumer.sol";
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
@@ -20,7 +20,7 @@ import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
 import {FullMath} from "./FullMath.sol";
 
 contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable, IEntropyConsumer {
-  
+ 
   error NotAuthorized();
   error InvalidInitParameters();
   error InvalidParameters();
@@ -65,7 +65,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 remainFunds
   );
 
-  event BuyCardReveal(uint64 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
+  event BuyCardReveal(uint256 sequenceNumber, bytes32 rngNumber, uint256 clubId, string comments);
 
   event MomentCardUpdate( 
     address owner, 
@@ -84,7 +84,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 amount,
     bool isBuy,
     uint256 priceAfterFee, 
-    uint64 sequenceNumber
+    uint256 sequenceNumber
   );
 
   event MomentTokenMint(uint256 clubId, address minter, address memeAddress, uint256 amount);
@@ -144,6 +144,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 expectedPrice;
     uint256 remainFunds;
     uint256 commitTime;
+    uint256 revealTime;
+    uint256 rngNumber;
   }
 
   mapping(bytes32 => bool) private _usedSignatures;
@@ -188,9 +190,13 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   address public entropyProvider;
   uint256 public entropyFeeMax; 
 
+  uint32 public orderBatchSize = 5;
+  DoubleEndedQueue.Bytes32Deque private _orderQueue;
+
+  DoubleEndedQueue.Bytes32Deque private _tgeQueue;
   uint256[] private _orderItems; 
   mapping(uint256 => uint256) private _orderCards;
-
+  
   function initialize( 
     address[] calldata validators_,  
     address uniswapV3Factory_,
@@ -258,6 +264,10 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit EntropyFeeMaxUpdate(feeMax);
   }
 
+  function setOrderBatchSize(uint32 batchSize) public virtual onlyOwner {
+    orderBatchSize = batchSize;
+  }
+
   function _nextClubId() internal returns (uint256) {
     uint256 max = 100000000;
     ++baseClubId;
@@ -271,12 +281,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   
   function checkMemeConf(MomentConfig calldata momentConf) public pure returns (bool) {
     if (momentConf.liquidityAmount < 1e18) return false;
-    if (momentConf.seriesTotal == 0 || momentConf.seriesTotal > 500) return false;
-    if (bytes(momentConf.name).length == 0) return false;
-    if (bytes(momentConf.symbol).length == 0) return false;
-    if (bytes(momentConf.baseURI).length == 0) return false;
-    if (momentConf.baseUnit < 1e18) return false;
-    
+    if (momentConf.seriesTotal == 0 || momentConf.seriesTotal > 500) return false; 
+    if (momentConf.baseUnit < 1e18) return false; 
     if (momentConf.priceType != PriceFormulaType.Linear 
       && momentConf.priceType != PriceFormulaType.QuadCurve 
       && momentConf.priceType != PriceFormulaType.Fixed) {
@@ -329,6 +335,32 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     }
   }
 
+  function getOrderQueueLength() public view returns (uint256) {
+    return DoubleEndedQueue.length(_orderQueue);
+  }
+
+  function getTgeQueueLength() public view returns (uint256) {
+    return DoubleEndedQueue.length(_tgeQueue);
+  }
+
+  function handleOrderQueue() public {
+    uint256 fees = gasleft();
+    for (uint32 i = 0; (i < orderBatchSize) && (fees - gasleft() >= fees / 3); i++) {
+      if (DoubleEndedQueue.empty(_orderQueue)) {
+        break;
+      }
+      uint256 sequenceNumber = uint256(DoubleEndedQueue.popFront(_orderQueue));
+      _buyCardExec(sequenceNumber);  
+    }
+  }
+
+  function handleTgeQueue() public {
+    if (!DoubleEndedQueue.empty(_tgeQueue)) {
+      uint256 clubId = uint256(DoubleEndedQueue.popFront(_tgeQueue));
+      wantTge(clubId);  
+    }
+  }
+  
   function wantTge(uint256 clubId) public {
     MomentClub storage club = momentClubs[clubId];
     if (club.clubId == clubId) revert MomentClubNotFound();
@@ -541,13 +573,15 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       amount: amount,
       expectedPrice: expectedPrice,
       remainFunds: remainFunds - entropyFee,
-      commitTime: block.timestamp
+      commitTime: block.timestamp,
+      revealTime: 0,
+      rngNumber: 0
     });
  
     emit BuyCardCommit(sequenceNumber, userRandomNumber, clubId, amount, expectedPrice, remainFunds); 
   }
 
-  function _checkOrder(MomentOrder memory order, uint64 sequenceNumber, bytes32 rngNumber) internal returns (bool) { 
+  function _checkOrder(MomentOrder memory order, uint256 sequenceNumber, bytes32 rngNumber) internal returns (bool) { 
     if (order.clubId == 0) {
       _sendFunds(order.trader, order.remainFunds);
       emit BuyCardReveal(sequenceNumber, rngNumber, 0, "Not found order");
@@ -608,6 +642,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
         seriesSupply[clubId] += buyAmount;
         if (seriesSupply[clubId] >= club.momentConf.seriesTotal && (!club.isLocked)) {
           club.isLocked = true;
+          DoubleEndedQueue.pushBack(_tgeQueue, bytes32(clubId));
         }
       }
 
@@ -619,9 +654,20 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
 
   function _buyCardReveal(uint64 sequenceNumber, bytes32 rngNumber) internal nonReentrant {
+    MomentOrder storage order = orders[sequenceNumber];
+    if (!_checkOrder(order, sequenceNumber, rngNumber)) {
+      delete orders[sequenceNumber];
+      return;
+    }
+    order.revealTime = block.timestamp;
+    order.rngNumber = uint256(rngNumber);
+    DoubleEndedQueue.pushBack(_orderQueue, bytes32(uint256(sequenceNumber)));
+  }
+
+  function _buyCardExec(uint256 sequenceNumber) internal nonReentrant {
     MomentOrder memory order = orders[sequenceNumber];
     delete orders[sequenceNumber];
-    if (!_checkOrder(order, sequenceNumber, rngNumber)) return;
+    if (!_checkOrder(order, sequenceNumber, bytes32(order.rngNumber))) return;
 
     MomentClub storage club = momentClubs[order.clubId];
 
@@ -638,7 +684,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     _sendFunds(club.creatorAddress, subjectFee);
     _sendFunds(_msgSender(), order.remainFunds - priceAfterFee);
 
-    _executeOrder(order, rngNumber);
+    _executeOrder(order, bytes32(order.rngNumber));
 
     emit MomentClubTrade(
       club.clubId,  
@@ -856,5 +902,5 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
 
   // for future upgrades
-  uint256[50] private __gap;
+  uint256[5] private __gap;
 }
