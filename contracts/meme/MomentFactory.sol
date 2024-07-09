@@ -284,9 +284,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     }
   }
 
-  function wantTge(uint256 clubId) internal {
-    MomentClub storage club = momentClubs[clubId];
-    if (club.clubId == clubId) revert MomentClubNotFound();
+  function wantTge(MomentClub storage club) internal { 
     if (!club.isLocked) revert MomentClubUnlocked();
     if (club.memeAddress != address(0)) revert MomentClubTGEDone(); 
 
@@ -501,7 +499,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     );
 
     if (club.isLocked) {
-      wantTge(clubId);
+      wantTge(club);
     }
   }
  
