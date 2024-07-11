@@ -276,8 +276,11 @@ async function deployMomentFactory() {
     weth
   );
 
-  tokenFactory = await deployProxy("TokenFactory", momentFactory.address);
-  await momentFactory.setTokenFactory(tokenFactory.address);
+  tokenMoment = await deployProxy("TokenMoment", momentFactory.address);
+  await momentFactory.setMomentToken(tokenMoment.address);
+
+  console.log('TokenMoment address:', tokenMoment.address)
+  console.log('MomentFactory address:', momentFactory.address)
 
   return momentFactory;
 }
