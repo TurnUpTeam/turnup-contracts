@@ -36,7 +36,7 @@ contract MomentToken is Initializable {
   function newMomentNFT(uint256 clubId, string calldata name, string calldata symbol, string calldata baseURI) external returns (address) {
     if (msg.sender != factory) revert Forbidden();
     MomentNFT nft = new MomentNFT(clubId, name, symbol, baseURI);
-    nft.setFactory(address(this));
+    nft.setFactory(msg.sender);
     return address(nft);
   }
 }
