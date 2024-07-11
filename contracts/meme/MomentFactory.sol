@@ -32,6 +32,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error MomentClubTooMany();  
   error MomentClubVerInvalid(uint256 expectedVer, uint256 actualVer);
   error MomentClubTGEDone();
+  error MomentTokenNotCreated();
   error InvalidAmount(); 
   error InsufficientFunds(); 
   error UnableToSendFunds(); 
@@ -67,6 +68,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     bool isBuy,
     uint256 priceAfterFee
   );
+
+  event MomentNFTMint(uint256 clubId, address  minter, address nftAddress, uint256 cardNo, uint256 tokenId);
 
   event MomentTokenMint(uint256 clubId, address minter, address memeAddress, uint256 amount);
 
@@ -345,7 +348,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   function mintMomentToken(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external payable whenNotPaused nonReentrant {
     if (cardArr.length == 0 || cardArr.length != amountArr.length) revert InvalidParameters();
     MomentClub storage club = momentClubs[clubId];
-    if (club.isLocked) revert MomentClubIsLocked();
+    if (club.memeAddress == address(0)) revert MomentTokenNotCreated();
     
     uint256 mintTokenAmount = 0;
     uint256 slotTokenAmount = club.momentConf.liquidityAmount / club.momentConf.seriesTotal;
@@ -366,9 +369,19 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
  
     // Mint event must happen before nft transfer
     emit MomentTokenMint(clubId, _msgSender(), club.memeAddress, mintTokenAmount);
-
+    
     MemeFT meme = MemeFT(payable(club.memeAddress));
     meme.mint(_msgSender(), mintTokenAmount);
+    
+    MomentNFT nft = MomentNFT(club.nftAddress);
+    for (uint256 i = 0; i < cardArr.length; i++) {
+      uint256 cardNo = cardArr[i];
+      uint256 cardAmount = amountArr[i];
+      for (uint256 j = 0; j < cardAmount; j++) {
+        uint256 tokenId = nft.preMint(_msgSender());
+        emit MomentNFTMint(clubId, _msgSender(), club.nftAddress, cardNo, tokenId);
+      }
+    }
   }
 
   function getPrice(
