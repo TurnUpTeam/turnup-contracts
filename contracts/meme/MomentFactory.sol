@@ -10,12 +10,12 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ValidatableUpgradeable} from "../utils/ValidatableUpgradeable.sol";
-import {Meme404} from "./Meme404.sol";
-import {MemeFT} from "./MemeFT.sol";
-import {TokenFactory} from "./TokenFactory.sol";
-import {IWETH} from "./IWETH.sol";
-import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
-import {FullMath} from "./FullMath.sol";
+import {MemeFT} from "../meme/MemeFT.sol";
+import {MomentNFT} from "../meme/MomentNFT.sol";
+import {MomentToken} from "../meme/MomentToken.sol";
+import {IWETH} from "../meme/IWETH.sol";
+import {INonfungiblePositionManager} from "../meme/INonfungiblePositionManager.sol";
+import {FullMath} from "../meme/FullMath.sol";
 
 contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
   
@@ -34,20 +34,20 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error MomentClubTGEDone();
   error InvalidAmount(); 
   error InsufficientFunds(); 
-  error UnableToSendFunds();
-  error Invalid404Address();
+  error UnableToSendFunds(); 
+  error InvalidNFTSender();
   error InsufficientFees();
   error UnableToTransferFunds();
   error SignatureExpired();
   error SignatureAlreadyUsed(); 
    
-  event TokenFactoryUpdated(address tokenFactory);
+  event MomentTokenUpdated(address momentToken);
   event ProtocolFeePercentUpdate(uint256 feePercent); 
   event SubjectFeePercentUpdate(uint256 feePercent);
   event TGEFeePercentUpdate(uint256 feePercent); 
   event MomentClubCreated(uint256 callId, uint256 clubId, address creator, uint256 creationFee);
 
-  event MomentTokenGeneration(uint256 clubId, address creator, address tokenAddress, address mirrorERC721, address swapPool);
+  event MomentTokenGeneration(uint256 clubId, address creator, address tokenAddress, address nftAddress, address swapPool);
  
   event MomentCardUpdate( 
     address owner, 
@@ -70,7 +70,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   event MomentTokenMint(uint256 clubId, address minter, address memeAddress, uint256 amount);
 
-  event MomentNFTTransfer(uint256 clubId, address memeAddress, address mirrorAddress, address from, address to, uint256 tokenId);
+  event MomentNFTTransfer(uint256 clubId, address memeAddress, address nftAddress, address from, address to, uint256 tokenId);
  
   event LPCreate(
     uint256 clubId,
@@ -94,12 +94,10 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   struct MomentConfig {
     uint256 liquidityAmount;
-    uint256 seriesTotal;
-    bool isFT; // 404 or ERC20
+    uint256 seriesTotal; 
     string name;
     string symbol;
-    string baseURI;
-    uint256 baseUnit;
+    string baseURI; 
     PriceFormulaType priceType;
     uint256 priceArg1;
     uint256 priceArg2;
@@ -110,7 +108,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     bool isLocked;
     address creatorAddress;
     address memeAddress;
-    address mirrorERC721;
+    address nftAddress; 
     address swapPool;
     uint256 lpTokenId;
     uint256 supply;
@@ -134,10 +132,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public balanceOf;
 
   uint256 private _rngNumber;
-
-  // solhint-disable-next-line var-name-mixedcase
-  mapping(address => uint256) private _404Tokens;
-
+  
   uint256 public protocolFeePercent; 
   uint256 public subjectFeePercent;
   uint256 public tgeFeePercent;
@@ -147,7 +142,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   uint256 public creationFees;
 
-  TokenFactory public tokenFactory;
+  MomentToken public momentToken;
   
   IUniswapV3Factory public uniswapV3Factory;
   INonfungiblePositionManager public uniswapPositionManager;
@@ -192,10 +187,10 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     weth = IWETH(weth_);
   }
  
-  function setTokenFactory(address factory) public onlyOwner {
-    if (factory == address(0)) revert ZeroAddress();
-    tokenFactory = TokenFactory(factory);
-    emit TokenFactoryUpdated(factory);
+  function setMomentToken(address addr) public onlyOwner {
+    if (addr == address(0)) revert ZeroAddress();
+    momentToken = MomentToken(addr);
+    emit MomentTokenUpdated(addr);
   }
  
   function setProtocolFeePercent(uint256 feePercent_) public virtual onlyOwner {
@@ -230,7 +225,6 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     if (bytes(momentConf.name).length == 0) return false;
     if (bytes(momentConf.symbol).length == 0) return false;
     if (bytes(momentConf.baseURI).length == 0) return false;
-    if (momentConf.baseUnit < 1e18) return false;
     
     if (momentConf.priceType != PriceFormulaType.Linear 
       && momentConf.priceType != PriceFormulaType.QuadCurve 
@@ -266,7 +260,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       isLocked: false,
       creatorAddress: _msgSender(),
       memeAddress: address(0),
-      mirrorERC721: address(0),
+      nftAddress: address(0),
       swapPool: address(0),
       lpTokenId: 0,
       supply: 0,
@@ -288,27 +282,17 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     if (!club.isLocked) revert MomentClubUnlocked();
     if (club.memeAddress != address(0)) revert MomentClubTGEDone(); 
 
-    if (club.momentConf.isFT) {
-      club.memeAddress = tokenFactory.newMemeFT(club.momentConf.name, club.momentConf.symbol);
-    } else {
-      club.memeAddress = tokenFactory.newMeme404(
-        club.momentConf.name,
-        club.momentConf.symbol,
-        club.momentConf.baseURI,
-        club.momentConf.baseUnit
-      );
-      Meme404 meme = Meme404(payable(club.memeAddress));
-      club.mirrorERC721 = meme.mirrorERC721();
-      _404Tokens[club.memeAddress] = club.clubId;
-
-      string memory addr = Strings.toHexString(club.mirrorERC721); // must all lowercase 0x a-z
-      string memory baseURI = string.concat(club.momentConf.baseURI, addr, "/");
-      meme.setBaseURI(baseURI);
-    }
+    club.memeAddress = momentToken.newMomentFT(club.momentConf.name, club.momentConf.symbol);
+    club.nftAddress = momentToken.newMomentNFT(club.clubId, club.momentConf.name, club.momentConf.symbol, club.momentConf.baseURI);
+    
+    string memory addr = Strings.toHexString(club.nftAddress); // must all lowercase 0x a-z
+    string memory baseURI = string.concat(club.momentConf.baseURI, addr, "/");
+    MomentNFT nft = MomentNFT(club.nftAddress);
+    nft.setBaseURI(baseURI);
 
     _createLP(club);
 
-    emit MomentTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.mirrorERC721, club.swapPool);
+    emit MomentTokenGeneration(club.clubId, _msgSender(), club.memeAddress, club.nftAddress, club.swapPool);
   }
 
   function _createLP(MomentClub storage club) internal {
@@ -317,10 +301,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     address token1 = address(weth);
     uint256 token0Amount = club.momentConf.liquidityAmount;
     uint256 token1Amount = club.funds - tgeFee;
-    uint256 nativeAmount = token1Amount;
     bool reverseOrder = false;
  
-    if (!(token0 < token1)) {
+    if (token0 >= token1) {
        token0 = token1;
        token1 = club.memeAddress;
        token0Amount = token1Amount;
@@ -333,18 +316,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint160 sqrtPriceX96 = uint160(Math.sqrt(FullMath.mulDiv(token1Amount, 2 ** 192, token0Amount)));
     IUniswapV3Pool(club.swapPool).initialize(sqrtPriceX96);
 
-    if (club.momentConf.isFT) {
-      MemeFT meme = MemeFT(payable(club.memeAddress));
-      meme.mint(address(this), club.momentConf.liquidityAmount);
-      meme.approve(address(uniswapPositionManager), club.momentConf.liquidityAmount);
-    } else {
-      Meme404 meme = Meme404(payable(club.memeAddress));
-      meme.setSkipNFT(true);
-      meme.mint(address(this), club.momentConf.liquidityAmount);
-      meme.approve(address(uniswapPositionManager), club.momentConf.liquidityAmount);
-    }
-
-    (uint256 lpTokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = uniswapPositionManager.mint{value: nativeAmount}(
+    MemeFT meme = MemeFT(payable(club.memeAddress));
+    meme.mint(address(this), club.momentConf.liquidityAmount);
+    meme.approve(address(uniswapPositionManager), club.momentConf.liquidityAmount);
+     
+    (uint256 lpTokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = uniswapPositionManager.mint{value: club.funds - tgeFee}(
       INonfungiblePositionManager.MintParams({
         token0: token0,
         token1: token1,
@@ -391,13 +367,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     // Mint event must happen before nft transfer
     emit MomentTokenMint(clubId, _msgSender(), club.memeAddress, mintTokenAmount);
 
-    if (club.momentConf.isFT) {
-      MemeFT meme = MemeFT(payable(club.memeAddress));
-      meme.mint(_msgSender(), mintTokenAmount);
-    } else {
-      Meme404 meme = Meme404(payable(club.memeAddress));
-      meme.mint(_msgSender(), mintTokenAmount);
-    }
+    MemeFT meme = MemeFT(payable(club.memeAddress));
+    meme.mint(_msgSender(), mintTokenAmount);
   }
 
   function getPrice(
@@ -598,12 +569,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     }
   }
 
-  function onNFTTransfer(address from, address to, uint256 tokenId) external {
-    uint256 clubId = _404Tokens[_msgSender()];
-    if (clubId == 0) revert Invalid404Address();
-    address memeAddress = momentClubs[clubId].memeAddress;
-    address mirrorERC721 = momentClubs[clubId].mirrorERC721;
-    emit MomentNFTTransfer(clubId, memeAddress, mirrorERC721, from, to, tokenId);
+  function onNFTTransfer(uint256 clubId, address from, address to, uint256 tokenId) external {
+    MomentClub storage club = momentClubs[clubId];
+    if (club.nftAddress == _msgSender()) revert InvalidNFTSender();
+    address memeAddress = momentClubs[clubId].memeAddress; 
+    emit MomentNFTTransfer(clubId, memeAddress, _msgSender(), from, to, tokenId);
   }
 
   function withdrawProtocolFees(address beneficiary, uint256 amount) external virtual onlyOwner nonReentrant {
@@ -708,9 +678,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       applyer,
       creationFee,
       momentConf.liquidityAmount,
-      momentConf.seriesTotal,
-      momentConf.isFT,
-      momentConf.baseUnit,
+      momentConf.seriesTotal, 
       uint256(momentConf.priceType),
       momentConf.priceArg1,
       momentConf.priceArg2,
