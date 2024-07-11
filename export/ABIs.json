@@ -11822,17 +11822,17 @@
       },
       {
         "inputs": [],
-        "name": "Invalid404Address",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "InvalidAmount",
         "type": "error"
       },
       {
         "inputs": [],
         "name": "InvalidInitParameters",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidNFTSender",
         "type": "error"
       },
       {
@@ -11889,6 +11889,11 @@
       {
         "inputs": [],
         "name": "MomentConfInvalid",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "MomentTokenNotCreated",
         "type": "error"
       },
       {
@@ -12156,13 +12161,50 @@
           {
             "indexed": false,
             "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "nftAddress",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "cardNo",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "MomentNFTMint",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
             "name": "memeAddress",
             "type": "address"
           },
           {
             "indexed": false,
             "internalType": "address",
-            "name": "mirrorAddress",
+            "name": "nftAddress",
             "type": "address"
           },
           {
@@ -12211,7 +12253,7 @@
           {
             "indexed": false,
             "internalType": "address",
-            "name": "mirrorERC721",
+            "name": "nftAddress",
             "type": "address"
           },
           {
@@ -12253,6 +12295,19 @@
           }
         ],
         "name": "MomentTokenMint",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "momentToken",
+            "type": "address"
+          }
+        ],
+        "name": "MomentTokenUpdated",
         "type": "event"
       },
       {
@@ -12324,19 +12379,6 @@
           }
         ],
         "name": "TGEFeePercentUpdate",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": false,
-            "internalType": "address",
-            "name": "tokenFactory",
-            "type": "address"
-          }
-        ],
-        "name": "TokenFactoryUpdated",
         "type": "event"
       },
       {
@@ -12512,11 +12554,6 @@
                 "type": "uint256"
               },
               {
-                "internalType": "bool",
-                "name": "isFT",
-                "type": "bool"
-              },
-              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -12530,11 +12567,6 @@
                 "internalType": "string",
                 "name": "baseURI",
                 "type": "string"
-              },
-              {
-                "internalType": "uint256",
-                "name": "baseUnit",
-                "type": "uint256"
               },
               {
                 "internalType": "enum MomentFactory.PriceFormulaType",
@@ -12837,11 +12869,6 @@
                 "type": "uint256"
               },
               {
-                "internalType": "bool",
-                "name": "isFT",
-                "type": "bool"
-              },
-              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -12855,11 +12882,6 @@
                 "internalType": "string",
                 "name": "baseURI",
                 "type": "string"
-              },
-              {
-                "internalType": "uint256",
-                "name": "baseUnit",
-                "type": "uint256"
               },
               {
                 "internalType": "enum MomentFactory.PriceFormulaType",
@@ -13024,7 +13046,7 @@
           },
           {
             "internalType": "address",
-            "name": "mirrorERC721",
+            "name": "nftAddress",
             "type": "address"
           },
           {
@@ -13060,11 +13082,6 @@
                 "type": "uint256"
               },
               {
-                "internalType": "bool",
-                "name": "isFT",
-                "type": "bool"
-              },
-              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -13078,11 +13095,6 @@
                 "internalType": "string",
                 "name": "baseURI",
                 "type": "string"
-              },
-              {
-                "internalType": "uint256",
-                "name": "baseUnit",
-                "type": "uint256"
               },
               {
                 "internalType": "enum MomentFactory.PriceFormulaType",
@@ -13103,6 +13115,19 @@
             "internalType": "struct MomentFactory.MomentConfig",
             "name": "momentConf",
             "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "momentToken",
+        "outputs": [
+          {
+            "internalType": "contract MomentToken",
+            "name": "",
+            "type": "address"
           }
         ],
         "stateMutability": "view",
@@ -13138,11 +13163,6 @@
                 "type": "uint256"
               },
               {
-                "internalType": "bool",
-                "name": "isFT",
-                "type": "bool"
-              },
-              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -13156,11 +13176,6 @@
                 "internalType": "string",
                 "name": "baseURI",
                 "type": "string"
-              },
-              {
-                "internalType": "uint256",
-                "name": "baseUnit",
-                "type": "uint256"
               },
               {
                 "internalType": "enum MomentFactory.PriceFormulaType",
@@ -13205,6 +13220,11 @@
       },
       {
         "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "clubId",
+            "type": "uint256"
+          },
           {
             "internalType": "address",
             "name": "from",
@@ -13337,6 +13357,19 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "name": "setMomentToken",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "uint256",
             "name": "feePercent_",
             "type": "uint256"
@@ -13369,19 +13402,6 @@
           }
         ],
         "name": "setTGEFeePercent",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "factory",
-            "type": "address"
-          }
-        ],
-        "name": "setTokenFactory",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -13444,19 +13464,6 @@
             "internalType": "uint256",
             "name": "",
             "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "tokenFactory",
-        "outputs": [
-          {
-            "internalType": "contract TokenFactory",
-            "name": "",
-            "type": "address"
           }
         ],
         "stateMutability": "view",
