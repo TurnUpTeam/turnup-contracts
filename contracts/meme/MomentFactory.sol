@@ -509,7 +509,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       balanceOf[_msgSender()][clubId][cardNo] = holdAmount + buyAmount;
       cardSupply[clubId][cardNo] = supply + buyAmount;
       if (supply == 0) {
-        seriesSupply[clubId] += buyAmount;
+        seriesSupply[clubId] += 1;
         if (seriesSupply[clubId] >= club.momentConf.seriesTotal && (!club.isLocked)) {
           club.isLocked = true;
         }
