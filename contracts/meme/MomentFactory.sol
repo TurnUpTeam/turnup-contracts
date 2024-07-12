@@ -584,7 +584,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   function onNFTTransfer(uint256 clubId, address from, address to, uint256 tokenId) external {
     MomentClub storage club = momentClubs[clubId];
-    if (club.nftAddress == _msgSender()) revert InvalidNFTSender();
+    if (club.nftAddress != _msgSender()) revert InvalidNFTSender();
     address memeAddress = momentClubs[clubId].memeAddress; 
     emit MomentNFTTransfer(clubId, memeAddress, _msgSender(), from, to, tokenId);
   }
