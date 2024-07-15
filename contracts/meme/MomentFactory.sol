@@ -97,6 +97,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   struct MomentConfig {
     uint256 liquidityAmount;
+    uint256 mintTotal;
     uint256 seriesTotal; 
     string name;
     string symbol;
@@ -351,7 +352,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     if (club.memeAddress == address(0)) revert MomentTokenNotCreated();
     
     uint256 mintTokenAmount = 0;
-    uint256 slotTokenAmount = club.momentConf.liquidityAmount / club.momentConf.seriesTotal;
+    uint256 slotTokenAmount = club.momentConf.mintTotal / club.momentConf.seriesTotal;
 
     for (uint256 i = 0; i < cardArr.length; i++) {
       uint256 cardNo = cardArr[i];
@@ -691,6 +692,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       applyer,
       creationFee,
       momentConf.liquidityAmount,
+      momentConf.mintTotal,
       momentConf.seriesTotal, 
       uint256(momentConf.priceType),
       momentConf.priceArg1,
