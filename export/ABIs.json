@@ -12550,6 +12550,11 @@
               },
               {
                 "internalType": "uint256",
+                "name": "mintTotal",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
                 "name": "seriesTotal",
                 "type": "uint256"
               },
@@ -12865,6 +12870,11 @@
               },
               {
                 "internalType": "uint256",
+                "name": "mintTotal",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
                 "name": "seriesTotal",
                 "type": "uint256"
               },
@@ -13078,6 +13088,11 @@
               },
               {
                 "internalType": "uint256",
+                "name": "mintTotal",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
                 "name": "seriesTotal",
                 "type": "uint256"
               },
@@ -13155,6 +13170,11 @@
               {
                 "internalType": "uint256",
                 "name": "liquidityAmount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "mintTotal",
                 "type": "uint256"
               },
               {
