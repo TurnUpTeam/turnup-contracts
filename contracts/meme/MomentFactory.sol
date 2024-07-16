@@ -177,8 +177,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       updateValidator(validators_[i], true);
     }
  
-    setProtocolFeePercent(1 ether / 100); 
-    setSubjectFeePercent(1 ether / 100);
+    setProtocolFeePercent(5 ether / 100); 
+    setSubjectFeePercent(5 ether / 100);
     setTGEFeePercent(5 ether / 100); 
 
     uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
