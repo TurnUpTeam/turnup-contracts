@@ -21,23 +21,24 @@ async function deployImplementation(contractName, ...args) {
 }
 
 async function deployProxy(contractName, ...args) {
-  let options;
+  let options = {};
   if (typeof args[args.length - 1] === "object") {
     if (args[args.length - 1].hasOwnProperty("gasLimit") || args[args.length - 1].hasOwnProperty("gasPrice")) {
-      options = args.pop();
+      options = args.pop()
     }
   }
-  console.debug("Deploying", contractName, "to", hre.network.name, "chainId", chainId);
-  const contract = await ethers.getContractFactory(contractName);
-  const deployed = await upgrades.deployProxy(contract, [...args], options);
-  console.debug("Tx:", deployed.deployTransaction.hash);
-  await deployed.deployed();
+  options['salt'] = (new Date().getTime()).toString()
+  console.debug("Deploying", contractName, "to", hre.network.name, "chainId", chainId)
+  const contract = await ethers.getContractFactory(contractName)
+  const deployed = await upgrades.deployProxy(contract, [...args], options)
+  console.debug("Tx:", deployed.deployTransaction.hash)
+  await deployed.deployed()
 
-  sleep(1500);
+  sleep(1500)
 
   console.debug("Proxy address", deployed.address);
-  console.debug("Implementation address", await upgrades.erc1967.getImplementationAddress(deployed.address));
-  console.debug("Admin address", await upgrades.erc1967.getAdminAddress(deployed.address));
+  console.debug("Implementation address", await upgrades.erc1967.getImplementationAddress(deployed.address))
+  console.debug("Admin address", await upgrades.erc1967.getAdminAddress(deployed.address))
 
   // await run("verify:verify", {address: deployed.address})
 
