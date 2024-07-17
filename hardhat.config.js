@@ -76,7 +76,7 @@ module.exports = {
     },
     base: {
       url: "https://base-mainnet.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_KEY,
-      accounts: [process.env.FOR_TESTNET],
+      accounts: [process.env.FOR_POLYGON],
       chainId: 8453,
     },
     sepolia: {
