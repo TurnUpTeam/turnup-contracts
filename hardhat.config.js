@@ -22,14 +22,13 @@ requirePath(
   BASE_SEPOLIA_UNISWAP_V3=0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
   BASE_SEPOLIA_UNISWAP_POSITION_MANAGER=0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2
   BASE_SEPOLIA_WTH=0x4200000000000000000000000000000000000006
-  BASE_SEPOLIA_PYTH_ENTROPY=0x41c9e39574F40Ad34c79f1C99B66A45eFB830d4c
   BASE_UNISWAP_V3=0x33128a8fC17869897dcE68Ed026d694621f6FDfD
   BASE_UNISWAP_POSITION_MANAGER=0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1
   BASE_WTH=0x4200000000000000000000000000000000000006
-  BASE_PYTH_ENTROPY=0x6E7D74FA7d5c90FEF9F0512987605a6d546181Bb
   POLYGON_UNISWAP_V3=0x1F98431c8aD98523631AE4a59f267346ea31F984
   POLYGON_UNISWAP_POSITION_MANAGER=0xC36442b4a4522E871399CD717aBDD847Ab11FE88
   POLYGON_WTH=0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270
+  ABSTRACT_TESTNET_WETH=0x000000000000000000000000000000000000800A
 `
 );
 
@@ -49,40 +48,57 @@ module.exports = {
       },
     },
   },
+  zksolc: {
+    version: "latest",
+    settings: {},
+  },
   networks: {
     hardhat: {
       blockGasLimit: 10000000,
+      zksync: false,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 1337,
+      zksync: false,
     },
     bsc: {
       url: "https://bsc-dataseed.binance.org",
       chainId: 56,
       gasPrice: 150000000000,
       accounts: [process.env.FOR_POLYGON],
+      zksync: false,
     },
     polygon: {
       url: "https://polygon-mainnet.infura.io/v3/" + process.env.INFURA_KEY,
       accounts: [process.env.FOR_POLYGON],
       chainId: 137,
       gasPrice: 80000000000,
+      zksync: false,
     },
     amoy: {
       url: "https://polygon-amoy.infura.io/v3/d8a840b52ce24a7da3550a33036cb126", // + process.env.INFURA_KEY,
       accounts: [process.env.FOR_TESTNET],
       chainId: 80002,
+      zksync: false,
     },
     base: {
       url: "https://base-mainnet.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_KEY,
       accounts: [process.env.FOR_POLYGON],
       chainId: 8453,
+      zksync: false,
     },
     sepolia: {
       url: "https://base-sepolia.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_SEPOLIA_KEY,
       accounts: [process.env.FOR_TESTNET],
       chainId: 84532,
+      zksync: false,
+    },
+    abstractTestnet: {
+      url: 'https://api.testnet.abs.xyz',
+      accounts: [process.env.FOR_TESTNET],
+      chainId: 11124,
+      zksync: true,
     },
   },
   etherscan: {
