@@ -1,15 +1,17 @@
 const {requirePath} = require("require-or-mock");
 require("dotenv").config();
-require("@nomiclabs/hardhat-waffle");
+// require("@nomiclabs/hardhat-waffle");
 require("hardhat-abi-exporter");
-require("@nomiclabs/hardhat-ethers");
-require("@openzeppelin/hardhat-upgrades");
-require("solidity-coverage");
-require("hardhat-contract-sizer");
+// require("@nomiclabs/hardhat-ethers");
+// require("@openzeppelin/hardhat-upgrades");
+// require("solidity-coverage");
+// require("hardhat-contract-sizer");
+require("@matterlabs/hardhat-zksync")
+require('@matterlabs/hardhat-zksync-verify')
 
-if (process.env.GAS_REPORT === "yes") {
-  require("hardhat-gas-reporter");
-}
+// if (process.env.GAS_REPORT === "yes") {
+//   require("hardhat-gas-reporter");
+// }
 
 // if missed, it sets up a mock
 requirePath(
@@ -39,59 +41,17 @@ require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: {
-    version: "0.8.20",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-    },
-  },
   zksolc: {
     version: "latest",
     settings: {},
   },
+  solidity: {
+    version: "0.8.20",
+  },
+  defaultNetwork: 'abstractTestnet',
   networks: {
     hardhat: {
-      blockGasLimit: 10000000,
-      zksync: false,
-    },
-    localhost: {
-      url: "http://127.0.0.1:8545",
-      chainId: 1337,
-      zksync: false,
-    },
-    bsc: {
-      url: "https://bsc-dataseed.binance.org",
-      chainId: 56,
-      gasPrice: 150000000000,
-      accounts: [process.env.FOR_POLYGON],
-      zksync: false,
-    },
-    polygon: {
-      url: "https://polygon-mainnet.infura.io/v3/" + process.env.INFURA_KEY,
-      accounts: [process.env.FOR_POLYGON],
-      chainId: 137,
-      gasPrice: 80000000000,
-      zksync: false,
-    },
-    amoy: {
-      url: "https://polygon-amoy.infura.io/v3/d8a840b52ce24a7da3550a33036cb126", // + process.env.INFURA_KEY,
-      accounts: [process.env.FOR_TESTNET],
-      chainId: 80002,
-      zksync: false,
-    },
-    base: {
-      url: "https://base-mainnet.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_KEY,
-      accounts: [process.env.FOR_POLYGON],
-      chainId: 8453,
-      zksync: false,
-    },
-    sepolia: {
-      url: "https://base-sepolia.g.alchemy.com/v2/" + process.env.ALCHEMY_BASE_SEPOLIA_KEY,
-      accounts: [process.env.FOR_TESTNET],
-      chainId: 84532,
+      // blockGasLimit: 10000000,
       zksync: false,
     },
     abstractTestnet: {
@@ -99,48 +59,9 @@ module.exports = {
       accounts: [process.env.FOR_TESTNET],
       chainId: 11124,
       zksync: true,
+      ethNetwork: 'sepolia',
+      verifyURL: 'https://api-explorer-verify.testnet.abs.xyz/contract_verification',
     },
-  },
-  etherscan: {
-    apiKey: {
-      polygon: process.env.POLYGON_SCAN_API,
-      amoy: process.env.POLYGON_SCAN_API,
-      base: process.env.BASE_SCAN_API,
-      sepolia: process.env.BASE_SCAN_API,
-    },
-    customChains: [
-      {
-        network: "amoy",
-        chainId: 80002,
-        urls: {
-          apiURL: "https://api-amoy.polygonscan.com/api",
-          browserURL: "https://amoy.polygonscan.com/",
-        },
-      },
-      {
-        network: "base",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org"
-        }
-      },
-      {
-        network: "sepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org/"
-        }
-      },
-    ],
-  },
-  sourcify: {
-    enabled: false,
-  },
-  gasReporter: {
-    enabled: true,
-    currency: "USD",
   },
   abiExporter: [
     {
