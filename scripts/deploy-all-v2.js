@@ -205,6 +205,8 @@ async function deployMemeFactory() {
       uniswapPositionManager = BASE_SEPOLIA_UNISWAP_POSITION_MANAGER;
       weth = BASE_SEPOLIA_WTH;
       break;
+	case 30732:  
+      break        
     default: // unsupport
       console.log("MemeFactory unsupport", "chainId", chainId);
       break;
@@ -212,10 +214,10 @@ async function deployMemeFactory() {
 
   memeFactory = await deployProxy(
     "MemeFactory",
-    [FIRST_VALIDATOR],
-    uniswapV3Factory,
-    uniswapPositionManager,
-    weth
+    [FIRST_VALIDATOR]
+    // uniswapV3Factory,
+    // uniswapPositionManager,
+    // weth
   );
 
   tokenFactory = await deployProxy("TokenFactory", memeFactory.address);
@@ -263,8 +265,7 @@ async function deployMomentFactory() {
     case 11124: // abstract testnet
       // weth =  
       break  
-    case 30732:
-      
+    case 30732:  
       break  
     default: // unsupport
       console.log("MomentFactory unsupport", "chainId", chainId);
@@ -317,14 +318,16 @@ async function main() {
   console.log("Lottery address:", lottery.address)
   console.log("PFPAuction address:", auction.address)
   console.log("TurnUPNFT address:", nft.address) 
-
+  */ 
+  
   let memeFactory = await deployMemeFactory();
   console.log("MemeFactory address:", memeFactory.address);
-  */
   
+  /*
   let momentFactory = await deployMomentFactory();
   console.log("MomentFactory address:", momentFactory.address);
-
+  */
+  
   console.log("end...");
 }
 

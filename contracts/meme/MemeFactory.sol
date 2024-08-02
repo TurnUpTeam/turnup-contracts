@@ -158,13 +158,15 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
   int24 private _tickUpper;
 
   function initialize( 
-    address[] memory validators_, 
-    address uniswapV3Factory_,
-    address uniswapPositionManager_,
-    address weth_
+    address[] memory validators_
+    // address uniswapV3Factory_,
+    // address uniswapPositionManager_,
+    // address weth_
   ) public initializer {
+  	/*
     if ((uniswapV3Factory_ == address(0)) || (uniswapPositionManager_ == address(0)) || (weth_ == address(0)))
       revert InvalidInitParameters();
+    */
 
     __Validatable_init();
     __Pausable_init();
@@ -179,6 +181,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     setProtocolFeePercent(2 ether / 100); 
     setTGEFeePercent(5 ether / 100); 
 
+	/*
     uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
     uniswapPositionManager = INonfungiblePositionManager(uniswapPositionManager_);
 
@@ -187,6 +190,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     _tickUpper = (887272 / tickSpacing) * tickSpacing; // TickMath.MAX_TICK
 
     weth = IWETH(weth_);
+    */
   }
 
   function setTokenFactory(address factory) public onlyOwner {
@@ -521,7 +525,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
 
     if (club.memeConf.maxSupply <= club.supply) {
       club.isLocked = true;
-      _tokenGeneration(club);  
+      // _tokenGeneration(club);  
     } 
   }
 
