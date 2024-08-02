@@ -160,16 +160,19 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   mapping(uint256 => uint256) private _orderCards;
 
   function initialize( 
-    address[] calldata validators_,  
-    address uniswapV3Factory_,
-    address uniswapPositionManager_,
-    address weth_
+    address[] calldata validators_
+    // address uniswapV3Factory_,
+    // address uniswapPositionManager_,
+    // address weth_
   ) public initializer {
-    if ((uniswapV3Factory_ == address(0)) 
+    /* if ((uniswapV3Factory_ == address(0)) 
       || (uniswapPositionManager_ == address(0)) 
       || (weth_ == address(0)))
-      revert InvalidInitParameters();
-
+      revert InvalidInitParameters(); */
+    /*
+    if (weth_ == address(0))
+      revert InvalidInitParameters();  
+	*/
     __Validatable_init();
     __Pausable_init();
 
@@ -181,14 +184,16 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     setSubjectFeePercent(5 ether / 100);
     setTGEFeePercent(5 ether / 100); 
 
+    /* 
     uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
     uniswapPositionManager = INonfungiblePositionManager(uniswapPositionManager_);
 
     int24 tickSpacing = uniswapV3Factory.feeAmountTickSpacing(_UNISWAP_POOL_FEE);
     _tickLower = (-887272 / tickSpacing) * tickSpacing; // TickMath.MIN_TICK
     _tickUpper = (887272 / tickSpacing) * tickSpacing; // TickMath.MAX_TICK
+    */
 
-    weth = IWETH(weth_);
+    // weth = IWETH(weth_);
   }
  
   function setMomentToken(address addr) public onlyOwner {
@@ -484,7 +489,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     );
 
     if (club.isLocked) {
-      wantTge(club);
+      // wantTge(club);
     }
   }
  

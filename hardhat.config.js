@@ -84,6 +84,11 @@ module.exports = {
       accounts: [process.env.FOR_TESTNET],
       chainId: 84532,
     },
+	m2: {	// movement testnet
+      url: 'https://mevm.devnet.imola.movementlabs.xyz',
+      accounts: [process.env.FOR_TESTNET],
+      chainId: 30732,
+    },
   },
   etherscan: {
     apiKey: {
