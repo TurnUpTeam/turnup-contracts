@@ -261,6 +261,8 @@ async function deployMomentFactory() {
       weth = BASE_SEPOLIA_WTH;
       break;
     case 11124: // abstract testnet
+      uniswapV3Factory = ABSTRACT_TESTNET_UNISWAP_V3;
+      uniswapPositionManager = ABSTRACT_TESTNET_UNISWAP_POSITION_MANAGER;
       weth = ABSTRACT_TESTNET_WETH
       break  
     default: // unsupport
@@ -268,13 +270,16 @@ async function deployMomentFactory() {
       break;
   }
 
-  console.log(FIRST_VALIDATOR)
-  console.log(weth)
+  console.log(`uniswapV3Factory ${uniswapV3Factory}`)
+  console.log(`uniswapPositionManager ${uniswapPositionManager}`)
+  console.log(`FIRST_VALIDATOR ${FIRST_VALIDATOR}`)
+  console.log(`weth ${weth}`)
+  
   momentFactory = await deployProxy(
     "MomentFactory",
     [FIRST_VALIDATOR],
-    // uniswapV3Factory,
-    // uniswapPositionManager,
+    uniswapV3Factory,
+    uniswapPositionManager,
     weth
   );
 
