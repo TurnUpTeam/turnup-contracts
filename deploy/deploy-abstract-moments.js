@@ -8,17 +8,26 @@ const { HardhatRuntimeEnvironment } = require('hardhat/types')
 module.exports = async function (hre) {
   const {
     FIRST_VALIDATOR,
+    ABSTRACT_TESTNET_UNISWAP_V3,
+    ABSTRACT_TESTNET_UNISWAP_POSITION_MANAGER,
     ABSTRACT_TESTNET_WETH,
   } = process.env
 
   console.log(`validator ${FIRST_VALIDATOR}`) 
-  console.log(`abstract testnet weth ${ABSTRACT_TESTNET_WETH}`)
+  console.log(`ABSTRACT_TESTNET_WETH ${ABSTRACT_TESTNET_WETH}`)
+  console.log(`ABSTRACT_TESTNET_UNISWAP_V3 ${ABSTRACT_TESTNET_UNISWAP_V3}`)
+  console.log(`ABSTRACT_TESTNET_UNISWAP_POSITION_MANAGER ${ABSTRACT_TESTNET_UNISWAP_POSITION_MANAGER}`)
 
   let wallet = await hre.zksyncEthers.getWallet(0)
   let deployer = new Deployer(hre, wallet)
   
   let contract = await deployer.loadArtifact('MomentFactory')
-  let factory = await hre.zkUpgrades.deployProxy(wallet, contract, [[FIRST_VALIDATOR,], ABSTRACT_TESTNET_WETH])
+  let factory = await hre.zkUpgrades.deployProxy(wallet, contract, [
+    [FIRST_VALIDATOR,], 
+    ABSTRACT_TESTNET_UNISWAP_V3,
+    ABSTRACT_TESTNET_UNISWAP_POSITION_MANAGER,
+    ABSTRACT_TESTNET_WETH,
+  ])
   console.log(`Moment factory deployed tx at: ${factory.deployTransaction.hash}`)
   await factory.waitForDeployment()
   let factoryAddr = await factory.getAddress()
