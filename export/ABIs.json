@@ -12559,6 +12559,11 @@
                 "type": "uint256"
               },
               {
+                "internalType": "bool",
+                "name": "allowTge",
+                "type": "bool"
+              },
+              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -12879,6 +12884,11 @@
                 "type": "uint256"
               },
               {
+                "internalType": "bool",
+                "name": "allowTge",
+                "type": "bool"
+              },
+              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -13097,6 +13107,11 @@
                 "type": "uint256"
               },
               {
+                "internalType": "bool",
+                "name": "allowTge",
+                "type": "bool"
+              },
+              {
                 "internalType": "string",
                 "name": "name",
                 "type": "string"
@@ -13181,6 +13196,11 @@
                 "internalType": "uint256",
                 "name": "seriesTotal",
                 "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "allowTge",
+                "type": "bool"
               },
               {
                 "internalType": "string",
