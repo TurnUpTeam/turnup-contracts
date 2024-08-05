@@ -99,6 +99,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 liquidityAmount;
     uint256 mintTotal;
     uint256 seriesTotal; 
+    bool allowTge;
     string name;
     string symbol;
     string baseURI; 
@@ -161,16 +162,14 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   function initialize( 
     address[] calldata validators_,  
-    // address uniswapV3Factory_,
-    // address uniswapPositionManager_,
+    address uniswapV3Factory_,
+    address uniswapPositionManager_,
     address weth_
   ) public initializer {
-    /* if ((uniswapV3Factory_ == address(0)) 
+    if ((uniswapV3Factory_ == address(0)) 
       || (uniswapPositionManager_ == address(0)) 
       || (weth_ == address(0)))
-      revert InvalidInitParameters(); */
-    if (weth_ == address(0))
-      revert InvalidInitParameters();  
+      revert InvalidInitParameters();
 
     __Validatable_init();
     __Pausable_init();
@@ -183,14 +182,12 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     setSubjectFeePercent(5 ether / 100);
     setTGEFeePercent(5 ether / 100); 
 
-    /* 
     uniswapV3Factory = IUniswapV3Factory(uniswapV3Factory_);
     uniswapPositionManager = INonfungiblePositionManager(uniswapPositionManager_);
 
     int24 tickSpacing = uniswapV3Factory.feeAmountTickSpacing(_UNISWAP_POOL_FEE);
     _tickLower = (-887272 / tickSpacing) * tickSpacing; // TickMath.MIN_TICK
     _tickUpper = (887272 / tickSpacing) * tickSpacing; // TickMath.MAX_TICK
-    */
 
     weth = IWETH(weth_);
   }
@@ -488,7 +485,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     );
 
     if (club.isLocked) {
-      // wantTge(club);
+      wantTge(club);
     }
   }
  
@@ -515,7 +512,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       cardSupply[clubId][cardNo] = supply + buyAmount;
       if (supply == 0) {
         seriesSupply[clubId] += 1;
-        if (seriesSupply[clubId] >= club.momentConf.seriesTotal && (!club.isLocked)) {
+        if (club.momentConf.allowTge && (!club.isLocked) && seriesSupply[clubId] >= club.momentConf.seriesTotal) {
           club.isLocked = true;
         }
       }
@@ -698,6 +695,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       momentConf.liquidityAmount,
       momentConf.mintTotal,
       momentConf.seriesTotal, 
+      momentConf.allowTge,
       uint256(momentConf.priceType),
       momentConf.priceArg1,
       momentConf.priceArg2,
