@@ -99,6 +99,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 liquidityAmount;
     uint256 mintTotal;
     uint256 seriesTotal; 
+    bool allowTge;
     string name;
     string symbol;
     string baseURI; 
@@ -511,7 +512,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       cardSupply[clubId][cardNo] = supply + buyAmount;
       if (supply == 0) {
         seriesSupply[clubId] += 1;
-        if (seriesSupply[clubId] >= club.momentConf.seriesTotal && (!club.isLocked)) {
+        if (club.momentConf.allowTge && (!club.isLocked) && seriesSupply[clubId] >= club.momentConf.seriesTotal) {
           club.isLocked = true;
         }
       }
@@ -694,6 +695,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       momentConf.liquidityAmount,
       momentConf.mintTotal,
       momentConf.seriesTotal, 
+      momentConf.allowTge,
       uint256(momentConf.priceType),
       momentConf.priceArg1,
       momentConf.priceArg2,
