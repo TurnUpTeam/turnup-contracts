@@ -49,6 +49,7 @@ module.exports = {
       },
     },
   },
+  defaultNetwork: "sepolia",
   networks: {
     hardhat: {
       blockGasLimit: 10000000,
