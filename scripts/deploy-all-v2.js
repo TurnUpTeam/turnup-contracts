@@ -244,7 +244,6 @@ async function deployMomentFactory() {
   let uniswapV3Factory;
   let uniswapPositionManager;
   let weth;
-  let pythEntropy;
 
   switch (chainId) {
     case 137: // polygon
@@ -256,13 +255,11 @@ async function deployMomentFactory() {
       uniswapV3Factory = BASE_UNISWAP_V3;
       uniswapPositionManager = BASE_UNISWAP_POSITION_MANAGER;
       weth = BASE_WTH;
-      pythEntropy = BASE_PYTH_ENTROPY;
       break;
     case 84532: // base sepolia
       uniswapV3Factory = BASE_SEPOLIA_UNISWAP_V3;
       uniswapPositionManager = BASE_SEPOLIA_UNISWAP_POSITION_MANAGER;
       weth = BASE_SEPOLIA_WTH;
-      pythEntropy = BASE_SEPOLIA_PYTH_ENTROPY;
       break;
     default: // unsupport
       console.log("MemeFactory unsupport", "chainId", chainId);
