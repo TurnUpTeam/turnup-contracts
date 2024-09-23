@@ -41,9 +41,8 @@ module.exports = async function (hre) {
   console.log('Moment Token deployed to:', tokensAddr)
 
   factory.connect(wallet)
-  console.log(factory)
   let tx = await factory.setMomentToken(tokensAddr)
-  console.log(tx)
+  console.log('set moment token tx at:', tx.hash)
   // console.log(`set moment token tx ${tx.deployTransaction.hash}`)
 }
 
