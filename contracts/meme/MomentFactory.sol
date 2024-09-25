@@ -30,8 +30,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   error MomentClubNotFound();
   error MomentConfInvalid();
   error MomentClubTooMany();  
-  error MomentClubVerInvalid(uint256 expectedVer, uint256 actualVer);
   error MomentClubTGEDone();
+  error MomentCardInsufficient();
+  error MomentCardExceedMax();
   error MomentTokenNotCreated();
   error InvalidAmount(); 
   error InsufficientFunds(); 
@@ -61,6 +62,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   event MomentClubTrade(
     uint256 clubId, 
+    MomentType momentType,
     address trader,
     uint256 supply,
     bool isLocked,
@@ -88,6 +90,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   event WithdrawLiquidityFees(uint256 clubId, address memeToken, address beneficiary, uint256 amount0, uint256 amount1);
 
+  enum MomentType {
+    Fair,
+    Draw
+  }
+
   enum PriceFormulaType {
     Min,
     Linear,
@@ -96,6 +103,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
 
   struct MomentConfig {
+    MomentType momentType; // MomentType
     uint256 liquidityAmount;
     uint256 mintTotal;
     uint256 seriesTotal;  
@@ -126,14 +134,17 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
 
   mapping(uint256 => MomentClub) public momentClubs;
   
-  // clubId => series supply
+  // DrawCard: clubId => series supply
   mapping(uint256 => uint256) public seriesSupply;
 
-  // clubId => (cardNo => supply)
+  // DrawCard: clubId => (cardNo => supply)
   mapping(uint256 => mapping(uint256 => uint256)) public cardSupply;
 
-  // address => (clubId => (cardNo => holdAmount))
-  mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public balanceOf;
+  // DrawCard: address => (clubId => (cardNo => holdAmount))
+  mapping(address => mapping(uint256 => mapping(uint256 => uint256))) public drawBalanceOf;
+
+  // FairCard: address => (clubId => holdAmount)
+  mapping(address => mapping(uint256 => uint256)) public fairBalanceOf;
 
   uint256 private _rngNumber;
   
@@ -224,8 +235,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
   
   function checkMemeConf(MomentConfig calldata momentConf) public pure returns (bool) {
+    if (momentConf.momentType != MomentType.Fair && momentConf.momentType != MomentType.Draw) return false;
     if (momentConf.liquidityAmount < 1e18) return false;
-    if (momentConf.seriesTotal == 0 || momentConf.seriesTotal > 500) return false;
+    if (momentConf.seriesTotal == 0 || momentConf.seriesTotal > 1000) return false;
     if (bytes(momentConf.name).length == 0) return false;
     if (bytes(momentConf.symbol).length == 0) return false;
     if (bytes(momentConf.baseURI).length == 0) return false;
@@ -244,17 +256,15 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     uint256 initBuyAmount_,
     uint256 creationFee_,
     MomentConfig calldata momentConf_,
-    uint256 timestamp,
-    uint256 validFor,
+    uint256 validUntil,
     bytes calldata signature
   ) external payable whenNotPaused nonReentrant {
     if (!checkMemeConf(momentConf_)) revert MomentConfInvalid();
     if (msg.value < creationFee_) revert CreationFeeInvalid();
 
     _validateSignature(
-      timestamp, 
-      validFor, 
-      hashForNewMomentClub(block.chainid, callId_, _msgSender(), creationFee_, momentConf_, timestamp, validFor), 
+      validUntil, 
+      hashForNewMomentClub(block.chainid, callId_, _msgSender(), creationFee_, momentConf_, validUntil), 
       signature
     );
 
@@ -346,7 +356,36 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     emit LPCreate(club.clubId, token0, token1, amount0, amount1, lpTokenId, liquidity, reverseOrder);
   }
 
-  function mintMomentToken(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external payable whenNotPaused nonReentrant {
+  function mintFairMoment(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant {
+    if (amount <= 0) revert InvalidParameters();
+    MomentClub storage club = momentClubs[clubId];
+    if (club.clubId == 0) revert MomentClubNotFound();
+    if (club.memeAddress == address(0)) revert MomentTokenNotCreated();
+    
+    uint256 holdAmount = fairBalanceOf[_msgSender()][clubId];
+    if (amount > holdAmount) {
+      revert MomentCardInsufficient();
+    }
+
+    fairBalanceOf[_msgSender()][clubId] = holdAmount - amount;
+
+    uint256 mintAmount = club.momentConf.mintTotal * holdAmount / club.supply;
+    MemeFT meme = MemeFT(payable(club.memeAddress));
+    meme.mint(_msgSender(), mintAmount);
+
+    emit MomentCardUpdate(_msgSender(), clubId, 0, club.supply - amount, holdAmount - amount, amount);
+    
+    // Mint event must happen before nft transfer
+    emit MomentTokenMint(clubId, _msgSender(), club.memeAddress, mintAmount);
+
+    MomentNFT nft = MomentNFT(club.nftAddress);
+    for (uint256 i = 0; i < amount; i++) {
+      uint256 tokenId = nft.preMint(_msgSender());
+      emit MomentNFTMint(clubId, _msgSender(), club.nftAddress, 0, tokenId); 
+    }
+  }
+
+  function mintDrawMoment(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
     if (cardArr.length == 0 || cardArr.length != amountArr.length) revert InvalidParameters();
     MomentClub storage club = momentClubs[clubId];
     if (club.memeAddress == address(0)) revert MomentTokenNotCreated();
@@ -358,9 +397,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 cardNo = cardArr[i];
       uint256 cardAmount = amountArr[i];
 
-      uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
+      uint256 holdAmount = drawBalanceOf[_msgSender()][clubId][cardNo];
       if (cardAmount == 0 || cardAmount > holdAmount) revert InvalidAmount();
-      balanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
+      drawBalanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
     
       uint256 supply = cardSupply[clubId][cardNo];
       mintTokenAmount = mintTokenAmount + slotTokenAmount * cardAmount / supply;
@@ -465,16 +504,26 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     
     club.funds += actualPrice;
     club.supply += amount;
-  
     protocolFees += protocolFee;
 
     _sendFunds(club.creatorAddress, subjectFee);
     _sendFunds(_msgSender(), remainFunds - priceAfterFee);
 
-    _dropCards(club, amount);
+    if (club.momentConf.momentType == MomentType.Fair) {
+      if (club.supply > club.momentConf.seriesTotal) revert MomentCardExceedMax();
+      uint256 holdAmount = fairBalanceOf[_msgSender()][clubId] + amount;
+      fairBalanceOf[_msgSender()][clubId] = holdAmount;
+      if (club.momentConf.mintTotal > 0 && club.supply >= club.momentConf.seriesTotal) {
+        club.isLocked = true;
+      } 
+      emit MomentCardUpdate(_msgSender(), clubId, 0, club.supply, holdAmount, amount);
+    } else {
+      _dropCards(club, amount);
+    }  
 
     emit MomentClubTrade(
       club.clubId,  
+      club.momentConf.momentType,
       _msgSender(), 
       club.supply, 
       club.isLocked, 
@@ -488,7 +537,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     }
   }
  
-  function _dropCards( MomentClub storage club, uint256 amount) internal {
+  function _dropCards(MomentClub storage club, uint256 amount) internal {
     uint256 clubId = club.clubId;
 
     for (uint256 i = 1; i <= amount; i++) {
@@ -505,9 +554,9 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       uint256 cardNo = _orderItems[i];
       uint256 supply = cardSupply[clubId][cardNo];
       uint256 buyAmount = _orderCards[cardNo];
-      uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
+      uint256 holdAmount = drawBalanceOf[_msgSender()][clubId][cardNo];
 
-      balanceOf[_msgSender()][clubId][cardNo] = holdAmount + buyAmount;
+      drawBalanceOf[_msgSender()][clubId][cardNo] = holdAmount + buyAmount;
       cardSupply[clubId][cardNo] = supply + buyAmount;
       if (supply == 0) {
         seriesSupply[clubId] += 1;
@@ -523,24 +572,75 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     delete _orderItems;
   }
   
-  function buyCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant { 
+  function buyFairCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant {
+    MomentClub storage club = momentClubs[clubId];
+    if (club.clubId == 0) revert MomentClubNotFound();
+    if (club.momentConf.momentType != MomentType.Fair) revert InvalidParameters();
     _buyCardImpl(clubId, amount, expectedPrice, msg.value);
   }
 
-  function sellCard(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
+  function sellFairCard(uint256 clubId, uint256 amount) external whenNotPaused nonReentrant{
+    if (amount == 0) revert InvalidParameters();
+    MomentClub storage club = momentClubs[clubId];
+    if (club.clubId == 0) revert MomentClubNotFound();
+    if (club.momentConf.momentType != MomentType.Fair) revert InvalidParameters();
+    if (club.isLocked) revert MomentClubIsLocked();
+    
+    uint256 holdAmount = fairBalanceOf[_msgSender()][clubId];
+    if (holdAmount < amount) {
+      revert MomentCardInsufficient();
+    }
+
+    uint256 actualPrice = getSellPrice(clubId, amount);
+    uint256 protocolFee = getProtocolFee(actualPrice); 
+    uint256 subjectFee = getSubjectFee(actualPrice);
+    uint256 priceAfterFee = actualPrice - protocolFee - subjectFee;
+
+    club.funds -= actualPrice;
+    club.supply -= amount;
+    fairBalanceOf[_msgSender()][clubId] = holdAmount - amount;
+
+    protocolFees += protocolFee;
+
+    _sendFunds(_msgSender(), priceAfterFee);
+    _sendFunds(club.creatorAddress, subjectFee);
+
+    emit MomentCardUpdate(_msgSender(), clubId, 0, club.supply, holdAmount - amount, amount);
+
+    emit MomentClubTrade(
+      clubId,  
+      club.momentConf.momentType,
+      _msgSender(),
+      club.supply,
+      club.isLocked,
+      amount,
+      false,
+      priceAfterFee
+    );  
+  }
+
+  function buyDrawCard(uint256 clubId, uint256 amount, uint256 expectedPrice) external payable whenNotPaused nonReentrant { 
+    MomentClub storage club = momentClubs[clubId];
+    if (club.clubId == 0) revert MomentClubNotFound();
+    if (club.momentConf.momentType != MomentType.Draw) revert InvalidParameters();
+    _buyCardImpl(clubId, amount, expectedPrice, msg.value);
+  }
+
+  function sellDrawCard(uint256 clubId, uint256[] calldata cardArr, uint256[] calldata amountArr) external whenNotPaused nonReentrant {
     if (cardArr.length == 0 || cardArr.length != amountArr.length) revert InvalidParameters();
     
     MomentClub storage club = momentClubs[clubId];
     if (club.isLocked) revert MomentClubIsLocked();
+    if (club.momentConf.momentType != MomentType.Draw) revert InvalidParameters();
 
     uint256 sellAmount = 0;
     for (uint256 i = 0; i < cardArr.length; i++) {
       uint256 cardNo = cardArr[i];
       uint256 cardAmount = amountArr[i];
 
-      uint256 holdAmount = balanceOf[_msgSender()][clubId][cardNo];
+      uint256 holdAmount = drawBalanceOf[_msgSender()][clubId][cardNo];
       if (cardAmount == 0 || cardAmount > holdAmount) revert InvalidAmount();
-      balanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
+      drawBalanceOf[_msgSender()][clubId][cardNo] = holdAmount - cardAmount;
       uint256 supply = cardSupply[clubId][cardNo];
       cardSupply[clubId][cardNo] = supply - cardAmount;
       if (supply == cardAmount) {
@@ -566,7 +666,8 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     _sendFunds(club.creatorAddress, subjectFee);
  
     emit MomentClubTrade(
-      clubId, 
+      clubId,  
+      club.momentConf.momentType,
       _msgSender(),
       club.supply,
       club.isLocked,
@@ -666,12 +767,11 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
   }
 
   function _validateSignature(
-    uint256 timestamp,
-    uint256 validFor,  
+    uint256 validUtil,  
     bytes32 hash,
     bytes calldata signature
   ) internal {
-    if (timestamp < block.timestamp - validFor) revert SignatureExpired();
+    if (validUtil < block.timestamp) revert SignatureExpired();
     if (!signedByValidator(hash, signature)) revert InvalidSignature();
     _saveSignatureAsUsed(signature);
   }
@@ -682,8 +782,7 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
     address applyer,
     uint256 creationFee,
     MomentConfig calldata momentConf,
-    uint256 timestamp,
-    uint256 validFor
+    uint256 validUntil
   ) public pure returns (bytes32) {
     return keccak256(abi.encodePacked(
       "\x19\x01",
@@ -691,14 +790,14 @@ contract MomentFactory is Initializable, ValidatableUpgradeable, PausableUpgrade
       callId,
       applyer,
       creationFee,
+      uint256(momentConf.momentType),
       momentConf.liquidityAmount,
       momentConf.mintTotal,
       momentConf.seriesTotal,  
       uint256(momentConf.priceType),
       momentConf.priceArg1,
       momentConf.priceArg2,
-      timestamp,
-      validFor
+      validUntil
     ));
   }
   
