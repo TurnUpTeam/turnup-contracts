@@ -5,8 +5,8 @@ import {DN404} from "dn404/src/DN404.sol";
 import {DN404Mirror} from "dn404/src/DN404Mirror.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
-import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
-import {IERC7631Base} from "./IERC7631Base.sol"; 
+// import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
+import {IERC7631Base} from "./IERC7631Base.sol";
 import {IERC7631BaseNFTSkippable} from "./IERC7631BaseNFTSkippable.sol";
 import {MemeFactory} from "./MemeFactory.sol";
 
@@ -45,7 +45,7 @@ contract Meme404 is DN404, Ownable {
     _baseUnit = baseUnit_;
 
     useDirectTransfers = true;
-	
+
     _initializeOwner(msg.sender);
     address mirror = address(new DN404Mirror(msg.sender));
     _initializeDN404(initialTokenSupply, initialSupplyOwner, mirror);
@@ -106,6 +106,6 @@ contract Meme404 is DN404, Ownable {
   }
 
   function withdraw(address beneficiary) public onlyFactory {
-    SafeTransferLib.safeTransferAllETH(beneficiary);
+    // SafeTransferLib.safeTransferAllETH(beneficiary);
   }
 }
