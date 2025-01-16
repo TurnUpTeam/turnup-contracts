@@ -45,7 +45,9 @@ require("dotenv").config();
 module.exports = {
   zksolc: {
     version: "latest",
-    settings: {},
+    settings: {
+      enableEraVMExtensions: true,
+    },
   },
   solidity: {
     version: "0.8.20",
