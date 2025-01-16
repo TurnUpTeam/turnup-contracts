@@ -20,6 +20,9 @@
     "@ethersproject/contracts": "^5.7.0",
     "@matterlabs/hardhat-zksync": "^1.1.0",
     "@matterlabs/hardhat-zksync-verify": "^1.6.0",
+    "@openzeppelin/contracts": "^4.8.3",
+    "@openzeppelin/contracts-upgradeable": "^4.8.3",
+    "@openzeppelin/hardhat-upgrades": "^3.2.0",
     "ethereumjs-abi": "^0.6.8",
     "ethereumjs-util": "^7.1.5",
     "fs-extra": "^11.1.1",
@@ -43,12 +46,10 @@
     "*.{js,css,md}": "prettier --write"
   },
   "dependencies": {
+    "@matterlabs/zksync-contracts": "^0.6.1",
     "@ndujalabs/erc721lockable": "^0.13.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
     "@nomicfoundation/hardhat-verify": "^2.0.8",
-    "@openzeppelin/contracts": "^4.8.3",
-    "@openzeppelin/contracts-upgradeable": "^4.8.3",
-    "@openzeppelin/hardhat-upgrades": "^3.2.0",
     "@pythnetwork/entropy-sdk-solidity": "^1.5.0",
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.4",
