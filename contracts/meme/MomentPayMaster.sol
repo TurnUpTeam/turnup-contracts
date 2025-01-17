@@ -16,7 +16,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
     error UnableToTransferFunds();
 
     event WithdrawFunds(address beneficiary, uint256 amount);
-    event Test(address fromAddress, address toAddress);
+    event Test(address fromAddress, address toAddress, uint256 nonce);
 
     modifier onlyBootloader() {
         require(msg.sender == BOOTLOADER_FORMAL_ADDRESS, "Only bootloader can call this method");
@@ -39,7 +39,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
 
         bytes4 paymasterInputSelector = bytes4(_transaction.paymasterInput[0:4]);
         
-        emit Test(_transaction.from, _transaction.to);
+        emit Test(_transaction.from, _transaction.to, _transaction.nonce);
 
         if (paymasterInputSelector == IPaymasterFlow.general.selector) {
             // Note, that while the minimal amount of ETH needed is tx.gasPrice * tx.gasLimit,
