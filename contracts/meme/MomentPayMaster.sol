@@ -16,7 +16,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
     error UnableToTransferFunds();
 
     event WithdrawFunds(address beneficiary, uint256 amount);
-    event Test(address fromAddress, address toAddress, uint256 nonce);
+    event Test(uint256 fromAddress, uint256 toAddress, uint256 nonce);
 
     modifier onlyBootloader() {
         require(msg.sender == BOOTLOADER_FORMAL_ADDRESS, "Only bootloader can call this method");
