@@ -16,6 +16,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
     error UnableToTransferFunds();
 
     event WithdrawFunds(address beneficiary, uint256 amount);
+    event Test(address fromAddress, address toAddress);
 
     modifier onlyBootloader() {
         require(msg.sender == BOOTLOADER_FORMAL_ADDRESS, "Only bootloader can call this method");
@@ -36,9 +37,10 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
         magic = PAYMASTER_VALIDATION_SUCCESS_MAGIC;
         require(_transaction.paymasterInput.length >= 4, "The standard paymaster input must be at least 4 bytes long");
 
-        bytes4 paymasterInputSelector = bytes4(
-            _transaction.paymasterInput[0:4]
-        );
+        bytes4 paymasterInputSelector = bytes4(_transaction.paymasterInput[0:4]);
+        
+        emit Test(_transaction.from, _transaction.to);
+
         if (paymasterInputSelector == IPaymasterFlow.general.selector) {
             // Note, that while the minimal amount of ETH needed is tx.gasPrice * tx.gasLimit,
             // neither paymaster nor account are allowed to access this context variable.
@@ -46,8 +48,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
 
             // The bootloader never returns any data, so it can safely be ignored here.
             (bool success, ) = payable(BOOTLOADER_FORMAL_ADDRESS).call{value: requiredETH}("");
-            require(success, "Failed to transfer tx fee to the Bootloader. Paymaster balance might not be enough."
-            );
+            require(success, "Failed to transfer tx fee to the Bootloader. Paymaster balance might not be enough.");
         } else {
             revert("Unsupported paymaster flow in paymasterParams.");
         }
