@@ -14,9 +14,13 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
     error ZeroAddress();
     error InsufficientFunds();
     error UnableToTransferFunds();
+    error MustCallMoment();
+    error AllowOnce();
 
     event WithdrawFunds(address beneficiary, uint256 amount);
-    event Test(uint256 fromAddress, uint256 toAddress, uint256 nonce);
+
+    address public momentAddress;
+    mapping(address => bool) books;
 
     modifier onlyBootloader() {
         require(msg.sender == BOOTLOADER_FORMAL_ADDRESS, "Only bootloader can call this method");
@@ -25,6 +29,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
     }
 
     function initialize() public initializer {
+      __Ownable_init();
       __Pausable_init();
     }
 
@@ -38,8 +43,19 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
         require(_transaction.paymasterInput.length >= 4, "The standard paymaster input must be at least 4 bytes long");
 
         bytes4 paymasterInputSelector = bytes4(_transaction.paymasterInput[0:4]);
+
+        address fromAddress = address(uint160(_transaction.from));
+        address toAddress = address(uint160(_transaction.to));
         
-        emit Test(_transaction.from, _transaction.to, _transaction.nonce);
+        if (toAddress != momentAddress) {
+          revert MustCallMoment();
+        }
+
+        if (books[fromAddress]) {
+          revert AllowOnce();
+        }
+
+        books[fromAddress] = true;
 
         if (paymasterInputSelector == IPaymasterFlow.general.selector) {
             // Note, that while the minimal amount of ETH needed is tx.gasPrice * tx.gasLimit,
@@ -67,6 +83,10 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
 
     // Needs to be able to receive ETH to pay the bootloader
     receive() external payable {
+    }
+
+    function setMomentAddress(address addr) public onlyOwner {
+      momentAddress = addr;
     }
 
     function withdraw(address beneficiary, uint256 amount) public onlyOwner {

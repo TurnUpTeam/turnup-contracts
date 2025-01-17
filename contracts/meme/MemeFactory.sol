@@ -166,6 +166,7 @@ contract MemeFactory is Initializable, ValidatableUpgradeable, PausableUpgradeab
     if ((uniswapV3Factory_ == address(0)) || (uniswapPositionManager_ == address(0)) || (weth_ == address(0)))
       revert InvalidInitParameters();
 
+    __Ownable_init();
     __Validatable_init();
     __Pausable_init();
 
