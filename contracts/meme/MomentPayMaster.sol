@@ -20,7 +20,7 @@ contract MomentPayMaster is Initializable, IPaymaster, OwnableUpgradeable, Pausa
     event WithdrawFunds(address beneficiary, uint256 amount);
 
     address public momentAddress;
-    mapping(address => bool) books;
+    mapping(address => bool) public books;
 
     modifier onlyBootloader() {
         require(msg.sender == BOOTLOADER_FORMAL_ADDRESS, "Only bootloader can call this method");
